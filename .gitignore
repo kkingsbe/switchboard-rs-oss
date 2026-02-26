@@ -15,7 +15,8 @@ Cargo.lock
 .state/
 
 # Kilo Code configuration (contains API keys - user-specific)
-.kilocode/
+.kilocode/cli/global
+.kilocode/cli/config.json
 
 # AI agent output artifacts (temporary files)
 .architect-output-*.md
