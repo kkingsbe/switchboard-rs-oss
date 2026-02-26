@@ -1,1 +1,0 @@
-I've now updated your switchboard.toml to include the keys for discord and openrouter, which unblocks you.

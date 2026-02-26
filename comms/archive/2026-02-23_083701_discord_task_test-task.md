@@ -1,8 +1,0 @@
-# Task: Test Task
-
-**Source:** Discord
-**Priority:** medium
-**Date:** 2026-02-23
-
-## Description
-Test description

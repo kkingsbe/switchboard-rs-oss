@@ -25,7 +25,7 @@ token_env = "${DISCORD_TOKEN}"
 
 From [`switchboard.toml:61`](switchboard.toml:61):
 ```toml
-api_key_env = "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"
+api_key_env = "${OPENROUTER_API_KEY}"
 ```
 
 These are actual credentials stored in plain text - a serious security vulnerability!

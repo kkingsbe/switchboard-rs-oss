@@ -6,26 +6,26 @@ timezone = "system"
 
 [[agent]]
 name = "gt-dev-1"
-schedule = "0 */20 * * * *"
+schedule = "0 5,25,45 * * * *"
 readonly = false
 timeout = "30m"
-prompt_file = "prompts/DEV_PARALLEL.md"
+prompt_file = ".switchboard/prompts/DEV_PARALLEL.md"
 env = { AGENT_ID = "1" }
 
 [[agent]]
 name = "gt-dev-2"
-schedule = "0 */20 * * * *"
+schedule = "0 10,30,50 * * * *"
 readonly = false
 timeout = "30m"
-prompt_file = "prompts/DEV_PARALLEL.md"
+prompt_file = ".switchboard/prompts/DEV_PARALLEL.md"
 env = { AGENT_ID = "2" }
 
 [[agent]]
 name = "gt-dev-3"
-schedule = "0 */20 * * * *"
+schedule = "0 15,35,55 * * * *"
 readonly = false
 timeout = "30m"
-prompt_file = "prompts/DEV_PARALLEL.md"
+prompt_file = ".switchboard/prompts/DEV_PARALLEL.md"
 env = { AGENT_ID = "3" }
 
 [[agent]]
@@ -33,7 +33,7 @@ name = "gt-dev-4"
 schedule = "0 */20 * * * *"
 readonly = false
 timeout = "30m"
-prompt_file = "prompts/DEV_PARALLEL.md"
+prompt_file = ".switchboard/prompts/DEV_PARALLEL.md"
 env = { AGENT_ID = "4" }
 
 [[agent]]
@@ -41,14 +41,14 @@ name = "gt-summarizer"
 schedule = "0 0 * * * *"
 readonly = false
 timeout = "30m"
-prompt_file = "prompts/SUMMARIZER.md"
+prompt_file = ".switchboard/prompts/SUMMARIZER.md"
 
 [[agent]]
 name = "gt-feature-architect"
 schedule = "0 */45 * * * *"
 readonly = false
 timeout = "30m"
-prompt_file = "prompts/ARCHITECT_FEATURE.md"
+prompt_file = ".switchboard/prompts/ARCHITECT_FEATURE.md"
 
 [discord]
 enabled = true

@@ -9,7 +9,7 @@ Cargo.lock
 *.profraw
 
 # Switchboard runtime
-.switchboard/
+.switchboard/logs/
 .sprint_complete
 .architect_in_progress
 .state/
