@@ -27,6 +27,5 @@ Cargo.lock
 
 discli.env
 
-switchboard.toml
 switchboard.env
 .env

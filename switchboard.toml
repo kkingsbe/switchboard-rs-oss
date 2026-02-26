@@ -1,0 +1,66 @@
+[settings]
+image_name = "switchboard-agent"
+image_tag = "latest"
+log_dir = ".switchboard/logs"
+timezone = "system"
+
+[[agent]]
+name = "gt-dev-1"
+schedule = "0 */20 * * * *"
+readonly = false
+timeout = "30m"
+prompt_file = "prompts/DEV_PARALLEL.md"
+env = { AGENT_ID = "1" }
+
+[[agent]]
+name = "gt-dev-2"
+schedule = "0 */20 * * * *"
+readonly = false
+timeout = "30m"
+prompt_file = "prompts/DEV_PARALLEL.md"
+env = { AGENT_ID = "2" }
+
+[[agent]]
+name = "gt-dev-3"
+schedule = "0 */20 * * * *"
+readonly = false
+timeout = "30m"
+prompt_file = "prompts/DEV_PARALLEL.md"
+env = { AGENT_ID = "3" }
+
+[[agent]]
+name = "gt-dev-4"
+schedule = "0 */20 * * * *"
+readonly = false
+timeout = "30m"
+prompt_file = "prompts/DEV_PARALLEL.md"
+env = { AGENT_ID = "4" }
+
+[[agent]]
+name = "gt-summarizer"
+schedule = "0 0 * * * *"
+readonly = false
+timeout = "30m"
+prompt_file = "prompts/SUMMARIZER.md"
+
+[[agent]]
+name = "gt-feature-architect"
+schedule = "0 */45 * * * *"
+readonly = false
+timeout = "30m"
+prompt_file = "prompts/ARCHITECT_FEATURE.md"
+
+[discord]
+enabled = true
+token_env = "${DISCORD_TOKEN}"
+channel_id = "${DISCORD_CHANNEL_ID}"
+
+[discord.llm]
+provider = "openrouter"
+api_key_env = "${OPENROUTER_API_KEY}"
+model = "anthropic/claude-sonnet-4"
+max_tokens = 1024
+
+[discord.conversation]
+max_history = 30
+ttl_minutes = 120
