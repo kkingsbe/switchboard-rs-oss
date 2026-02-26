@@ -35,7 +35,7 @@ For detailed installation instructions covering all methods, see the [Installati
 To build and install Switchboard from source:
 
 ```bash
-git clone https://github.com/your-org/switchboard.git && cd switchboard
+git clone https://github.com/kkingsbe/switchboard-rs-oss.git && cd switchboard-rs-oss
 cargo install --path .
 ```
 
@@ -48,39 +48,6 @@ cargo build
 ```
 
 The debug binary will be located at `target/debug/switchboard`.
-
-### Installation from crates.io
-
-Install Switchboard directly from crates.io with a single command:
-
-```bash
-cargo install switchboard
-```
-
-For detailed instructions including version selection, updating, and troubleshooting, see the [Installation Guide - Installing from crates.io](docs/INSTALLATION.md#installing-from-cratesio).
-
-### Binary Download
-
-Pre-compiled binaries for Linux, macOS, and Windows will be available for download from the [GitHub Releases](https://github.com/your-org/switchboard/releases) page.
-
-Download the appropriate binary for your platform:
-
-```bash
-# Linux
-curl -L https://github.com/your-org/switchboard/releases/latest/download/switchboard-linux-x86_64 -o switchboard
-chmod +x switchboard
-sudo mv switchboard /usr/local/bin/
-
-# macOS
-curl -L https://github.com/your-org/switchboard/releases/latest/download/switchboard-darwin-x86_64 -o switchboard
-chmod +x switchboard
-sudo mv switchboard /usr/local/bin/
-
-# Windows (PowerShell)
-Invoke-WebRequest -Uri "https://github.com/your-org/switchboard/releases/latest/download/switchboard-windows-x86_64.exe" -OutFile "switchboard.exe"
-```
-
-*Note: Binary releases are coming soon. For now, please install from source.*
 
 ### Verification
 
