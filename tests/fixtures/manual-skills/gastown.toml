@@ -1,0 +1,28 @@
+# switchboard.toml - Test fixture for manually managed skills
+#
+# This configuration file tests backwards compatibility with manually installed skills.
+# The skills referenced in the agents' skills arrays already exist as manually
+# installed skills in the `.kilocode/skills/` directory.
+#
+# This tests that:
+# 1. Preexisting skills are detected by find_preexisting_skills()
+# 2. Entry script generation skips npx for preexisting skills
+
+[[agent]]
+name = "test-agent-with-manual-skills"
+schedule = "0 * * * *"
+prompt = """
+Test agent that uses manually installed skills.
+"""
+# These skills are already present in .kilocode/skills/
+# format: owner/repo where repo matches the skill directory name
+skills = ["test-owner/test-skill", "another-owner/another-skill"]
+
+[[agent]]
+name = "test-agent-mixed-skills"
+schedule = "*/15 * * * *"
+prompt = """
+Test agent with a mix of manually installed and npx-installed skills.
+"""
+# Mix of manual skill (test-skill) and hypothetical npx skill
+skills = ["test-owner/test-skill", "hypothetical-owner/hypothetical-skill"]

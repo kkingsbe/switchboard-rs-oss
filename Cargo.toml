@@ -1,0 +1,81 @@
+[package]
+name = "switchboard"
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+description = "A CLI tool for managing KiloCode agents and Docker containers"
+keywords = ["docker", "cli", "scheduler", "agent", "container"]
+categories = ["command-line-utilities", "development-tools", "config"]
+repository = "https://github.com/yourusername/switchboard"
+exclude = [
+    "summarizer-narratives/",
+    "comms/",
+    "sample_prompts/",
+    ".github/",
+    "scripts/",
+    "discli.env",
+    "*.md",
+    "!README.md",
+]
+
+[[bin]]
+name = "switchboard"
+path = "src/main.rs"
+
+[dependencies]
+clap = { version = "4.5", features = ["derive"] }
+tokio = { version = "1.40", features = ["full"] }
+bollard = "0.18"
+tokio-cron-scheduler = "0.15"
+serde = { version = "1.0", features = ["derive"] }
+serde_derive = "1.0"
+serde_json = "1.0"
+serde_repr = "0.1"
+toml = "0.8"
+chrono = "0.4"
+chrono-tz = "0.10"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+tracing-appender = "0.2"
+anyhow = "1.0"
+async-trait = "0.1"
+thiserror = "1.0"
+futures = "0.3"
+bytes = "1.0"
+flate2 = "1.0"
+tar = "0.4"
+comfy-table = "7"
+cron = "0.12"
+scopeguard = "1.2"
+libc = "0.2"
+uuid = { version = "1.10", features = ["v4", "serde"] }
+regex = "1.10"
+reqwest = { version = "0.12", features = ["json"] }
+once_cell = "1.19"
+serde_yaml = "0.9"
+futures-util = "0.3"
+rustls = { version = "0.23", features = ["aws-lc-rs"] }
+
+# Discord Gateway support (twilight-based)
+twilight-gateway = "0.17"
+twilight-model = "0.17"
+twilight-http = "0.17"
+
+[dev-dependencies]
+assert_cmd = "2.0"
+tempfile = "3.0"
+predicates = "3.1"
+cargo-llvm-cov = "0.6"
+tokio = { version = "1.40", features = ["full"] }
+futures-util = "0.3"
+tracing-test = "0.2"
+matches = "0.1"
+serial_test = "0.10"
+http = "1.0"
+
+[features]
+default = ["discord"]
+integration = []
+scheduler = []
+streams = []
+discord = []

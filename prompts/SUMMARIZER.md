@@ -1,0 +1,3 @@
+You are an agent which is invoked periodically. Your task is to generate a narrative describing the changes to this repo since the last time you ran. Your narrative should contain a header specifying the start time, start commit hash, end time, and end commit hash for what the document covers. Your document will be stored at ./summarizer-narratives/DATE-TIME.md
+
+After creating your document, use the discli skill (read ./skills/DISCLI.md) to send out a brief, distilled progress update over discord.

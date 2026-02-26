@@ -1,0 +1,37 @@
+# basic.toml - Minimal configuration example for switchboard
+#
+# This is a minimal example to help you get started with switchboard.
+# Copy this file to switchboard.toml and customize it for your needs.
+#
+# Validation: Run `cargo run -- validate --config examples/basic.toml` to check
+
+# =============================================================================
+# GLOBAL SETTINGS
+# =============================================================================
+# Optional settings that provide defaults for all agents.
+# Only the most essential settings are included here.
+
+[settings]
+# Docker image name to use for agent containers
+# This should be an image that can run AI coding agents
+image_name = "kilocode/prompter:latest"
+
+# =============================================================================
+# AGENT CONFIGURATION
+# =============================================================================
+# Each agent section defines a task that will run on a schedule.
+# At least one [[agent]] section is required.
+
+[[agent]]
+# Required: Unique identifier for this agent
+# This name is used in logs and metrics
+name = "daily-report"
+
+# Required: Cron schedule for when this agent should run
+# Format: "minute hour day month weekday"
+# This example runs daily at 9:00 AM (minute 0, hour 9)
+schedule = "0 9 * * *"
+
+# Required: Inline prompt text for the agent
+# This is the task that will be executed on the schedule
+prompt = "Generate a daily summary report of the codebase changes."

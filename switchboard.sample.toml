@@ -1,0 +1,358 @@
+# switchboard.sample.toml - Sample configuration file for switchboard
+#
+# This is a comprehensive example configuration demonstrating all available options.
+# Copy this file to switchboard.toml and customize it for your needs.
+#
+# Configuration structure:
+# - [settings] section: Optional global settings that apply to all agents
+# - [[agent]] sections: One or more agent configurations (at least one required)
+#
+# Validation: Run `switchboard validate switchboard.toml` to check your configuration
+
+# =============================================================================
+# GLOBAL SETTINGS
+# =============================================================================
+# Optional settings that provide defaults for all agents.
+# All fields are optional with sensible defaults shown below.
+
+[settings]
+# Docker image name to use for agent containers (default: "switchboard-agent")
+image_name = "switchboard-agent"
+
+# Docker image tag (default: "latest")
+image_tag = "latest"
+
+# Directory where log files will be stored (default: ".switchboard/logs")
+log_dir = ".switchboard/logs"
+
+# Workspace path (now derived from the config file's directory)
+# Agents will have access to files in that directory
+# Agents will have access to files in that directory
+
+# Timezone for scheduling (default: "system")
+# Use "system" to use the system's local timezone, or specify IANA timezone format
+# Examples: "America/New_York", "Europe/London", "Asia/Tokyo"
+timezone = "system"
+
+# Default overlap mode for handling concurrent executions (default: "skip")
+# "skip" - If an agent is already running, skip new runs and log a warning
+# "queue" - Add new runs to a queue for sequential execution after current run completes
+overlap_mode = "skip"
+
+# =============================================================================
+# AGENT CONFIGURATIONS
+# =============================================================================
+# Each agent section defines a task that will run on a schedule.
+# At least one [[agent]] section is required.
+
+# -----------------------------------------------------------------------------
+# Agent 1: Simple agent with minimal configuration
+# -----------------------------------------------------------------------------
+# This demonstrates the minimum required fields: name, schedule, and either
+# prompt or prompt_file.
+
+[[agent]]
+# Required: Unique identifier for this agent (must be unique across all agents)
+name = "simple-agent"
+
+# Required: Cron schedule for when this agent should run
+# Format: "minute hour day month day-of-week"
+# This example runs at the top of every hour
+schedule = "0 * * * *"
+
+# Required: Either inline prompt text OR a prompt_file path (not both)
+prompt = """
+Analyze the current state of the codebase and provide a brief summary.
+"""
+
+# -----------------------------------------------------------------------------
+# Agent 2: Agent with all optional fields configured
+# -----------------------------------------------------------------------------
+# This demonstrates all available agent options.
+
+[[agent]]
+name = "comprehensive-agent"
+
+# Required: Cron schedule
+# This example runs every 15 minutes
+schedule = "*/15 * * * *"
+
+# Required: Inline prompt (alternative to prompt_file)
+prompt = """
+Review the recent changes in the codebase and identify potential issues.
+Focus on code quality, performance, and security concerns.
+"""
+
+# Optional: Environment variables passed to the agent container
+# Format: inline table with KEY = "value" pairs
+env = { API_KEY = "your-api-key-here", LOG_LEVEL = "info", MAX_RETRIES = "3" }
+
+# Optional: Whether the agent runs in read-only mode (default: false)
+# When true, the agent cannot write to the filesystem
+readonly = false
+
+# Optional: Maximum execution duration (default: "30m")
+# Format: <number><unit> where unit is "s" (seconds), "m" (minutes), or "h" (hours)
+# Must be greater than 0
+timeout = "1h"
+
+# Optional: Overlap mode for this specific agent (overrides global setting)
+# "skip" - Skip new runs if agent is already running
+# "queue" - Queue new runs for sequential execution
+overlap_mode = "Queue"
+
+# Optional: Maximum queue size when overlap_mode is "queue" (default: 3)
+# Maximum number of pending runs that can be queued
+max_queue_size = 5
+
+# Optional: Skills to be installed inside the agent container at startup
+# Skills are specified as simple names (directory names in ./skills/):
+# Examples:
+skills = [
+    "frontend-design",  # Simple skill name
+    "security-audit",   # Another simple skill name
+]
+
+# -----------------------------------------------------------------------------
+# Agent 3: Agent using prompt_file instead of inline prompt
+# -----------------------------------------------------------------------------
+# This demonstrates using an external prompt file for better maintainability.
+
+[[agent]]
+name = "file-prompt-agent"
+
+# Required: Cron schedule
+# This example runs every hour on the 30th minute
+schedule = "30 * * * *"
+
+# Required: Path to prompt file (relative to config file or absolute path)
+# The file will be read at startup and its contents used as the prompt
+prompt_file = "sample_prompts/SUMMARIZER.md"
+
+# Optional: Environment variables
+# Format: inline table with KEY = "value" pairs
+env = { TZ = "UTC" }
+
+# Optional: Read-only mode for file-based prompt agent
+readonly = false
+
+# Optional: Timeout for file-based prompt agent
+timeout = "30m"
+
+# -----------------------------------------------------------------------------
+# Agent 4: Quick-check agent with short timeout
+# -----------------------------------------------------------------------------
+# This demonstrates a lightweight agent that runs frequently with a short timeout.
+
+[[agent]]
+name = "quick-health-check"
+
+# Required: Cron schedule
+# This example runs every minute
+schedule = "* * * * *"
+
+# Required: Inline prompt
+prompt = "Check the health status of the system and report any issues."
+
+# Optional: Short timeout suitable for quick checks
+timeout = "30s"
+
+# Optional: Skip mode (default behavior for overlapping runs)
+# If the previous run is still in progress, the new run will be skipped
+overlap_mode = "Skip"
+
+# -----------------------------------------------------------------------------
+# Agent 5: gtse-dev-1 agent with skills configuration
+# -----------------------------------------------------------------------------
+# This agent is used for development tasks with specific skills.
+
+[[agent]]
+name = "gtse-dev-1"
+
+# Required: Cron schedule
+# This example runs at 9 AM every weekday
+schedule = "0 9 * * 1-5"
+
+# Required: Inline prompt
+prompt = "Perform development tasks as assigned."
+
+# Optional: Skills for this agent
+skills = [
+    "test-skill",
+]
+
+# =============================================================================
+# ADDITIONAL NOTES
+# =============================================================================
+#
+# Cron Schedule Format:
+#   The schedule field uses 6-field cron expression format:
+#   Field:        second  minute  hour  day  month  day-of-week
+#   Values:       0-59    0-59    0-23  1-31  1-12   0-6 (0=Sunday)
+#
+#   Examples:
+#   - "0 0 * * * *"          - Every hour on the hour
+#   - "0 */15 * * * *"        - Every 15 minutes
+#   - "0 0 9 * * 1-5"         - 9:00 AM on weekdays
+#   - "0 30 4 * * *"          - 4:30 AM every day
+#   - "0 0 12 1 * *"          - Noon on the 1st of every month
+#
+# Timeout Format:
+#   Timeout values must be positive numbers followed by a unit suffix:
+#   - "30s" - 30 seconds
+#   - "5m"  - 5 minutes
+#   - "1h"  - 1 hour
+#   - "2h30m" is NOT supported (use "150m" or "9000s" instead)
+#
+# Overlap Modes:
+#   - "Skip": Default behavior. If an agent is already running when a new
+#     scheduled execution time arrives, the new run is skipped and a warning
+#     is logged. Good for idempotent tasks where only one instance should run.
+#   - "Queue": New runs are added to a queue and executed sequentially after
+#     the current run completes. Useful when you need to process all scheduled
+#     runs but want to avoid concurrent execution. The max_queue_size field
+#     controls how many runs can be queued (default: 3).
+#
+# Prompt vs Prompt File:
+#   - Use "prompt" for short, self-contained prompts
+#   - Use "prompt_file" for longer prompts or when you want to manage prompts
+#     as separate files (better for version control and editing)
+#   - You must specify exactly one of these fields, not both
+#
+# Read-only Mode:
+#   - When readonly = true, the agent container cannot write to the filesystem
+#   - This is useful for analysis tasks that should only read data
+#   - The workspace is still mounted, but in read-only mode
+#
+# Environment Variables:
+#   - Environment variables can be passed to the agent container via the
+#     env field using inline table syntax
+#   - Format: env = { KEY = "value", ANOTHER_KEY = "value" }
+#   - These are useful for passing API keys, configuration values, or other
+#     runtime parameters to the agent
+#
+# =============================================================================
+# DISCORD CONCIERGE INTEGRATION
+# =============================================================================
+# The Discord concierge is a conversational LLM agent that lives in a Discord
+# channel. It listens to messages and provides a natural-language interface
+# to the multi-agent system. It can file bugs, create tasks, check status,
+# relay agent updates, and answer questions about the project.
+#
+# To enable Discord, add the [discord] section and set enabled = true.
+# to enable Discord bot functionality
+#
+# Required environment variables (must be set in your shell or .env file):
+#   - DISCORD_TOKEN: Your Discord bot token
+#   - OPENROUTER_API_KEY: Your OpenRouter API key (for LLM calls)
+#
+# Tools available to the Discord concierge:
+#   - file_bug: File a bug report into comms/inbox/
+#   - file_task: File a task or feature request
+#   - get_status: Check agent status and TODO progress
+#   - list_inbox: List pending items in comms/inbox/
+#   - read_outbox: Read and relay agent messages from comms/outbox/
+#   - read_todos: Read TODO file progress
+#   - read_backlog: Read BACKLOG.md
+#   - add_to_backlog: Add items to BACKLOG.md
+#   - read_file: Read any project file
+#   - list_directory: List directory contents
+
+# -----------------------------------------------------------------------------
+# Discord Configuration - Basic Settings
+# -----------------------------------------------------------------------------
+
+[discord]
+# Enable/disable the Discord concierge integration (default: false)
+# Set to true to enable Discord bot functionality
+enabled = false
+
+# Discord bot token - supports env var reference syntax
+# Examples:
+#   token_env = "${DISCORD_TOKEN}"           # Read from DISCORD_TOKEN env var
+#   token_env = "${DISCORD_TOKEN:-}"         # Use empty if not set
+# The resolved value is used for authentication
+token_env = "${DISCORD_TOKEN}"
+
+# Discord channel ID to listen on (required when enabled = true)
+# This is the numeric channel ID where the bot will listen for messages
+# To get the channel ID: enable Developer Mode in Discord, right-click channel, "Copy ID"
+channel_id = "1474550134388949272"
+
+# Gateway intents (optional) - Controls which Discord events the bot receives
+# Common values:
+#   512      = GUILD_MESSAGES (messages in servers)
+#   4096     = DIRECT_MESSAGES (direct messages)
+#   16384    = MESSAGE_CONTENT (message content - REQUIRES VERIFICATION in Discord Developer Portal!)
+#   21504    = 512 + 4096 + 16384 (all message intents - DEFAULT)
+# If not specified, defaults to 21504 (all intents)
+# NOTE: If you get 400 Bad Request errors, your bot may not have MESSAGE_CONTENT intent
+# verified in the Discord Developer Portal. In that case, set this to 512 (GUILD_MESSAGES only)
+# intents = 21504
+
+# -----------------------------------------------------------------------------
+# Discord Configuration - LLM Settings
+# -----------------------------------------------------------------------------
+
+[discord.llm]
+# LLM provider (default: "openrouter")
+# Currently only "openrouter" is supported
+provider = "openrouter"
+
+# OpenRouter API key - supports env var reference syntax
+# Examples:
+#   api_key_env = "${OPENROUTER_API_KEY}"     # Read from OPENROUTER_API_KEY env var
+#   api_key_env = "${OPENROUTER_API_KEY:-}"   # Use empty if not set
+api_key_env = "${OPENROUTER_API_KEY}"
+
+# Model identifier (default: "anthropic/claude-sonnet-4")
+# See OpenRouter documentation for available models
+model = "anthropic/claude-sonnet-4"
+
+# Maximum tokens per LLM response (default: 1024)
+# Controls how long the LLM response can be
+max_tokens = 1024
+
+# Custom system prompt file (optional)
+# Path to a markdown file containing custom system prompt instructions
+# If not specified, a built-in default system prompt is used
+# The bot will read this file at startup
+# system_prompt_file = "prompts/concierge.md"
+
+# -----------------------------------------------------------------------------
+# Discord Configuration - Conversation Settings
+# -----------------------------------------------------------------------------
+
+[discord.conversation]
+# Maximum conversation history per user (default: 30)
+# Number of messages to keep in conversation history for context
+max_history = 30
+
+# Conversation TTL in minutes (default: 120)
+# Conversations expire after this many minutes of inactivity
+# This prevents unbounded memory growth
+ttl_minutes = 120
+
+# =============================================================================
+# EXAMPLE: Full Discord Configuration
+# =============================================================================
+# Below is a commented example showing all Discord options with example values.
+# Uncomment and modify as needed to enable the Discord concierge.
+#
+# [discord]
+# enabled = true
+# token_env = "DISCORD_TOKEN"
+# channel_id = "1474550134388949272"
+#
+# [discord.llm]
+# provider = "openrouter"
+# api_key_env = "OPENROUTER_API_KEY"
+# model = "anthropic/claude-sonnet-4"
+# max_tokens = 1024
+# system_prompt_file = "prompts/concierge.md"
+#
+# [discord.conversation]
+# max_history = 30
+# ttl_minutes = 120
+#
+# -----------------------------------------------------------------------------

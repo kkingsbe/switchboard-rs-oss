@@ -1,0 +1,32 @@
+# Rust
+/target
+**/*.rs.bk
+*.pdb
+Cargo.lock
+
+# Test coverage
+/llvm-cov
+*.profraw
+
+# Switchboard runtime
+.switchboard/
+.sprint_complete
+.architect_in_progress
+.state/
+
+# Kilo Code configuration (contains API keys - user-specific)
+.kilocode/
+
+# AI agent output artifacts (temporary files)
+.architect-output-*.md
+.prompt-output-*.md
+.janitor-output-*.md
+
+.kilocode/cli/config.json
+.kilocode/cli/global/secrets.json
+
+discli.env
+
+switchboard.toml
+switchboard.env
+.env

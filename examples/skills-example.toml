@@ -1,0 +1,375 @@
+# skills-example.toml - Example configuration demonstrating skills usage
+#
+# This example demonstrates how to use the skills field in agent configurations.
+# Skills are optional reusable procedural knowledge packages that extend agent behavior.
+#
+# Skills Format:
+#   - "owner/repo@skill-name" - Installs a specific skill from a repository
+#   - "owner/repo"           - Installs all skills from a repository
+#
+# Installation:
+#   Skills are automatically installed inside each agent container at startup
+#   via: npx skills add <source> -a kilo -y
+#   This happens before the agent's prompt is executed.
+#
+# Validation:
+#   Run `cargo run -- validate --config examples/skills-example.toml` to check syntax
+
+# =============================================================================
+# GLOBAL SETTINGS
+# =============================================================================
+# Optional settings that provide defaults for all agents.
+# All fields are optional with sensible defaults shown below.
+
+[settings]
+# Docker image name to use for agent containers (default: "switchboard-agent")
+image_name = "switchboard-agent"
+
+# Docker image tag (default: "latest")
+image_tag = "latest"
+
+# Directory where log files will be stored (default: ".switchboard/logs")
+log_dir = ".switchboard/logs"
+
+# Timezone for scheduling (default: "system")
+# Use "system" to use the system's local timezone, or specify IANA timezone format
+timezone = "system"
+
+# Default overlap mode for handling concurrent executions (default: "skip")
+# "skip" - If an agent is already running, skip new runs
+# "queue" - Add new runs to a queue for sequential execution
+overlap_mode = "skip"
+
+# =============================================================================
+# AGENT CONFIGURATIONS WITH SKILLS
+# =============================================================================
+# Each agent section defines a task that will run on a schedule.
+# At least one [[agent]] section is required.
+
+# -----------------------------------------------------------------------------
+# Agent 1: Specific skill from a repository
+# -----------------------------------------------------------------------------
+# This agent demonstrates the "owner/repo@skill-name" format, which installs
+# a specific skill from a repository.
+#
+# The skills field is optional. When present, it specifies a list of skill
+# sources to install inside the agent container at startup.
+#
+# Format: "owner/repo@skill-name"
+#   - owner: GitHub username or organization
+#   - repo: Repository name containing the skill
+#   - skill-name: Name of the specific skill to install (defined in SKILL.md)
+#
+# How it works:
+#   1. When the container starts, Switchboard generates a startup script
+#   2. The script runs: npx skills add vercel-labs/agent-skills@frontend-design -a kilo -y
+#   3. The skill is installed into the container's .kilocode/skills/ directory
+#   4. The agent then executes with access to that specific skill
+#
+# Note: Skills are installed inside the container, not on the host machine.
+#       Node.js/npx is required inside the container (satisfied by node:22-slim base).
+
+[[agent]]
+name = "ui-design-reviewer"
+
+# Required: Cron schedule (runs every 30 minutes)
+schedule = "*/30 * * * *"
+
+# Required: Inline prompt describing the agent's task
+prompt = """
+Review the UI components in the codebase and ensure they follow the frontend-design
+guidelines. Check for consistency, accessibility, and best practices.
+"""
+
+# Optional: Specific skills to install for this agent
+# Using "owner/repo@skill-name" format installs only the specified skill
+skills = [
+    "vercel-labs/agent-skills@frontend-design",
+]
+
+# Optional: Read-only mode
+readonly = false
+
+# Optional: Maximum execution duration
+timeout = "30m"
+
+# -----------------------------------------------------------------------------
+# Agent 2: Multiple specific skills from different repositories
+# -----------------------------------------------------------------------------
+# This agent demonstrates installing multiple specific skills from different
+# repositories using the "owner/repo@skill-name" format.
+#
+# Each skill is installed sequentially in the order listed.
+# If any skill installation fails, the container will exit and the agent
+# will not run.
+
+[[agent]]
+name = "security-and-quality-auditor"
+
+# Required: Cron schedule (runs every hour)
+schedule = "0 * * * *"
+
+# Required: Inline prompt
+prompt = """
+Perform a comprehensive audit of the codebase focusing on security vulnerabilities
+and code quality issues. Use the installed skills to guide your analysis.
+"""
+
+# Optional: Multiple specific skills from different repositories
+# Each skill is installed separately via npx skills add
+skills = [
+    "anthropics/skills@security-audit",         # Specific security skill
+    "vercel-labs/agent-skills@code-quality",    # Specific code quality skill
+    "openai-skills/testing-frameworks",         # Specific testing skill
+]
+
+# Optional: Timeout for security audit (longer duration for thorough analysis)
+timeout = "1h"
+
+# Optional: Environment variables
+env = { LOG_LEVEL = "debug" }
+
+# -----------------------------------------------------------------------------
+# Agent 3: All skills from a repository
+# -----------------------------------------------------------------------------
+# This agent demonstrates the "owner/repo" format, which installs all skills
+# available in the specified repository.
+#
+# Format: "owner/repo" (no @skill-name suffix)
+#
+# This is useful when you want to give an agent access to all skills from
+# a curated collection, such as a comprehensive agent-skills repository.
+#
+# Note: Installing all skills from a repository may take longer at startup
+#       because npx must download and install each skill in the repository.
+
+[[agent]]
+name = "full-stack-developer"
+
+# Required: Cron schedule (runs every 2 hours)
+schedule = "0 */2 * * *"
+
+# Required: Inline prompt
+prompt = """
+Review the codebase and suggest improvements across the entire stack. Use all
+available skills to provide comprehensive recommendations.
+"""
+
+# Optional: All skills from a repository (using "owner/repo" format)
+# This installs every skill available in vercel-labs/agent-skills
+skills = [
+    "vercel-labs/agent-skills",
+]
+
+# Optional: Timeout for full-stack review
+timeout = "45m"
+
+# -----------------------------------------------------------------------------
+# Agent 4: Mixed skills (specific + all from repo)
+# -----------------------------------------------------------------------------
+# This agent demonstrates combining both formats: specific skills and
+# all skills from a repository.
+#
+# Skills are installed in declaration order, so the specific skills
+# are installed before all skills from the repository.
+
+[[agent]]
+name = "comprehensive-reviewer"
+
+# Required: Cron schedule (runs daily at midnight)
+schedule = "0 0 * * *"
+
+# Required: Inline prompt
+prompt = """
+Perform a comprehensive review of the codebase, leveraging all available skills
+to provide detailed feedback on architecture, security, performance, and best practices.
+"""
+
+# Optional: Mixed skill formats
+# First installs specific skills, then all skills from the repository
+skills = [
+    "anthropics/skills@architectural-analysis",  # Specific architectural skill
+    "vercel-labs/agent-skills",                  # All skills from agent-skills repo
+]
+
+# Optional: Longer timeout for comprehensive review
+timeout = "2h"
+
+# Optional: Queue mode for this specific agent
+overlap_mode = "queue"
+
+# Optional: Maximum queue size
+max_queue_size = 3
+
+# -----------------------------------------------------------------------------
+# Agent 5: Agent without skills (for comparison)
+# -----------------------------------------------------------------------------
+# This example demonstrates that skills are optional.
+#
+# If the skills field is omitted, the agent runs without any skills installed.
+# The container starts and immediately executes the agent's prompt.
+#
+# This is useful for agents that don't need specialized knowledge, or when
+# you want to minimize startup time (no skill installation overhead).
+
+[[agent]]
+name = "simple-summarizer"
+
+# Required: Cron schedule (runs every hour on the half-hour)
+schedule = "30 * * * *"
+
+# Required: Inline prompt
+prompt = """
+Summarize the recent changes in the codebase.
+"""
+
+# Note: No skills field - this agent runs without any skills
+# This means faster container startup (no skill installation overhead)
+
+# Optional: Timeout
+timeout = "30m"
+
+# -----------------------------------------------------------------------------
+# Agent 6: Empty skills array (valid but warned by validate)
+# -----------------------------------------------------------------------------
+# This agent demonstrates an empty skills array.
+#
+# This configuration is valid TOML, but `switchboard validate` will emit a warning
+# because an empty skills array typically indicates an oversight or incomplete
+# configuration.
+#
+# Use case: You might declare this when you plan to add skills later, or
+#           when you want to explicitly document that no skills are needed.
+
+[[agent]]
+name = "health-checker"
+
+# Required: Cron schedule (runs every 5 minutes)
+schedule = "*/5 * * * *"
+
+# Required: Inline prompt
+prompt = "Check the health status of the system and report any issues."
+
+# Optional: Empty skills array (valid but warned by validate)
+# This explicitly indicates no skills are needed for this simple health check
+skills = []
+
+# Optional: Short timeout for quick health check
+timeout = "5m"
+
+# =============================================================================
+# SKILLS INSTALLATION DETAILS
+# =============================================================================
+#
+# How Skills Are Installed:
+#
+# 1. When an agent container is created, Switchboard generates an entrypoint script
+#    that runs before the Kilo Code CLI is invoked.
+#
+# 2. The script contains npx commands for each skill in the agent's skills list:
+#
+#    #!/bin/sh
+#    set -e
+#    
+#    # Install declared skills
+#    npx skills add vercel-labs/agent-skills@frontend-design -a kilo -y
+#    npx skills add anthropics/skills@security-audit -a kilo -y
+#    npx skills add vercel-labs/agent-skills -a kilo -y
+#
+#    # Hand off to Kilo Code CLI
+#    exec kilocode --yes "$@"
+#
+# 3. Each skill is installed into the container's .kilocode/skills/ directory.
+#
+# 4. Skills are installed sequentially in the order declared. If any skill
+#    installation fails, the container exits with a non-zero code and the
+#    agent's prompt is not executed.
+#
+# 5. If an agent has no skills field or skills = [], the startup script
+#    skips the installation step entirely and proceeds directly to agent
+#    execution.
+#
+# 6. Skills are not persisted between container runs. Each run installs
+#    fresh from source, ensuring you always get the latest version.
+#
+# Skills Format Reference:
+#
+#   Format                     | Description                          | Example
+#   ---------------------------|--------------------------------------|----------------------------
+#   owner/repo@skill-name      | Specific skill from a repository     | vercel-labs/agent-skills@frontend-design
+#   owner/repo                 | All skills from a repository         | vercel-labs/agent-skills
+#
+#   Where:
+#   - owner: GitHub username or organization
+#   - repo: Repository name containing the skill(s)
+#   - skill-name: Name of the specific skill (from SKILL.md frontmatter)
+#
+# Skill Discovery:
+#
+#   Use `switchboard skills list` to browse available skills interactively,
+#   or `switchboard skills list --search <query>` to search for skills.
+#   These commands delegate to `npx skills find` and require Node.js on the host.
+#
+# Installation on Host (Optional):
+#
+#   You can also install skills on the host machine using:
+#   - `switchboard skills install <source>` - Install to project's .kilocode/skills/
+#   - `switchboard skills install --global <source>` - Install to ~/.kilocode/skills/
+#
+#   However, skills declared in switchboard.toml are installed inside the
+#   container at runtime, so host-side installation is not required for
+#   agent execution. Host-side installation is primarily for development
+#   and testing purposes.
+#
+# Requirements:
+#
+#   - Container: Node.js and npx must be available (satisfied by node:22-slim base)
+#   - Host (optional): Node.js and npx required for `switchboard skills` CLI commands
+#
+# =============================================================================
+# CRON SCHEDULE FORMAT
+# =============================================================================
+#
+# Switchboard uses 5-field Unix cron expression format:
+#
+#   Field:        minute  hour  day  month  weekday
+#   Values:       0-59    0-23  1-31  1-12   0-6 (0=Sunday)
+#
+# Examples:
+#   - "0 * * * *"            - Every hour on the hour
+#   - "*/15 * * * *"         - Every 15 minutes
+#   - "0 9 * * 1-5"          - 9:00 AM on weekdays
+#   - "30 4 * * *"            - 4:30 AM every day
+#   - "0 12 1 * *"            - Noon on the 1st of every month
+#
+# =============================================================================
+# ADDITIONAL NOTES
+# =============================================================================
+#
+# Timeout Format:
+#   Timeout values must be positive numbers followed by a unit suffix:
+#   - "30s" - 30 seconds
+#   - "5m"  - 5 minutes
+#   - "1h"  - 1 hour
+#   - "2h30m" is NOT supported (use "150m" or "9000s" instead)
+#
+# Overlap Modes:
+#   - "Skip": Default behavior. If an agent is already running when a new
+#     scheduled execution time arrives, the new run is skipped and a warning
+#     is logged. Good for idempotent tasks where only one instance should run.
+#   - "Queue": New runs are added to a queue and executed sequentially after
+#     the current run completes. Useful when you need to process all scheduled
+#     runs but want to avoid concurrent execution. The max_queue_size field
+#     controls how many runs can be queued (default: 3).
+#
+# Read-only Mode:
+#   - When readonly = true, the agent container cannot write to the filesystem
+#   - This is useful for analysis tasks that should only read data
+#   - The workspace is still mounted, but in read-only mode
+#
+# Environment Variables:
+#   - Environment variables can be passed to the agent container via the
+#     env field using inline table syntax
+#   - Format: env = { KEY = "value", ANOTHER_KEY = "value" }
+#   - These are useful for passing API keys, configuration values, or other
+#     runtime parameters to the agent

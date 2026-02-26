@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "skills": {
+    "rust-best-practices": {
+      "source": "apollographql/skills@rust-best-practices",
+      "skill_name": "rust-best-practices",
+      "installed_at": "2026-02-26T22:19:11.569621100+00:00",
+      "version": null
+    }
+  }
+}

@@ -1,0 +1,250 @@
+# advanced.toml - Comprehensive configuration example for switchboard
+#
+# This example demonstrates all available configuration options including:
+# - Global settings with all optional fields
+# - Multiple agents with different configurations
+# - Environment variables
+# - Read-only workspaces
+# - Overlap modes (skip vs queue)
+# - Timeout configurations
+# - Both inline prompts and prompt files
+#
+# Validation: Run `cargo run -- validate --config examples/advanced.toml`
+
+# =============================================================================
+# GLOBAL SETTINGS
+# =============================================================================
+# Optional settings that provide defaults for all agents.
+# These can be overridden on a per-agent basis.
+
+[settings]
+# Docker image name to use for agent containers
+# This should be an image that can run AI coding agents
+image_name = "switchboard-agent"
+
+# Docker image tag (version)
+# When combined with image_name, becomes "switchboard-agent:latest"
+# Common values: "latest", "v1.0.0", or specific commit hashes
+image_tag = "latest"
+
+# Directory where agent execution logs are stored
+# Logs are organized by agent name and timestamp
+# Default: ".switchboard/logs" if not specified
+log_dir = ".switchboard/logs"
+
+# Timezone for schedule interpretation
+# Uses IANA timezone database format (e.g., "America/New_York", "UTC", "Europe/London")
+# This affects when scheduled agents run relative to local time
+timezone = "America/New_York"
+
+# Default overlap mode for agents (can be overridden per-agent)
+# "skip": If an agent is already running, skip the scheduled run
+# "queue": If an agent is already running, queue the run (requires max_queue_size)
+# Default: "skip" if not specified
+overlap_mode = "skip"
+
+# =============================================================================
+# AGENT CONFIGURATION
+# =============================================================================
+# Each [[agent]] section defines a task that will run on a schedule.
+# All fields except 'prompt' or 'prompt_file' are optional and inherit from settings.
+
+# =============================================================================
+# AGENT 1: Environment Variables & Timeout
+# =============================================================================
+[[agent]]
+# Required: Unique identifier for this agent
+# This name is used in logs and metrics
+name = "data-collector"
+
+# Required: Cron schedule for when this agent should run
+# Format: "minute hour day month weekday" (5 fields)
+# This example runs every 2 hours (at the top of the hour)
+schedule = "0 */2 * * *"
+
+# Required: Inline prompt text for the agent
+# This is the task that will be executed on the schedule
+prompt = "Collect and summarize data from the API endpoints defined in the codebase. Focus on identifying any deprecated endpoints and usage patterns."
+
+# Environment variables to pass to the agent container
+# These are available to the agent process during execution
+# Use inline table syntax: { KEY = "value" }
+# Common use cases: API keys, configuration flags, debug settings
+env = { API_KEY = "your-api-key", LOG_LEVEL = "info", MAX_RETRIES = "3" }
+
+# Maximum duration for agent execution
+# Format: <number><unit> where unit is s (seconds), m (minutes), or h (hours)
+# If the agent runs longer than this, it will be terminated
+# This agent is allowed to run for up to 1 hour
+timeout = "1h"
+
+# Note: No overlap_mode specified, so it uses the global default (skip)
+# This means if the data-collector is already running when the next schedule fires,
+# that run will be skipped and retried at the next scheduled time.
+
+# =============================================================================
+# AGENT 2: Read-Only Workspace
+# =============================================================================
+[[agent]]
+name = "log-analyzer"
+
+# Runs daily at midnight
+schedule = "0 0 * * *"
+
+prompt = "Analyze the application logs for the past 24 hours. Identify any error patterns, unusual activity, or performance degradation. Provide recommendations."
+
+# Read-only workspace mode
+# When true, the agent container cannot write to the workspace
+# Useful for analysis tasks that should only read data
+# Helps prevent accidental modifications during read-only operations
+readonly = true
+
+# Timeout of 45 minutes for log analysis
+timeout = "45m"
+
+# =============================================================================
+# AGENT 3: Queue Overlap Mode
+# =============================================================================
+[[agent]]
+name = "task-processor"
+
+# Runs every 5 minutes
+schedule = "*/5 * * * *"
+
+prompt = "Process pending tasks from the task queue. Handle each task according to its priority and dependencies. Update task status and generate progress reports."
+
+# Override global overlap_mode to use queue
+# Unlike "skip", "queue" allows multiple runs to be queued if the agent is busy
+# Queued runs execute sequentially when previous runs complete
+overlap_mode = "queue"
+
+# Maximum number of queued runs allowed
+# Only applicable when overlap_mode = "queue"
+# If the queue is full, new scheduled runs will be skipped
+# This prevents unbounded queue growth if the agent can't keep up
+max_queue_size = 5
+
+# Shorter timeout (15 minutes) since tasks should be quick
+timeout = "15m"
+
+# =============================================================================
+# AGENT 4: Prompt File
+# =============================================================================
+[[agent]]
+name = "report-generator"
+
+# Runs every Monday at 8:00 AM
+schedule = "0 8 * * 1"
+
+# Instead of an inline prompt, reference an external file
+# This is useful for long prompts or prompts that need version control
+# The path is relative to the workspace directory
+# Note: This file will be created in subtask 2 of this task
+prompt_file = "prompts/report-generator.md"
+
+# Override to skip mode (explicit, though this is also the global default)
+# If a report is already being generated, skip the scheduled run
+overlap_mode = "skip"
+
+# Longer timeout (2 hours) for comprehensive report generation
+timeout = "2h"
+
+# =============================================================================
+# OVERLAP MODES EXPLAINED
+# =============================================================================
+#
+# SKIP MODE (default):
+# - If an agent is already running when scheduled, the run is skipped
+# - Simple and predictable - no buildup of pending runs
+# - Good for: Long-running tasks where overlap isn't useful
+# - Example: Daily report generation
+#
+# QUEUE MODE:
+# - If an agent is already running, new runs are queued
+# - Queued runs execute when previous runs complete
+# - Requires max_queue_size to limit queue length
+# - Good for: Quick tasks that you don't want to miss
+# - Example: Every-5-minute task processor
+#
+# IMPORTANT: Choose overlap_mode based on your agent's purpose:
+# - Use SKIP for long-running, resource-intensive tasks
+# - Use QUEUE for quick tasks where missing a run is problematic
+
+# =============================================================================
+# CRON FORMAT
+# =============================================================================
+#
+# Cron schedules use 5 fields: "minute hour day month day-of-week"
+#
+# Fields:
+# - minute: 0-59
+# - hour: 0-23 (0 = midnight)
+# - day: 1-31 (day of month)
+# - month: 1-12 (or names: Jan, Feb, etc.)
+# - day-of-week: 0-6 (0 = Sunday, 1 = Monday, etc., or names: Sun, Mon, etc.)
+#
+# Special characters:
+# - *: any value
+# - */n: every n (e.g., */5 = every 5)
+# - 1,2,3: specific values
+# - 1-5: range
+#
+# Examples:
+# - "0 9 * * *" = Daily at 9:00 AM
+# - "0 */2 * * *" = Every 2 hours at the top of the hour
+# - "*/5 * * * *" = Every 5 minutes
+# - "0 8 * * 1" = Every Monday at 8:00 AM
+
+# =============================================================================
+# TIMEOUT FORMAT
+# =============================================================================
+#
+# Timeouts use the format: <number><unit>
+# Supported units:
+# - s: seconds (e.g., "30s", "90s")
+# - m: minutes (e.g., "5m", "45m")
+# - h: hours (e.g., "1h", "2h")
+#
+# Choose timeouts based on your agent's expected workload:
+# - Quick checks: 15-30 minutes
+# - Moderate tasks: 1-2 hours
+# - Heavy processing: 4+ hours (use with caution)
+#
+# IMPORTANT: Timeouts are enforced to prevent stuck agents from consuming resources.
+# Set them longer than your expected runtime, but not so long that errors go unnoticed.
+
+# =============================================================================
+# WHEN TO USE READONLY
+# =============================================================================
+#
+# Set readonly = true when the agent should only READ from the workspace:
+# - Log analysis and reporting
+# - Code review and audits
+# - Documentation generation
+# - Dependency analysis
+#
+# Leave readonly = false (default) when the agent needs to WRITE:
+# - Code generation and modifications
+# - File creation
+# - Test generation
+# - Refactoring tasks
+#
+# SECURITY NOTE: readonly provides protection against accidental modifications
+# but does not guarantee absolute security. The agent still has read access to
+# the entire workspace.
+
+# =============================================================================
+# GLOBAL VS PER-AGENT SETTINGS
+# =============================================================================
+#
+# Global settings ([settings] section) provide defaults that apply to all agents.
+# Per-agent settings (in each [[agent]] section) override global defaults.
+#
+# Precedence (highest to lowest):
+# 1. Per-agent setting (e.g., agent.timeout = "1h")
+# 2. Global setting (e.g., settings.timeout = "2h")
+# 3. Hardcoded default (e.g., timeout = "1h" in the code)
+#
+# BEST PRACTICE: Use global settings for common values, and only override
+# on a per-agent basis when necessary. This makes configuration cleaner and
+# easier to maintain.

@@ -1,0 +1,37 @@
+# Directories not needed for the crate package
+summarizer-narratives
+comms
+sample_prompts
+.github
+scripts
+
+# Development and environment files
+discli.env
+
+# Standard Rust exclusions
+/target
+**/*.rs.bk
+*.pdb
+Cargo.lock
+
+# Test coverage
+/llvm-cov
+*.profraw
+
+# Switchboard runtime and temporary files
+.switchboard/
+.sprint_complete
+.architect_in_progress
+.state/
+
+# Kilo Code configuration (contains API keys - user-specific)
+.kilocode/
+
+# AI agent output artifacts (temporary files)
+.architect-output-*.md
+.prompt-output-*.md
+.janitor-output-*.md
+
+# Documentation files not needed for binary
+*.md
+!.README.md
