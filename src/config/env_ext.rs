@@ -12,7 +12,7 @@ impl crate::config::Config {
         #[cfg(feature = "discord")]
         {
             let env_vars = get_env_vars();
-            self.resolve_discord_config(&env_vars);
+            self.resolve_discord_config(env_vars);
         }
         
         #[cfg(not(feature = "discord"))]

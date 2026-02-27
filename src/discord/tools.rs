@@ -748,7 +748,7 @@ pub fn execute_tool(tool: Tool) -> Result<String, ToolError> {
 /// This is used by the ToolExecutor to convert LLM tool calls into executable Tool variants.
 pub fn parse_tool_from_llm(name: &str, arguments: &str) -> Result<Tool, ToolError> {
     let args: serde_json::Value = serde_json::from_str(arguments)
-        .map_err(|e| ToolError::Json(e))?;
+        .map_err(ToolError::Json)?;
 
     match name {
         "read_file" => {
@@ -876,7 +876,7 @@ mod tests {
 
         // Use scope to ensure cwd is restored before any assertions
         let result = {
-            let backlog_path = Path::new("BACKLOG.md");
+            let _backlog_path = Path::new("BACKLOG.md");
             execute_add_to_backlog("Test feature item", Some("FEATURE"))
         };
 
@@ -906,7 +906,7 @@ mod tests {
 
         // Execute in a scope so result is available after cwd restore
         let result = {
-            let backlog_path = Path::new("BACKLOG.md");
+            let _backlog_path = Path::new("BACKLOG.md");
             execute_add_to_backlog("Untagged backlog item", None)
         };
 

@@ -173,7 +173,7 @@ impl DiscordGateway {
             }
 
             // Check for external shutdown signal
-            if let Ok(_) = shutdown_rx.try_recv() {
+            if shutdown_rx.try_recv().is_ok() {
                 info!("Discord Gateway: external shutdown signal received");
                 return Ok(());
             }

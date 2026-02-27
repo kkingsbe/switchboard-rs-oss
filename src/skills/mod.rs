@@ -2406,7 +2406,6 @@ description: A valid skill
     // ========================================================================
 
     use crate::traits::{ExitStatus, ProcessError, ProcessExecutorTrait, ProcessOutput};
-    use async_trait::async_trait;
     use std::collections::HashMap;
     use std::path::PathBuf;
     use std::sync::Arc;

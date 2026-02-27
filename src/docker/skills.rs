@@ -107,10 +107,10 @@ fn extract_skill_name(skill: &str) -> Result<String, SkillsError> {
         if parts.len() == 2 {
             Ok(parts[1].to_string())
         } else {
-            return Err(SkillsError::InvalidSkillFormat {
+            Err(SkillsError::InvalidSkillFormat {
                 skill_source: skill.to_string(),
                 reason: "Invalid skill format".to_string(),
-            });
+            })
         }
     } else {
         // Format: owner/repo - use the repo part as the skill name
@@ -118,10 +118,10 @@ fn extract_skill_name(skill: &str) -> Result<String, SkillsError> {
         if parts.len() == 2 {
             Ok(parts[1].to_string())
         } else {
-            return Err(SkillsError::InvalidSkillFormat {
+            Err(SkillsError::InvalidSkillFormat {
                 skill_source: skill.to_string(),
                 reason: "Invalid skill format".to_string(),
-            });
+            })
         }
     }
 }

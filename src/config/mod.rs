@@ -3451,6 +3451,7 @@ mod tests {
         assert!(discord.conversation.is_none());
 
     #[test]
+    #[allow(dead_code)]
     fn test_switchboard_toml_skills_parsing() {
         // Test that switchboard.toml loads with skills parsed correctly for agents that have them
         // This verifies the agent-specific skill parsing works correctly

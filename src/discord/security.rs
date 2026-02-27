@@ -304,7 +304,7 @@ mod tests {
         let file_path = subdir.join("file.txt");
         fs::write(&file_path, "test").unwrap();
 
-        let result = validate_path(&Path::new("subdir/file.txt"), allowed_dir);
+        let result = validate_path(Path::new("subdir/file.txt"), allowed_dir);
         assert!(result.is_ok());
         assert!(result.unwrap().starts_with(allowed_dir));
     }
@@ -319,7 +319,7 @@ mod tests {
         fs::write(&file_path, "test").unwrap();
 
         // Try to escape using ".."
-        let result = validate_path(&Path::new("../Cargo.toml"), allowed_dir);
+        let result = validate_path(Path::new("../Cargo.toml"), allowed_dir);
         assert!(result.is_err());
         assert!(result.unwrap_err().contains("escape"));
     }
@@ -330,7 +330,7 @@ mod tests {
         let allowed_dir = temp_dir.path();
 
         // Try to access an absolute path outside the allowed directory
-        let result = validate_path(&Path::new("/etc/passwd"), allowed_dir);
+        let result = validate_path(Path::new("/etc/passwd"), allowed_dir);
         assert!(result.is_err());
         assert!(result.unwrap_err().contains("escapes"));
     }
@@ -356,7 +356,7 @@ mod tests {
             symlink(std::env::temp_dir(), &link_path).unwrap();
 
             // Try to access through the symlink - accessing a file that exists in temp
-            let result = validate_path(&Path::new("link/test_symlink_target"), allowed_dir);
+            let result = validate_path(Path::new("link/test_symlink_target"), allowed_dir);
 
             // Clean up
             if let Err(e) = fs::remove_file(&target_file) {
@@ -365,9 +365,7 @@ mod tests {
 
             // This should fail because the symlink resolves to temp_dir which is outside allowed_dir
             // (unless temp_dir happens to be inside our allowed_dir, which is unlikely)
-            if result.is_ok() {
-                // If it passed, verify the resolved path is actually outside
-                let resolved = result.unwrap();
+            if let Ok(resolved) = result {
                 assert!(
                     !resolved.starts_with(allowed_dir),
                     "Symlink traversal should be blocked, but path {} starts with allowed {}",
@@ -384,7 +382,7 @@ mod tests {
         let allowed_dir = temp_dir.path();
 
         // Try multiple levels of ".."
-        let result = validate_path(&Path::new("a/b/../../../../etc/passwd"), allowed_dir);
+        let result = validate_path(Path::new("a/b/../../../../etc/passwd"), allowed_dir);
         assert!(result.is_err());
         assert!(result.unwrap_err().contains("escape"));
     }

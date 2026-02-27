@@ -35,7 +35,7 @@ pub mod skills;
 /// This function has a 5-second timeout to prevent indefinite hangs when Docker
 /// is unavailable or slow.
 async fn get_docker_socket_path(
-    executor: Option<Arc<dyn ProcessExecutorTrait>>,
+    _executor: Option<Arc<dyn ProcessExecutorTrait>>,
 ) -> Result<Option<String>, ProcessError> {
     // Use tokio::process::Command for async execution with timeout
     // This avoids the issues with spawn_blocking on Windows
@@ -972,7 +972,7 @@ impl crate::traits::DockerClientTrait for DockerClient {
                 
                 // Create tarball
                 let tarball = crate::docker::create_build_context_tarball(&context, &dockerfile)
-                    .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e.to_string()))?;
+                    .map_err(|e| std::io::Error::other(e.to_string()))?;
                 let tarball_bytes = bytes::Bytes::from(tarball.into_inner());
                 
                 let build_options = BuildImageOptions {
@@ -993,7 +993,7 @@ impl crate::traits::DockerClientTrait for DockerClient {
                             }
                         }
                         Err(e) => {
-                            return Err(std::io::Error::new(std::io::ErrorKind::Other, e.to_string()));
+                            return Err(std::io::Error::other(e.to_string()));
                         }
                     }
                 }
