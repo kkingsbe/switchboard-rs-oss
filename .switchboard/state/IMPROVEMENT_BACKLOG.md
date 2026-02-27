@@ -1,334 +1,433 @@
-# Codebase Scan Report
+# IMPROVEMENT_BACKLOG.md
 
-**Project**: switchboard  
-**Scanned**: 2026-02-27T00:07:20Z  
-**Scope**: /workspace (full project)  
-**Files Analyzed**: ~80 Rust source files, ~40 test files
+> Last Audit: 2026-02-27T04:44:10Z
+> Commit Audited: 488988e67aa876ca7cfac823be40982c702367ce
+> Health Trend: degrading
+
+## Summary
+
+| Severity | Count | 
+|----------|-------|
+| Critical | 17 |
+| High | 8 |
+| Medium | 14 |
+| Low | 8 |
+
+## Active Findings
+
+### FIND-001 — Build Failure: Bollard API Incompatibility
+- **Category:** Structure
+- **Severity:** Critical
+- **Effort:** S
+- **Risk:** Safe
+- **Priority Score:** 22/22
+- **Files:** [`src/docker/mod.rs:140`](src/docker/mod.rs:140)
+- **Description:** Function `connect_with_named_pipe_defaults` does not exist in bollard 0.18.1. The Windows-specific Docker connection API has changed, causing compilation failure.
+- **Evidence:** `src/docker/mod.rs:140` - function call to non-existent bollard API
+- **Suggested Fix:** Update the Docker client initialization to use the new bollard API for Windows named pipe connections, or use cross-platform connection method
+- **Status:** OPEN
+
+### FIND-002 — Merge Conflicts in Test Files
+- **Category:** Structure
+- **Severity:** Critical
+- **Effort:** S
+- **Risk:** Safe
+- **Priority Score:** 22/22
+- **Files:** [`tests/mod.rs:8-12`](tests/mod.rs:8), [`tests/performance_common.rs:1-2457`](tests/performance_common.rs:1), [`tests/skills_install_performance.rs:39-65`](tests/skills_install_performance.rs:39), [`tests/skills_install_time_metrics.rs:10`](tests/skills_install_time_metrics.rs:10), [`tests/skills_list_performance.rs:46-80`](tests/skills_list_performance.rs:46)
+- **Description:** Unresolved merge conflicts in test files block the build and prevent tests from running.
+- **Evidence:** Merge conflict markers (<<<<<<<, =======, >>>>>>>) present in test files
+- **Suggested Fix:** Resolve merge conflicts in all affected test files - keep incoming changes for performance tests or remove conflicts if tests are no longer needed
+- **Status:** OPEN
+
+### FIND-003 — panic!() in Production Code
+- **Category:** Error Handling
+- **Severity:** Critical
+- **Effort:** S
+- **Risk:** Medium
+- **Priority Score:** 20/22
+- **Skill:** rust-best-practices
+- **Files:** [`src/docker/skills.rs:111`](src/docker/skills.rs:111), [`src/docker/skills.rs:119`](src/docker/skills.rs:119)
+- **Description:** Direct `panic!()` calls in production code can cause application crashes on invalid input.
+- **Evidence:** `panic!("Invalid skill format: {}", skill)`
+- **Suggested Fix:** Replace `panic!()` with proper error return using `Result<(), SkillsError>` or similar error type
+- **Status:** OPEN
+
+### FIND-004 — .expect() in Production Code
+- **Category:** Error Handling
+- **Severity:** Critical
+- **Effort:** M
+- **Risk:** Medium
+- **Priority Score:** 18/22
+- **Skill:** rust-best-practices
+- **Files:** [`src/docker/mod.rs:901-1162`](src/docker/mod.rs:901), [`src/cli/mod.rs:348`](src/cli/mod.rs:348), [`src/scheduler/mod.rs:1257`](src/scheduler/mod.rs:1257), [`src/logging.rs:44`](src/logging.rs:44), [`src/logging.rs:59`](src/logging.rs:59), [`src/config/mod.rs:41`](src/config/mod.rs:41)
+- **Description:** 17 instances of `.expect()` in production code can panic if unwrapped value is None/Err.
+- **Evidence:** Multiple `.expect("Docker client not available")` calls in docker/mod.rs
+- **Suggested Fix:** Replace `.expect()` calls with proper error handling using `Result<T, Error>` and the `?` operator
+- **Status:** OPEN
+
+### FIND-005 — Swallowed Errors with .ok()
+- **Category:** Error Handling
+- **Severity:** High
+- **Effort:** S
+- **Risk:** Low
+- **Priority Score:** 18/22
+- **Skill:** rust-engineer
+- **Files:** [`src/commands/list.rs:45`](src/commands/list.rs:45), [`src/commands/list.rs:78`](src/commands/list.rs:78), [`src/discord/llm.rs:457-460`](src/discord/llm.rs:457), [`src/discord/api.rs:272-305`](src/discord/api.rs:272)
+- **Description:** Using `.ok()` silently converts errors to default values, hiding configuration errors and making debugging difficult.
+- **Evidence:** `value_str.parse().ok()?` and `.and_then(|s| s.timezone.parse::<Tz>().ok())`
+- **Suggested Fix:** Replace `.ok()` with proper error propagation to maintain error context
+- **Status:** OPEN
+
+### FIND-006 — God Module: docker/run/run.rs
+- **Category:** Complexity
+- **Severity:** Critical
+- **Effort:** L
+- **Risk:** Medium
+- **Priority Score:** 16/22
+- **Files:** [`src/docker/run/run.rs:5115`](src/docker/run/run.rs:1)
+- **Description:** Single file with 5115 lines violates single responsibility principle and is extremely difficult to maintain.
+- **Evidence:** File contains 5115 lines of code
+- **Suggested Fix:** Split into focused submodules: container creation, stream handling, wait strategies, cleanup logic
+- **Status:** OPEN
+
+### FIND-007 — God Module: config/mod.rs
+- **Category:** Complexity
+- **Severity:** Critical
+- **Effort:** L
+- **Risk:** Medium
+- **Priority Score:** 16/22
+- **Files:** [`src/config/mod.rs:3503`](src/config/mod.rs:1)
+- **Description:** Single file with 3503 lines handles configuration loading, validation, parsing, and environment handling.
+- **Evidence:** File contains 3503 lines of code
+- **Suggested Fix:** Extract validation logic, parsing logic, and environment handling into separate modules
+- **Status:** OPEN
+
+### FIND-008 — God Module: skills/mod.rs
+- **Category:** Complexity
+- **Severity:** Critical
+- **Effort:** L
+- **Risk:** Medium
+- **Priority Score:** 16/22
+- **Files:** [`src/skills/mod.rs:2717`](src/skills/mod.rs:1)
+- **Description:** Single file with 2717 lines contains core skills management functionality.
+- **Evidence:** File contains 2717 lines of code
+- **Suggested Fix:** Split into skill discovery, installation, validation, and execution modules
+- **Status:** OPEN
+
+### FIND-009 — God Module: cli/mod.rs
+- **Category:** Complexity
+- **Severity:** Critical
+- **Effort:** L
+- **Risk:** Medium
+- **Priority Score:** 16/22
+- **Files:** [`src/cli/mod.rs:2123`](src/cli/mod.rs:1)
+- **Description:** Single file with 2123 lines contains CLI argument parsing and command handling.
+- **Evidence:** File contains 2123 lines of code
+- **Suggested Fix:** Extract command handlers into separate modules in src/commands/
+- **Status:** OPEN
+
+### FIND-010 — God Module: commands/skills.rs
+- **Category:** Complexity
+- **Severity:** Critical
+- **Effort:** L
+- **Risk:** Medium
+- **Priority Score:** 16/22
+- **Files:** [`src/commands/skills.rs:2067`](src/commands/skills.rs:1)
+- **Description:** Single file with 2067 lines handles skills CLI commands.
+- **Evidence:** File contains 2067 lines of code
+- **Suggested Fix:** Split into subcommands: install, list, remove, update
+- **Status:** OPEN
+
+### FIND-011 — Non-thiserror Error Types
+- **Category:** Skill Violation
+- **Severity:** High
+- **Effort:** M
+- **Risk:** Low
+- **Priority Score:** 16/22
+- **Skill:** rust-best-practices
+- **Files:** [`src/skills/error.rs:34`](src/skills/error.rs:34), [`src/traits/mod.rs:686`](src/traits/mod.rs:686), [`src/config/mod.rs:70`](src/config/mod.rs:70), [`src/discord/tools.rs:23`](src/discord/tools.rs:23), [`src/discord/llm.rs:52`](src/discord/llm.rs:52), [`src/discord/api.rs:362`](src/discord/api.rs:362), [`src/logger/terminal.rs:16`](src/logger/terminal.rs:16), [`src/logger/file.rs:24`](src/logger/file.rs:24)
+- **Description:** 8 custom error types not using `thiserror::Error` derive, causing inconsistent error handling and extra boilerplate.
+- **Evidence:** `#[derive(Debug, Clone, PartialEq)]` instead of `#[derive(thiserror::Error)]`
+- **Suggested Fix:** Migrate error types to use `thiserror::Error` derive macro
+- **Status:** OPEN
+
+### FIND-012 — Excessive .clone() Usage
+- **Category:** Skill Violation
+- **Severity:** High
+- **Effort:** L
+- **Risk:** Low
+- **Priority Score:** 14/22
+- **Skill:** rust-best-practices
+- **Files:** [`src/scheduler/mod.rs`](src/scheduler/mod.rs), [`src/cli/mod.rs`](src/cli/mod.rs), [`src/docker/run/run.rs`](src/docker/run/run.rs), [`src/discord/mod.rs`](src/discord/mod.rs)
+- **Description:** 159 instances of unnecessary `.clone()` calls cause unnecessary heap allocations.
+- **Evidence:** `container_id.clone()`, `agent_name.clone()`, `config.prompt.clone()`
+- **Suggested Fix:** Use references `&T` where ownership transfer is not required
+- **Status:** OPEN
+
+### FIND-012 — Unused Imports
+- **Category:** Dead Code
+- **Severity:** High
+- **Effort:** S
+- **Risk:** Safe
+- **Priority Score:** 16/22
+- **Files:** [`src/discord/gateway.rs:8`](src/discord/gateway.rs:8), [`src/discord/tools.rs:14`](src/discord/tools.rs:14), [`src/traits/mod.rs:17`](src/traits/mod.rs:17), [`src/docker/mod.rs:40`](src/docker/mod.rs:40)
+- **Description:** 4 unused imports create noise and may indicate incomplete refactoring.
+- **Evidence:** Unused imports: `error` in gateway.rs, `error`, `info` in tools.rs, `std::io::Write` in traits/mod.rs
+- **Suggested Fix:** Remove unused imports or use them
+- **Status:** OPEN
+
+### FIND-014 — Broken Documentation Links
+- **Category:** Documentation
+- **Severity:** Medium
+- **Effort:** S
+- **Risk:** Safe
+- **Priority Score:** 16/22
+- **Files:** [`docs/README.md`](docs/README.md), [`docs/installation.md`](docs/installation.md)
+- **Description:** 6 broken links in documentation reference files that don't exist.
+- **Evidence:** Links to quickstart.md, cli.md, env-vars.md, CONTRIBUTING.md, ARCHITECTURE.md
+- **Suggested Fix:** Create missing documentation files or remove broken links
+- **Status:** OPEN
+
+### FIND-015 — God Module: discord/tools.rs
+- **Category:** Complexity
+- **Severity:** High
+- **Effort:** L
+- **Risk:** Medium
+- **Priority Score:** 13/22
+- **Files:** [`src/discord/tools.rs:1616`](src/discord/tools.rs:1)
+- **Description:** Single file with 1616 lines contains Discord tool implementations.
+- **Evidence:** File contains 1616 lines of code
+- **Suggested Fix:** Split into separate tool implementations
+- **Status:** OPEN
+
+### FIND-016 — God Module: discord/llm.rs
+- **Category:** Complexity
+- **Severity:** High
+- **Effort:** L
+- **Risk:** Medium
+- **Priority Score:** 13/22
+- **Files:** [`src/discord/llm.rs:1530`](src/discord/llm.rs:1)
+- **Description:** Single file with 1530 lines contains LLM integration logic.
+- **Evidence:** File contains 1530 lines of code
+- **Suggested Fix:** Extract LLM client, prompt handling, and response parsing
+- **Status:** OPEN
+
+### FIND-017 — God Module: docker/skills.rs
+- **Category:** Complexity
+- **Severity:** High
+- **Effort:** L
+- **Risk:** Medium
+- **Priority Score:** 13/22
+- **Files:** [`src/docker/skills.rs:1484`](src/docker/skills.rs:1)
+- **Description:** Single file with 1484 lines contains Docker-specific skills operations.
+- **Evidence:** File contains 1484 lines of code
+- **Suggested Fix:** Consolidate with skills/mod.rs or extract Docker skill operations
+- **Status:** OPEN
+
+### FIND-018 — God Module: commands/validate.rs
+- **Category:** Complexity
+- **Severity:** High
+- **Effort:** L
+- **Risk:** Medium
+- **Priority Score:** 13/22
+- **Files:** [`src/commands/validate.rs:1420`](src/commands/validate.rs:1)
+- **Description:** Single file with 1420 lines contains validation commands.
+- **Evidence:** File contains 1420 lines of code
+- **Suggested Fix:** Extract validation logic into shared module
+- **Status:** OPEN
+
+### FIND-019 — God Module: docker/mod.rs
+- **Category:** Complexity
+- **Severity:** High
+- **Effort:** L
+- **Risk:** Medium
+- **Priority Score:** 13/22
+- **Files:** [`src/docker/mod.rs:1377`](src/docker/mod.rs:1)
+- **Description:** Single file with 1377 lines contains Docker client operations.
+- **Evidence:** File contains 1377 lines of code
+- **Suggested Fix:** Split into client, container, image, network modules
+- **Status:** OPEN
+
+### FIND-020 — Cron Format Documentation Inconsistency
+- **Category:** Documentation
+- **Severity:** Low
+- **Effort:** S
+- **Risk:** Safe
+- **Priority Score:** 13/22
+- **Files:** [`README.md:188-197`](README.md:188), [`docs/configuration.md:164`](docs/configuration.md:164)
+- **Description:** README shows 6-field cron examples while configuration.md describes 5-field format.
+- **Evidence:** Inconsistent documentation between README and configuration docs
+- **Suggested Fix:** Clarify in docs/configuration.md that both 5-field and 6-field cron expressions are supported
+- **Status:** OPEN
+
+### FIND-021 — Missing API Documentation
+- **Category:** Documentation
+- **Severity:** Low
+- **Effort:** S
+- **Risk:** Safe
+- **Priority Score:** 13/22
+- **Files:** [`src/traits/mod.rs:778`](src/traits/mod.rs:778), [`src/scheduler/clock.rs:24`](src/scheduler/clock.rs:24), [`src/docker/mod.rs:542`](src/docker/mod.rs:542)
+- **Description:** 3 public types lack complete documentation.
+- **Evidence:** RealProcessExecutor, SystemClock, DockerClient lack full doc comments
+- **Suggested Fix:** Add comprehensive doc comments to public types
+- **Status:** OPEN
+
+### FIND-022 — Unused Allow(dead_code) Annotations
+- **Category:** Dead Code
+- **Severity:** Low
+- **Effort:** S
+- **Risk:** Safe
+- **Priority Score:** 13/22
+- **Files:** [`src/config/mod.rs:846`](src/config/mod.rs:846), [`src/discord/gateway.rs:113`](src/discord/gateway.rs:113)
+- **Description:** Dead code annotations on unused functions/structs indicate incomplete cleanup.
+- **Evidence:** `#[allow(dead_code)]` on read_prompt_file and DiscordGateway
+- **Suggested Fix:** Remove unused code or remove the allow annotation if code is intentionally kept
+- **Status:** OPEN
+
+### FIND-023 — God Module: scheduler/mod.rs
+- **Category:** Complexity
+- **Severity:** Medium
+- **Effort:** L
+- **Risk:** Medium
+- **Priority Score:** 10/22
+- **Files:** [`src/scheduler/mod.rs:1259`](src/scheduler/mod.rs:1)
+- **Description:** Single file with 1259 lines contains scheduling logic.
+- **Evidence:** File contains 1259 lines of code
+- **Suggested Fix:** Extract clock, scheduling algorithms, and job management
+- **Status:** OPEN
+
+### FIND-024 — God Module: metrics/store.rs
+- **Category:** Complexity
+- **Severity:** Medium
+- **Effort:** L
+- **Risk:** Medium
+- **Priority Score:** 10/22
+- **Files:** [`src/metrics/store.rs:1091`](src/metrics/store.rs:1)
+- **Description:** Single file with 1091 lines contains metrics storage logic.
+- **Evidence:** File contains 1091 lines of code
+- **Suggested Fix:** Extract storage backends and query logic
+- **Status:** OPEN
+
+### FIND-025 — God Module: discord/config.rs
+- **Category:** Complexity
+- **Severity:** Medium
+- **Effort:** L
+- **Risk:** Medium
+- **Priority Score:** 10/22
+- **Files:** [`src/discord/config.rs:1091`](src/discord/config.rs:1)
+- **Description:** Single file with 1091 lines contains Discord configuration handling.
+- **Evidence:** File contains 1091 lines of code
+- **Suggested Fix:** Split config loading, validation, and management
+- **Status:** OPEN
+
+### FIND-026 — Unsafe Code Without Safety Documentation
+- **Category:** Skill Violation
+- **Severity:** Medium
+- **Effort:** S
+- **Risk:** Medium
+- **Priority Score:** 10/22
+- **Skill:** rust-engineer
+- **Files:** [`src/logging.rs:81`](src/logging.rs:81), [`src/cli/mod.rs:383`](src/cli/mod.rs:383)
+- **Description:** Unsafe code blocks lack safety documentation comments.
+- **Evidence:** `unsafe { INIT.call_once(...) }` and `unsafe { libc::kill(pid, 0) }`
+- **Suggested Fix:** Add safety comments explaining invariants for each unsafe block
+- **Status:** OPEN
+
+### FIND-027 — Redundant Dependencies
+- **Category:** Dependency
+- **Severity:** Low
+- **Effort:** S
+- **Risk:** Safe
+- **Priority Score:** 10/22
+- **Files:** [`Cargo.toml`](Cargo.toml)
+- **Description:** Redundant dependencies detected - serde_derive re-exported by serde since 1.0.
+- **Evidence:** Both `serde` and `serde_derive` listed in dependencies
+- **Suggested Fix:** Remove serde_derive from dependencies (serde re-exports it)
+- **Status:** OPEN
+
+### FIND-028 — Inconsistent Error Type Implementations
+- **Category:** Error Handling
+- **Severity:** Medium
+- **Effort:** M
+- **Risk:** Low
+- **Priority Score:** 8/22
+- **Files:** Multiple error types across codebase
+- **Description:** 13 custom error types with inconsistent derive implementations.
+- **Evidence:** Mix of thiserror::Error, std::error::Error, and manual implementations
+- **Suggested Fix:** Standardize all error types to use thiserror::Error
+- **Status:** OPEN
+
+### FIND-029 — Formatting Issues
+- **Category:** Structure
+- **Severity:** Low
+- **Effort:** S
+- **Risk:** Safe
+- **Priority Score:** 10/22
+- **Files:** 50+ files need formatting
+- **Description:** Multiple files need formatting per cargo fmt rules.
+- **Evidence:** Files like src/cli/mod.rs, src/commands/build.rs, src/discord/config.rs need formatting
+- **Suggested Fix:** Run `cargo fmt` to fix formatting issues
+- **Status:** OPEN
 
 ---
 
-## Executive Summary
+## Priority Order Summary
 
-| Severity | Count | Estimated Effort |
-|----------|-------|------------------|
-| 🔴 Critical | 6 | 8h |
-| 🟠 High | 8 | 12h |
-| 🟡 Medium | 12 | 16h |
-| 🔵 Low | 5 | 4h |
-| ⚪ Convention | 8 | 6h |
-
-**Overall Health Score**: 5.5/10
-
-**Top 3 Priorities**:
-1. **Critical**: Resolve merge conflicts in test files (blocking builds/tests)
-2. **Critical**: Refactor god modules (>500 lines causing maintenance issues)
-3. **High**: Replace unwrap()/expect() in production code with proper error handling
-
----
-
-## Tech Stack Summary
-
-- **Languages**: Rust (2021 edition)
-- **Frameworks**: tokio, clap, bollard (Docker), twilight (Discord Gateway)
-- **Build Tools**: Cargo
-- **Testing**: assert_cmd, tempfile, predicates, serial_test
-- **Key Dependencies**: bollard 0.18, tokio 1.40, twilight-gateway 0.17, serde, tracing
-
----
-
-## Findings by Category
-
-### 🔴 Critical Issues
-
-#### [CRIT-001] Merge Conflicts in Test Files - **File**: `tests/mod.rs` (lines 8-12)
-- **Issue**: Git merge conflict markers present in file. This completely breaks compilation.
-- **Risk**: The project cannot be compiled or tested until resolved. CI/CD pipelines will fail.
-- **Recommendation**: Resolve the merge conflict by keeping the appropriate code and removing conflict markers.
-- **Effort**: S
-
-```rust
-<<<<<<< HEAD
-=======
--------
->>>>>>> skills-improvements
-```
-
-#### [CRIT-002] Massive Merge Conflict in Performance Tests - **File**: `tests/performance_common.rs` (2457 lines)
-- **Issue**: File contains ~1229 lines of duplicated content from unresolved merge conflict
-- **Risk**: Complete test suite failure, massive test file bloat
-- **Recommendation**: Remove duplicate code sections and resolve merge conflicts properly
-- **Effort**: L
-
-#### [CRIT-003] Merge Conflicts in Additional Test Files - **Files**: 
-- `tests/skills_install_performance.rs` (lines 39-65)
-- `tests/skills_install_time_metrics.rs` 
-- `tests/skills_list_performance.rs` (lines 46-80)
-- **Issue**: Multiple test files contain unresolved merge conflict markers
-- **Risk**: Test compilation failures, cannot run test suite
-- **Recommendation**: Resolve all merge conflicts in test files
-- **Effort**: M
-
-#### [CRIT-004] God Module - docker/run/run.rs - **File**: `src/docker/run/run.rs` (5115 lines)
-- **Issue**: Single file with 5115 lines violates Single Responsibility Principle
-- **Risk**: Extremely difficult to maintain, understand, or modify safely
-- **Recommendation**: Split into multiple modules:
-  - Container lifecycle management
-  - Stream handling
-  - Wait/timeout logic
-  - Type definitions
-- **Effort**: L (architectural refactoring)
-
-#### [CRIT-005] God Module - config/mod.rs - **File**: `src/config/mod.rs` (3503 lines)
-- **Issue**: Configuration module is excessively large with 3503 lines
-- **Risk**: Maintenance difficulty, cognitive overload
-- **Recommendation**: Split into:
-  - Config parsing (from_toml)
-  - Config validation
-  - Environment handling
-  - Agent/Schedule types
-- **Effort**: L
-
-#### [CRIT-006] God Module - skills/mod.rs - **File**: `src/skills/mod.rs` (2717 lines)
-- **Issue**: Skills management module is 2717 lines
-- **Risk**: Hard to add new features or debug issues
-- **Recommendation**: Extract into:
-  - Skills manager
-  - Lockfile handling
-  - Skill metadata parsing
-  - Directory scanning
-- **Effort**: L
+| Priority | Finding | Score |
+|----------|---------|-------|
+| 1 | FIND-001: Build Failure (bollard) | 22 |
+| 2 | FIND-002: Merge Conflicts | 22 |
+| 3 | FIND-003: panic!() in Production | 20 |
+| 4 | FIND-004: .expect() in Production | 18 |
+| 5 | FIND-005: Swallowed Errors | 18 |
+| 6 | FIND-006: God Module run.rs | 16 |
+| 7 | FIND-007: God Module config/mod.rs | 16 |
+| 8 | FIND-008: God Module skills/mod.rs | 16 |
+| 9 | FIND-009: God Module cli/mod.rs | 16 |
+| 10 | FIND-010: God Module commands/skills.rs | 16 |
+| 11 | FIND-011: Non-thiserror Errors | 16 |
+| 12 | FIND-012: Unused Imports | 16 |
+| 13 | FIND-014: Broken Doc Links | 16 |
+| 14 | FIND-015: God Module discord/tools.rs | 13 |
+| 15 | FIND-016: God Module discord/llm.rs | 13 |
+| 16 | FIND-017: God Module docker/skills.rs | 13 |
+| 17 | FIND-018: God Module commands/validate.rs | 13 |
+| 18 | FIND-019: God Module docker/mod.rs | 13 |
+| 19 | FIND-012: Excessive .clone() | 14 |
+| 20 | FIND-020: Cron Doc Inconsistency | 13 |
+| 21 | FIND-021: Missing API Docs | 13 |
+| 22 | FIND-022: Unused allow(dead_code) | 13 |
+| 23 | FIND-023: God Module scheduler/mod.rs | 10 |
+| 24 | FIND-024: God Module metrics/store.rs | 10 |
+| 25 | FIND-025: God Module discord/config.rs | 10 |
+| 26 | FIND-026: Unsafe Without Safety Docs | 10 |
+| 27 | FIND-027: Redundant Dependencies | 10 |
+| 28 | FIND-028: Inconsistent Error Types | 8 |
+| 29 | FIND-029: Formatting Issues | 10 |
 
 ---
 
-### 🟠 High Priority Issues
-
-#### [HIGH-001] unwrap()/expect() in Production Code - **File**: `src/logging.rs` (lines 44, 59)
-- **Issue**: Using `.expect()` for operations that can fail in production
-```rust
-std::fs::create_dir_all(&log_dir).expect(&error_msg);
-tracing::subscriber::set_global_default(subscriber).expect("Failed to set tracing subscriber");
-```
-- **Risk**: Application will panic if logging directory creation fails or subscriber setup fails
-- **Recommendation**: Return Result types or use proper error handling
-- **Effort**: M
-
-#### [HIGH-002] unwrap() on Global State - **File**: `src/logging.rs:110`
-- **Issue**: `GLOBAL_LOG_DIR.as_ref().unwrap()` - unsafe access to global state
-- **Risk**: Panic if global state not initialized
-- **Recommendation**: Use get_or_init() pattern or proper initialization
-- **Effort**: S
-
-#### [HIGH-003] expect() for Docker Client - **File**: `src/cli/mod.rs:343`
-- **Issue**: `client.docker().expect("Docker client should be available")`
-- **Risk**: Application panic if Docker unavailable
-- **Recommendation**: Return proper error with actionable message
-- **Effort**: S
-
-#### [HIGH-004] expect() for Scheduler Creation - **File**: `src/scheduler/mod.rs:1257`
-- **Issue**: `Self::new_sync(None, None, None).expect("Failed to create default Scheduler")`
-- **Risk**: Panic on default scheduler creation failure
-- **Recommendation**: Handle error gracefully or make initialization explicit
-- **Effort**: S
-
-#### [HIGH-005] Inconsistent Error Handling - Anyhow in Library Code
-- **Issue**: Using `anyhow::Error` in library modules (discord/mod.rs, docker/mod.rs)
-- **Risk**: According to best practices, anyhow should only be used in binaries
-- **Recommendation**: Use thiserror for library errors, convert to anyhow only at binary boundaries
-- **Files Affected**: src/discord/mod.rs, src/docker/mod.rs
-- **Effort**: M
-
-#### [HIGH-006] Missing Regex Static Initialization Error Handling - **File**: `src/config/mod.rs:41`
-- **Issue**: `Regex::new(...).expect("Invalid SKILL_SOURCE_REGEX pattern")` at static lazy
-- **Risk**: Application cannot start if regex is invalid (unlikely but possible)
-- **Recommendation**: Use compile-time validated regex or handle error gracefully
-- **Effort**: S
-
-#### [HIGH-007] Signal Handler expect() - **File**: `src/commands/logs.rs:306`
-- **Issue**: `signal(SignalKind::terminate()).expect("Failed to setup SIGTERM handler")`
-- **Risk**: Application panic if signal handler setup fails
-- **Recommendation**: Handle error and exit gracefully
-- **Effort**: S
-
-#### [HIGH-008] Unused Imports - **Files**: `src/discord/gateway.rs`, `src/discord/tools.rs`
-- **Issue**: Unused imports detected by compiler:
-  - `error` in gateway.rs:8
-  - `error` and `info` in tools.rs:14
-- **Risk**: Code clutter, potential confusion
-- **Effort**: S
-
----
-
-### 🟡 Medium Priority (Refactoring)
-
-#### [MED-001] God Module - cli/mod.rs - **File**: `src/cli/mod.rs` (2113 lines)
-- **Issue**: CLI module is 2113 lines, handles multiple concerns
-- **Recommendation**: Extract command implementations to separate files
-- **Effort**: M
-
-#### [MED-002] God Module - commands/skills.rs - **File**: `src/commands/skills.rs` (2067 lines)
-- **Issue**: Skills command implementation is 2067 lines
-- **Recommendation**: Split into multiple command handlers
-- **Effort**: M
-
-#### [MED-003] God Module - discord/tools.rs - **File**: `src/discord/tools.rs` (1616 lines)
-- **Issue**: Tools module is 1616 lines
-- **Recommendation**: Extract tool implementations to separate files
-- **Effort**: M
-
-#### [MED-004] God Module - discord/llm.rs - **File**: `src/discord/llm.rs` (1530 lines)
-- **Issue**: LLM handling module is 1530 lines
-- **Recommendation**: Split into client, response handling, tool execution
-- **Effort**: M
-
-#### [MED-005] God Module - docker/skills.rs - **File**: `src/docker/skills.rs` (1484 lines)
-- **Issue**: Docker skills integration is 1484 lines
-- **Recommendation**: Extract skill installation, entrypoint generation
-- **Effort**: M
-
-#### [MED-006] God Module - commands/validate.rs - **File**: `src/commands/validate.rs` (1413 lines)
-- **Issue**: Validation command is 1413 lines
-- **Recommendation**: Split validation logic
-- **Effort**: M
-
-#### [MED-007] God Module - docker/mod.rs - **File**: `src/docker/mod.rs` (1327 lines)
-- **Issue**: Docker module is 1327 lines
-- **Recommendation**: Split into Docker client, container management
-- **Effort**: M
-
-#### [MED-008] God Module - scheduler/mod.rs - **File**: `src/scheduler/mod.rs` (1259 lines)
-- **Issue**: Scheduler module is 1259 lines
-- **Recommendation**: Extract scheduling logic, queue management
-- **Effort**: M
-
-#### [MED-009] God Module - metrics/store.rs - **File**: `src/metrics/store.rs` (1091 lines)
-- **Issue**: Metrics storage is 1091 lines
-- **Recommendation**: Split serialization, file operations
-- **Effort**: M
-
-#### [MED-010] God Module - discord/config.rs - **File**: `src/discord/config.rs` (1091 lines)
-- **Issue**: Discord config is 1091 lines
-- **Recommendation**: Extract parsing, validation
-- **Effort**: M
-
-#### [MED-011] Dead Code - from_u8 Function - **File**: `src/discord/gateway.rs:68`
-- **Issue**: `fn from_u8(val: u8) -> Option<Self>` is never used
-- **Risk**: Unused code, increased compilation time
-- **Recommendation**: Remove or mark #[allow(dead_code)] if intentionally kept
-- **Effort**: S
-
-#### [MED-012] Config Warning - **File**: `.cargo/config.toml`
-- **Issue**: `unused config key 'profile.test.features'`
-- **Risk**: Misconfiguration
-- **Effort**: S
-
----
-
-### 🔵 Low Priority
-
-#### [LOW-001] Cargo fmt Failures - Multiple Files
-- **Issue**: Code formatting doesn't match project standards across many files
-- **Files**: cli/mod.rs, commands/skills.rs, discord/tools.rs, docker/mod.rs, docker/skills.rs, skills/mod.rs, etc.
-- **Recommendation**: Run `cargo fmt` and commit the changes
-- **Effort**: S
-
-#### [LOW-002] Magic Numbers - **File**: `src/discord/tools.rs:370`
-- **Issue**: `let todo_files = ["TODO1.md", "TODO2.md", ...]` - magic numbers
-- **Recommendation**: Define constants for file names
-- **Effort**: S
-
-#### [LOW-003] Missing Documentation - Error Types
-- **Issue**: Some public error types lack comprehensive documentation
-- **Recommendation**: Add doc comments explaining error conditions
-- **Effort**: M
-
-#### [LOW-004] Test File Size - scheduler_tests.rs - **File**: `tests/scheduler_tests.rs` (2811 lines)
-- **Issue**: Single test file is very large
-- **Recommendation**: Consider splitting into multiple test files by functionality
-- **Effort**: M
-
-#### [LOW-005] Test File Size - validate_command.rs - **File**: `tests/validate_command.rs` (1235 lines)
-- **Issue**: Large test file
-- **Recommendation**: Consider splitting
-- **Effort**: M
-
----
-
-### ⚪ Convention Issues
-
-#### [CONV-001] Mixed Error Handling Paradigms
-- **Issue**: Some modules use thiserror, others use anyhow inconsistently
-- **Affected**: discord (anyhow), docker (anyhow), metrics (thiserror), scheduler (thiserror)
-- **Recommendation**: Standardize on thiserror for libraries, anyhow only at binary boundaries
-
-#### [CONV-002] Import Ordering Inconsistency
-- **Issue**: Some files use `use std::` then `use crate::`, others mix differently
-- **Recommendation**: Follow consistent import ordering (std, external, crate)
-
-#### [CONV-003] Test Naming Consistency
-- **Issue**: Mix of test naming conventions (snake_case vs camelCase in test names)
-- **Recommendation**: Follow Rust conventions: `snake_case` for test functions
-
-#### [CONV-004] Module Organization
-- **Issue**: Some large modules could be better organized
-- **Recommendation**: Consider more granular module划分
-
----
-
-## Systemic Patterns
-
-### Pattern: God Modules
-- **Occurrences**: 15+ files exceed 500 lines
-- **Files Affected**: run.rs (5115), config/mod.rs (3503), skills/mod.rs (2717), cli/mod.rs (2113), commands/skills.rs (2067), discord/tools.rs (1616), discord/llm.rs (1530), docker/skills.rs (1484), commands/validate.rs (1413), docker/mod.rs (1327), scheduler/mod.rs (1259), metrics/store.rs (1091), discord/config.rs (1091)
-- **Description**: Many files are excessively large, violating Single Responsibility Principle
-- **Recommendation**: Implement systematic refactoring plan to split large modules
-
-### Pattern: Merge Conflicts in Tests
-- **Occurrences**: 5+ test files
-- **Files Affected**: tests/mod.rs, tests/performance_common.rs, tests/skills_install_performance.rs, tests/skills_install_time_metrics.rs, tests/skills_list_performance.rs
-- **Description**: Unresolved git merge conflicts blocking compilation and testing
-- **Recommendation**: Urgent resolution required - these are blocking all CI/CD
-
-### Pattern: unwrap()/expect() in Production
-- **Occurrences**: 8+ locations identified
-- **Files Affected**: logging.rs, cli/mod.rs, scheduler/mod.rs, config/mod.rs, commands/logs.rs
-- **Description**: Using panic-on-failure patterns instead of proper error handling
-- **Recommendation**: Replace with Result types and proper error propagation
-
----
-
-## Recommendations Roadmap
+## Recommended Action Plan
 
 ### Immediate (This Sprint)
-- [ ] **CRIT-001**: Resolve merge conflict in tests/mod.rs - 30m
-- [ ] **CRIT-002**: Resolve merge conflict in tests/performance_common.rs - 2h
-- [ ] **CRIT-003**: Resolve remaining test file merge conflicts - 1h
-- [ ] **HIGH-001 through HIGH-004**: Replace unwrap/expect in production code - 2h
+1. **FIX-001**: Resolve merge conflicts in test files (FIND-002) - Unblocks build
+2. **FIX-002**: Fix bollard API compatibility (FIND-001) - Unblocks build
+3. **FIX-003**: Replace panic!() calls (FIND-003) - Critical error handling
 
-### Short-term (Next 2-4 weeks)
-- [ ] **HIGH-005**: Standardize error handling (thiserror for libs) - 4h
-- [ ] **MED-001 through MED-012**: Begin god module refactoring - 16h
-- [ ] Run `cargo fmt` and commit formatting fixes - 1h
+### Short-term (Next 2-4 Weeks)
+4. **FIX-004**: Replace .expect() calls in production (FIND-004)
+5. **FIX-005**: Fix swallowed errors (FIND-005)
+6. **FIX-006**: Migrate to thiserror (FIND-011)
+7. **FIX-007**: Clean up unused imports (FIND-012)
+8. **FIX-008**: Fix broken doc links (FIND-014)
+
+### Medium-term (1-2 Months)
+9. **FIX-009**: Refactor god modules (FIND-006 through FIND-010) - Start with top 5
+10. **FIX-010**: Reduce .clone() usage (FIND-012)
 
 ### Long-term (Backlog)
-- [ ] **CRIT-004 through CRIT-006**: Architectural refactoring of god modules - 20h+
-- [ ] Complete module extraction and proper abstraction - 24h+
-
----
-
-## Appendix
-
-### Files Scanned
-- src/ (main library code): 80 files, ~35,000 lines
-- tests/: 40+ test files, ~25,000 lines total
-- Total: ~60,000 lines of Rust code
-
-### Skipped Files
-- None intentionally skipped - full codebase scanned
-
-### Health Score Calculation
-- Critical issues (6) × 2 = 12 points deducted
-- High issues (8) × 1 = 8 points deducted  
-- Medium issues (12) × 0.5 = 6 points deducted
-- Low issues (5) × 0.25 = 1.25 points deducted
-- Convention issues (8) × 0.25 = 2 points deducted
-- **Score**: 10 - 12 - 8 - 6 - 1.25 - 2 = 5.5/10
+11. Refactor remaining god modules (FIND-015 through FIND-025)
+12. Add safety documentation to unsafe blocks (FIND-026)
+13. Clean up redundant dependencies (FIND-027)
+14. Standardize error types (FIND-028)
+15. Run formatting pass (FIND-029)
