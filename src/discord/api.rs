@@ -272,7 +272,13 @@ impl DiscordApiClient {
             .headers()
             .get("X-RateLimit-Remaining")
             .and_then(|v| v.to_str().ok())
-            .and_then(|v| v.parse().ok())
+            .and_then(|v| match v.parse() {
+                Ok(val) => Some(val),
+                Err(e) => {
+                    warn!("Failed to parse X-RateLimit-Remaining header: {}", e);
+                    None
+                }
+            })
         {
             self.rate_limit_remaining = remaining;
         }
@@ -281,7 +287,13 @@ impl DiscordApiClient {
             .headers()
             .get("X-RateLimit-Reset")
             .and_then(|v| v.to_str().ok())
-            .and_then(|v| v.parse::<u64>().ok())
+            .and_then(|v| match v.parse::<u64>() {
+                Ok(val) => Some(val),
+                Err(e) => {
+                    warn!("Failed to parse X-RateLimit-Reset header: {}", e);
+                    None
+                }
+            })
         {
             // Convert Unix timestamp to Instant
             let now = std::time::SystemTime::now()
@@ -302,7 +314,13 @@ impl DiscordApiClient {
             .headers()
             .get("Retry-After")
             .and_then(|v| v.to_str().ok())
-            .and_then(|v| v.parse().ok())
+            .and_then(|v| match v.parse() {
+                Ok(val) => Some(val),
+                Err(e) => {
+                    warn!("Failed to parse Retry-After header: {}", e);
+                    None
+                }
+            })
             .unwrap_or_else(|| {
                 warn!("Missing or invalid Retry-After header, using default 1s");
                 1
