@@ -463,7 +463,10 @@ impl OpenRouterClient {
                             60
                         })
                     })
-                    .unwrap_or(60);
+                    .unwrap_or_else(|| {
+                        warn!("Missing or invalid retry-after header, using default 60s");
+                        60
+                    });
                 Err(LlmError::RateLimited(wait_secs))
             }
             500..=599 => {

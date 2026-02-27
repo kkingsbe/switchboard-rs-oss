@@ -7,6 +7,7 @@ use reqwest::header::{HeaderMap, HeaderValue, AUTHORIZATION, CONTENT_TYPE};
 use serde::{Deserialize, Serialize};
 use std::time::{Duration, Instant};
 use thiserror::Error;
+use tracing::warn;
 
 /// Maximum length of a Discord message
 const MAX_MESSAGE_LENGTH: usize = 2000;
@@ -302,7 +303,10 @@ impl DiscordApiClient {
             .get("Retry-After")
             .and_then(|v| v.to_str().ok())
             .and_then(|v| v.parse().ok())
-            .unwrap_or(1)
+            .unwrap_or_else(|| {
+                warn!("Missing or invalid Retry-After header, using default 1s");
+                1
+            })
     }
 
     // ========================================
