@@ -39,3 +39,4 @@ pub mod metrics;
 pub mod scheduler;
 pub mod skills;
 pub mod traits;
+pub mod ui;

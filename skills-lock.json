@@ -5,6 +5,11 @@
       "source": "apollographql/skills",
       "sourceType": "github",
       "computedHash": "3d80db37cef0198fe21f6f10363bbe0a7cb3f36afab49d0f3270fad4abc2a6d9"
+    },
+    "rust-engineer": {
+      "source": "jeffallan/claude-skills",
+      "sourceType": "github",
+      "computedHash": "6351a9cf8f48d380eac41a076730ae222e7c9958cb4453afbe7c30d67c4c8cea"
     }
   }
 }

@@ -37,60 +37,82 @@ pub mod skills;
 async fn get_docker_socket_path(
     executor: Option<Arc<dyn ProcessExecutorTrait>>,
 ) -> Result<Option<String>, ProcessError> {
+    eprintln!("DEBUG: get_docker_socket_path() called");
     let executor = executor.unwrap_or_else(|| Arc::new(RealProcessExecutor::new()));
 
-    // Clone executor for first closure
-    let executor_clone1 = executor.clone();
-    // Use docker context show to get the active context name (with timeout)
+    // Use tokio::process::Command for async execution with timeout
+    // This avoids the issues with spawn_blocking on Windows
+    eprintln!("DEBUG: About to run docker context show with timeout...");
+    
+    // Try to get Docker context with timeout
     let output = tokio::time::timeout(
         Duration::from_secs(5),
-        tokio::task::spawn_blocking(move || {
-            executor_clone1.execute("docker", &["context".to_string(), "show".to_string()])
-        }),
+        async {
+            let output = tokio::process::Command::new("docker")
+                .args(["context", "show"])
+                .output()
+                .await
+                .map_err(|e| {
+                    ProcessError::ExecutionFailed {
+                        program: "docker".to_string(),
+                        error_details: format!("Failed to run docker context show: {}", e),
+                        suggestion: "Check if Docker is installed".to_string(),
+                    }
+                })?;
+            Ok::<_, ProcessError>(output)
+        }
     )
     .await
-    .map_err(|_| ProcessError::ExecutionFailed {
-        program: "docker".to_string(),
-        error_details: "Timeout getting Docker context (docker context show)".to_string(),
-        suggestion: "Check if Docker is running and responsive".to_string(),
-    })?
-    .map_err(|e| ProcessError::ExecutionFailed {
-        program: "docker".to_string(),
-        error_details: format!("Failed to get Docker context: {}", e),
-        suggestion: "Check if Docker is running".to_string(),
+    .map_err(|_| {
+        eprintln!("DEBUG: Timeout occurred for docker context show!");
+        ProcessError::ExecutionFailed {
+            program: "docker".to_string(),
+            error_details: "Timeout getting Docker context (docker context show)".to_string(),
+            suggestion: "Check if Docker is running and responsive".to_string(),
+        }
     })??;
 
-    let context_name = output.stdout.trim().to_string();
+    eprintln!("DEBUG: docker context show completed successfully");
 
-    // Clone executor for second closure
-    let executor_clone2 = executor.clone();
+    let context_name = String::from_utf8_lossy(&output.stdout).trim().to_string();
+
+    eprintln!("DEBUG: About to run docker context inspect with timeout for context: {}", context_name);
+
     // Use docker context inspect to get the endpoint for the active context (with timeout)
     let output = tokio::time::timeout(
         Duration::from_secs(5),
-        tokio::task::spawn_blocking(move || {
-            executor_clone2.execute(
-                "docker",
-                &["context".to_string(), "inspect".to_string(), context_name],
-            )
-        }),
+        async {
+            let output = tokio::process::Command::new("docker")
+                .args(["context", "inspect", &context_name])
+                .output()
+                .await
+                .map_err(|e| {
+                    ProcessError::ExecutionFailed {
+                        program: "docker".to_string(),
+                        error_details: format!("Failed to run docker context inspect: {}", e),
+                        suggestion: "Check if Docker is installed".to_string(),
+                    }
+                })?;
+            Ok::<_, ProcessError>(output)
+        }
     )
     .await
-    .map_err(|_| ProcessError::ExecutionFailed {
-        program: "docker".to_string(),
-        error_details: "Timeout inspecting Docker context (docker context inspect)".to_string(),
-        suggestion: "Check if Docker is running and responsive".to_string(),
-    })?
-    .map_err(|e| ProcessError::ExecutionFailed {
-        program: "docker".to_string(),
-        error_details: format!("Failed to inspect Docker context: {}", e),
-        suggestion: "Check if Docker is running".to_string(),
+    .map_err(|_| {
+        eprintln!("DEBUG: Timeout occurred for docker context inspect!");
+        ProcessError::ExecutionFailed {
+            program: "docker".to_string(),
+            error_details: "Timeout inspecting Docker context (docker context inspect)".to_string(),
+            suggestion: "Check if Docker is running and responsive".to_string(),
+        }
     })??;
 
-    let json_output = &output.stdout;
+    eprintln!("DEBUG: docker context inspect completed successfully");
+
+    let json_output = String::from_utf8_lossy(&output.stdout);
 
     // Parse the JSON to extract the Docker endpoint
     // The endpoint is in the format: {"Endpoints": {"docker": {"Host": "unix:///path/to/socket"}}}
-    if let Ok(parsed) = serde_json::from_str::<serde_json::Value>(json_output) {
+    if let Ok(parsed) = serde_json::from_str::<serde_json::Value>(&json_output) {
         if let Some(host) = parsed[0]["Endpoints"]["docker"]["Host"].as_str() {
             // Return the full host string (e.g., "unix:///path/to/sock")
             return Ok(Some(host.to_string()));
@@ -109,21 +131,33 @@ async fn get_docker_socket_path(
 pub async fn connect_to_docker(
     executor: Option<Arc<dyn ProcessExecutorTrait>>,
 ) -> Result<Docker, anyhow::Error> {
+    eprintln!("DEBUG: connect_to_docker() called");
     let executor = executor.unwrap_or_else(|| Arc::new(RealProcessExecutor::new()));
 
     // Try to get socket path from Docker context first
     if let Ok(Some(socket_path)) = get_docker_socket_path(Some(executor.clone())).await {
+        eprintln!("DEBUG: Got socket path: {}", socket_path);
         // Handle unix:// socket paths
         if socket_path.starts_with("unix://") {
             let path = socket_path.strip_prefix("unix://").unwrap();
             // Try connecting to the context's socket
+            eprintln!("DEBUG: Attempting to connect to socket: {}", path);
             if let Ok(docker) = Docker::connect_with_socket(path, 5, bollard::API_DEFAULT_VERSION) {
+                eprintln!("DEBUG: Connected to socket successfully");
+                return Ok(docker);
+            }
+        } else if socket_path.starts_with("npipe://") {
+            // Windows named pipe
+            let path = socket_path.strip_prefix("npipe://").unwrap();
+            eprintln!("DEBUG: Attempting to connect to named pipe: {}", path);
+            if let Ok(docker) = Docker::connect_with_named_pipe_defaults() {
+                eprintln!("DEBUG: Connected to named pipe successfully");
                 return Ok(docker);
             }
         }
     }
 
-    // Fall back to default local connection
+    eprintln!("DEBUG: Falling back to connect_with_local_defaults()");
     Docker::connect_with_local_defaults().map_err(|e| anyhow::anyhow!("{}", e))
 }
 
@@ -376,6 +410,7 @@ pub fn create_build_context_tarball(
         tar_builder.append_data(&mut header, dockerfile_path, dockerfile_content.as_bytes())?;
 
         // Add all files from the build context directory
+        // Only include .kilocode directory (the Dockerfile only copies this)
         if build_context.is_dir() {
             let entries = std::fs::read_dir(build_context)
                 .map_err(|e| anyhow::anyhow!("Failed to read build context: {}", e))?;
@@ -391,6 +426,15 @@ pub fn create_build_context_tarball(
                 // Skip the Dockerfile if it exists in the build context (we already added it)
                 if relative_path == Path::new("Dockerfile") {
                     continue;
+                }
+
+                // Only include .kilocode directory - everything else is not needed
+                // (the Dockerfile only copies .kilocode into the image)
+                let name = relative_path.file_name()
+                    .and_then(|n| n.to_str())
+                    .unwrap_or("");
+                if name != "kilocode" {
+                    continue; // Skip everything except .kilocode
                 }
 
                 if path.is_file() {
@@ -420,6 +464,7 @@ pub fn create_build_context_tarball(
         encoder.finish()?;
     }
 
+    eprintln!("DEBUG: create_build_context_tarball about to return");
     Ok(Cursor::new(tarball))
 }
 
@@ -545,6 +590,7 @@ impl DockerClient {
     /// Returns `DockerError::ConnectionError` if the connection to Docker daemon fails.
     /// Returns `DockerError::DockerUnavailable` if Docker is not available (ping fails).
     pub async fn new(image_name: String, image_tag: String) -> Result<Self, DockerError> {
+        eprintln!("DEBUG: DockerClient::new() called");
         Self::new_with_executor(image_name, image_tag, None).await
     }
 
@@ -607,8 +653,28 @@ impl DockerClient {
             DockerError::ConnectionError(helpful_msg)
         })?;
 
-        // Verify Docker is available by pinging the daemon
-        docker.ping().await.map_err(|e| {
+        // Verify Docker is available by pinging the daemon (with timeout)
+        eprintln!("DEBUG: About to ping Docker daemon with 10s timeout...");
+        let ping_result = tokio::time::timeout(
+            Duration::from_secs(10),
+            docker.ping(),
+        )
+        .await;
+
+        eprintln!("DEBUG: Ping result: {:?}", ping_result);
+
+        ping_result
+            .map_err(|_| {
+                DockerError::DockerUnavailable {
+                    reason: "Docker ping timed out after 10 seconds".to_string(),
+                    suggestion: "Docker daemon may be slow to respond. Check Docker status with: docker info\n\n\
+                        If Docker is not running:\n\
+                        - Linux: sudo systemctl start docker\n\
+                        - macOS/Windows: Start Docker Desktop"
+                        .to_string(),
+                }
+            })?
+            .map_err(|e| {
             let error_msg = e.to_string();
             DockerError::DockerUnavailable {
                 reason: format!(
@@ -796,6 +862,7 @@ impl DockerClient {
         image_tag: &str,
         no_cache: bool,
     ) -> Result<String, DockerError> {
+        eprintln!("DEBUG: build_agent_image() called");
         // Verify build context exists
         if !build_context.exists() {
             return Err(DockerError::BuildError {
@@ -824,9 +891,11 @@ impl DockerClient {
         // Create BuildOptions from the parameters
         let options = BuildOptions::new(image_name, image_tag).with_dockerfile(dockerfile);
 
+        eprintln!("DEBUG: About to call self.client.build_image()...");
         let image_id = self
             .client
             .build_image(options, build_context.to_path_buf())?;
+        eprintln!("DEBUG: build_image() completed, image_id: {}", image_id);
 
         // Clean up the temporary Dockerfile
         let _ = std::fs::remove_file(&dockerfile_path);

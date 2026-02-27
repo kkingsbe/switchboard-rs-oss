@@ -132,6 +132,8 @@ impl BuildCommand {
 
         println!("Dockerfile read: {} bytes", dockerfile_content.len());
 
+        println!("DEBUG: Creating DockerClient...");
+
         // Create DockerClient instance
         let docker_client = DockerClient::new(image_name.clone(), image_tag.clone()).await
             .map_err(|e| {
@@ -145,6 +147,7 @@ impl BuildCommand {
             })?;
 
         // Build the agent image
+        eprintln!("DEBUG: About to call build_agent_image...");
         docker_client
             .build_agent_image(
                 &dockerfile_content,

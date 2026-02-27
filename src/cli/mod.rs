@@ -23,6 +23,7 @@ use crate::metrics::MetricsStore;
 use crate::scheduler::Scheduler;
 use crate::scheduler::SchedulerError;
 use crate::traits::{DockerClientTrait, ProcessExecutorTrait, RealProcessExecutor};
+use crate::ui::ColorMode;
 use bollard::container::{ListContainersOptions, StopContainerOptions};
 use clap::{Parser, Subcommand};
 use std::collections::HashMap;
@@ -176,6 +177,10 @@ pub struct Cli {
     /// Path to the configuration file (default: ./switchboard.toml)
     #[arg(short, long, value_name = "PATH")]
     pub config: Option<String>,
+
+    /// Control colored output (auto, always, never)
+    #[arg(long, value_enum, default_value = "auto")]
+    pub color: ColorMode,
 
     #[command(subcommand)]
     pub command: Commands,
@@ -528,10 +533,11 @@ fn check_and_clean_stale_pid_file(pid_file_path: &Path) -> Result<(), Box<dyn st
 ///   validate  Parse and validate config file
 ///   skills    Manage Kilo skills
 /// ```
-pub async fn run() -> Result<(), Box<dyn std::error::Error>> {
+pub async fn run() -> Result<ColorMode, Box<dyn std::error::Error>> {
     let cli = Cli::parse();
+    let color_mode = cli.color;
 
-    match cli.command {
+    let result = match cli.command {
         Commands::Up(args) => run_up(args, cli.config).await,
         Commands::Run(args) => run_run(args, cli.config).await,
         Commands::Build(args) => run_build(args, cli.config).await,
@@ -542,7 +548,11 @@ pub async fn run() -> Result<(), Box<dyn std::error::Error>> {
         Commands::Validate(args) => run_validate(args, cli.config).await,
         Commands::Skills(args) => run_skills(args, cli.config).await,
         Commands::Status => run_status(cli.config),
-    }
+    };
+
+    // Return the color_mode regardless of success or failure
+    result?;
+    Ok(color_mode)
 }
 
 /// Handler for the 'up' command - Build agent image and start the scheduler

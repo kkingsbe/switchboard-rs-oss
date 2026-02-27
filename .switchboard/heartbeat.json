@@ -1,36 +1,26 @@
 {
-  "pid": 41916,
-  "last_heartbeat": "2026-02-26T22:48:45.334219100+00:00",
+  "pid": 3812,
+  "last_heartbeat": "2026-02-27T04:05:57.457436600+00:00",
   "state": "running",
   "agents": [
     {
-      "name": "gt-dev-1",
-      "schedule": "0 */20 * * * *",
+      "name": "sb-auditor",
+      "schedule": "0 0 */4 * *",
       "current_run": null
     },
     {
-      "name": "gt-dev-2",
-      "schedule": "0 */20 * * * *",
+      "name": "sb-refactor-1",
+      "schedule": "0 */45 * * *",
       "current_run": null
     },
     {
-      "name": "gt-dev-3",
-      "schedule": "0 */20 * * * *",
-      "current_run": null
-    },
-    {
-      "name": "gt-dev-4",
-      "schedule": "0 */20 * * * *",
+      "name": "sb-refactor-2",
+      "schedule": "15 */45 * * *",
       "current_run": null
     },
     {
       "name": "gt-summarizer",
       "schedule": "0 0 * * * *",
-      "current_run": null
-    },
-    {
-      "name": "gt-feature-architect",
-      "schedule": "0 */45 * * * *",
       "current_run": null
     }
   ]

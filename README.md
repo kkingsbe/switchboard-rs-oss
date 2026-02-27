@@ -118,12 +118,44 @@ The scheduler will run in the foreground. Press `Ctrl+C` to stop.
 |------------|---------|---------|
 | **Docker** | 20.10+ | Container runtime for agent isolation |
 | **Rust** | 1.70+ | Required for `cargo install` |
+| **Kilo Code Token** | - | API token for AI agent execution |
+
+> ⚠️ **Note**: You must obtain a Kilo Code token to run AI agents. After cloning, copy `.kilocode/cli/config.example.json` to `.kilocode/cli/config.json` and fill in your token and model choice. See [Kilo Code Configuration](#kilo-code-configuration) for details.
+
+### Kilo Code Configuration
+
+Switchboard requires a Kilo Code token to execute AI agents. After cloning the repository:
+
+1. Copy the example config file:
+   ```bash
+   cp .kilocode/cli/config.example.json .kilocode/cli/config.json
+   ```
+
+2. Edit `.kilocode/cli/config.json` and fill in your token:
+   ```json
+   {
+     "id": "default",
+     "provider": "kilocode",
+     "kilocodeToken": "YOUR_TOKEN_HERE",
+     "kilocodeModel": "z-ai/glm-4.7",
+     "kilocodePosthogApiKey": ""
+   }
+   ```
+
+3. Available models include:
+   - `z-ai/glm-4.7` (default)
+   - `minimax/minimax-m2.5`
 
 ### Install from Source
 
 ```bash
 git clone https://github.com/switchboard-ai/switchboard.git
 cd switchboard
+
+# Configure Kilo Code token
+cp .kilocode/cli/config.example.json .kilocode/cli/config.json
+# Edit config.json and add your kilocodeToken and optionally change kilocodeModel
+
 cargo install --path .
 ```
 

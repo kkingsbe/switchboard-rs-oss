@@ -14,6 +14,7 @@
 use bollard::Docker;
 use futures::StreamExt;
 use std::fmt::Debug;
+use std::io::Write;
 use std::path::PathBuf;
 use std::process::Command;
 use tokio::time::Duration;
@@ -335,63 +336,66 @@ impl DockerClientTrait for RealDockerClient {
             ..Default::default()
         };
 
-        let image_id = tokio::runtime::Handle::current()
-            .block_on(async {
-                // Wrap the entire build operation with a 5-minute (300 second) timeout
-                tokio::time::timeout(
-                    Duration::from_secs(300),
-                    async {
-                        let mut stream = self
-                            .docker
-                            .build_image(build_options, None, Some(tarball_bytes));
+        // Use block_in_place to avoid deadlock when called from async context
+        let image_id = tokio::task::block_in_place(|| {
+            tokio::runtime::Handle::current()
+                .block_on(async {
+                    // Wrap the entire build operation with a 10-minute (600 second) timeout
+                    tokio::time::timeout(
+                        Duration::from_secs(600),
+                        async {
+                            let mut stream = self
+                                .docker
+                                .build_image(build_options, None, Some(tarball_bytes));
 
-                        let mut final_image_id = String::new();
+                            let mut final_image_id = String::new();
 
-                        while let Some(build_result) = stream.next().await {
-                            match build_result {
-                                Ok(info) => {
-                                    if let Some(id) = info.id {
-                                        final_image_id = id;
+                            while let Some(build_result) = stream.next().await {
+                                match build_result {
+                                    Ok(info) => {
+                                        if let Some(id) = info.id {
+                                            final_image_id = id;
+                                        }
+                                        // Print build output to user so they can see progress
+                                        if let Some(stream_type) = info.stream {
+                                            print!("{}", stream_type);
+                                        }
                                     }
-                                    // Log build output for debugging
-                                    if let Some(stream_type) = info.stream {
-                                        tracing::debug!("Build output: {}", stream_type);
+                                    Err(e) => {
+                                        return Err(e);
                                     }
-                                }
-                                Err(e) => {
-                                    return Err(e);
                                 }
                             }
-                        }
 
-                        if final_image_id.is_empty() {
-                            // If no image ID from stream, use the image name
-                            Ok(image_name.clone())
-                        } else {
-                            Ok(final_image_id)
-                        }
-                    },
-                )
-                .await
-                .map_err(|_| {
-                    // Timeout error
-                    std::io::Error::new(
-                        std::io::ErrorKind::TimedOut,
-                        "Docker build timed out after 300 seconds",
+                            if final_image_id.is_empty() {
+                                // If no image ID from stream, use the image name
+                                Ok(image_name.clone())
+                            } else {
+                                Ok(final_image_id)
+                            }
+                        },
                     )
-                })?
-            })
-            .map_err(|e| DockerError::BuildError {
-                error_details: e.to_string(),
-                suggestion: if e.to_string().contains("Timed out") {
-                    "Docker build timed out after 5 minutes. The build may be taking too long, 
+                    .await
+                    .map_err(|_| {
+                        // Timeout error
+                        std::io::Error::new(
+                            std::io::ErrorKind::TimedOut,
+                            "Docker build timed out after 600 seconds",
+                        )
+                    })?
+                })
+                .map_err(|e| DockerError::BuildError {
+                    error_details: e.to_string(),
+                    suggestion: if e.to_string().contains("Timed out") {
+                        "Docker build timed out after 10 minutes. The build may be taking too long, 
 or there may be network issues. Try again or check your network connection.".to_string()
-                } else {
-                    "Check Docker build logs for details".to_string()
-                },
-            })?;
+                    } else {
+                        "Check Docker build logs for details".to_string()
+                    },
+                })
+        });
 
-        Ok(image_id)
+        image_id
     }
 
     fn run_container(&self, config: ContainerConfig) -> Result<String, DockerError> {

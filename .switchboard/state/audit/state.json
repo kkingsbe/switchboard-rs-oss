@@ -1,0 +1,41 @@
+{
+  "last_audit": "2026-02-27T00:14:50Z",
+  "scope": "full",
+  "health_score": 5.5,
+  "findings_hash": "a1b2c3d4e5f6",
+  "critical_count": 6,
+  "high_count": 8,
+  "medium_count": 12,
+  "low_count": 5,
+  "convention_count": 8,
+  "total_findings": 39,
+  "top_priorities": [
+    "Resolve merge conflicts in test files",
+    "Refactor god modules (>500 lines)",
+    "Replace unwrap()/expect() in production code"
+  ],
+  "build_status": "passed_with_warnings",
+  "clippy_status": "not_run_due_to_conflicts",
+  "fmt_status": "failed",
+  "test_status": "blocked_by_merge_conflicts",
+  "files_analyzed": {
+    "src": 80,
+    "tests": 40,
+    "total_lines": 60000
+  },
+  "god_modules": [
+    "src/docker/run/run.rs (5115 lines)",
+    "src/config/mod.rs (3503 lines)",
+    "src/skills/mod.rs (2717 lines)",
+    "src/cli/mod.rs (2113 lines)",
+    "src/commands/skills.rs (2067 lines)",
+    "src/discord/tools.rs (1616 lines)",
+    "src/discord/llm.rs (1530 lines)",
+    "src/docker/skills.rs (1484 lines)",
+    "src/commands/validate.rs (1413 lines)",
+    "src/docker/mod.rs (1327 lines)",
+    "src/scheduler/mod.rs (1259 lines)",
+    "src/metrics/store.rs (1091 lines)",
+    "src/discord/config.rs (1091 lines)"
+  ]
+}
