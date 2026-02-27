@@ -898,9 +898,13 @@ pub async fn run_up(
                         println!("  ✓ Discord listener spawned (optional)");
 
                         // Wait indefinitely for Ctrl+C signal
-                        let _ = tokio::signal::ctrl_c().await;
+                        if let Err(e) = tokio::signal::ctrl_c().await {
+                            eprintln!("Failed to listen for Ctrl+C: {}", e);
+                        }
                         println!("\n\n⚠ Received Ctrl+C, shutting down scheduler...");
-                        let _ = shutdown_tx.send(());
+                        if shutdown_tx.send(()).is_err() {
+                            eprintln!("Warning: shutdown receiver was dropped");
+                        }
 
                         // Wait for Discord to finish (with timeout)
                         match tokio::time::timeout(
@@ -924,7 +928,9 @@ pub async fn run_up(
                         );
 
                         // Wait indefinitely for Ctrl+C signal
-                        let _ = tokio::signal::ctrl_c().await;
+                        if let Err(e) = tokio::signal::ctrl_c().await {
+                            eprintln!("Failed to listen for Ctrl+C: {}", e);
+                        }
                         println!("\n\n⚠ Received Ctrl+C, shutting down scheduler...");
 
                         if let Err(e) = sched.stop().await {
