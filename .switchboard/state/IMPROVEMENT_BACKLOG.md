@@ -25,7 +25,8 @@
 - **Description:** Invalid Rust syntax: `use std::io::self;` - self imports are only allowed within a { } list
 - **Evidence:** `src/traits/mod.rs:17` - `use std::io::self;`
 - **Suggested Fix:** Change to `use std::io;`
-- **Status:** OPEN
+- **Status:** SCHEDULED
+- **Scheduled:** Improvement Sprint 1, assigned to .switchboard/state/REFACTOR_TODO2.md
 
 ### FIND-002 — panic!() in Production Code
 - **Category:** Error Handling
@@ -38,7 +39,8 @@
 - **Description:** Direct `panic!()` calls in production code can cause application crashes on invalid input.
 - **Evidence:** `panic!("Invalid skill format: {}", skill)` and `panic!("Failed to create log directory: {}", log_dir.display())`
 - **Suggested Fix:** Replace `panic!()` with proper error return using `Result<(), SkillsError>` or similar error type
-- **Status:** OPEN
+- **Status:** SCHEDULED
+- **Scheduled:** Improvement Sprint 1, assigned to .switchboard/state/REFACTOR_TODO2.md
 
 ### FIND-003 — .expect()/.unwrap() in Production Code (Mutex Locks)
 - **Category:** Error Handling
@@ -77,7 +79,8 @@
 - **Description:** Using `let _ = ...` silently discards errors, hiding failures from file operations, signal handling, and logging.
 - **Evidence:** `let _ = logger_guard.write_terminal_output(&message);`, `let _ = tokio::signal::ctrl_c().await;`
 - **Suggested Fix:** Propagate errors using `?` operator or log warnings for non-critical failures
-- **Status:** OPEN
+- **Status:** SCHEDULED
+- **Scheduled:** Improvement Sprint 1, assigned to .switchboard/state/REFACTOR_TODO1.md and .switchboard/state/REFACTOR_TODO2.md
 
 ### FIND-006 — .ok() Silently Defaulting Errors
 - **Category:** Error Handling
@@ -90,7 +93,8 @@
 - **Description:** Using `.ok()` silently converts errors to default values, hiding configuration errors and rate limit parsing failures.
 - **Evidence:** `.and_then(|s| s.timezone.parse::<Tz>().ok())` and rate limit header parsing
 - **Suggested Fix:** Replace `.ok()` with proper error propagation using `?` to maintain error context
-- **Status:** OPEN
+- **Status:** SCHEDULED
+- **Scheduled:** Improvement Sprint 1, assigned to .switchboard/state/REFACTOR_TODO1.md
 
 ### FIND-007 — God Module: docker/run/run.rs
 - **Category:** Complexity
@@ -235,7 +239,8 @@
 - **Description:** 4+ unused items identified by clippy: unused imports, unused variables, dead code.
 - **Evidence:** `async_trait::async_trait` unused, `executor` unused variable, `backlog_path` unused (x2)
 - **Suggested Fix:** Remove unused imports/variables or add `#[allow(dead_code)]` if intentionally kept
-- **Status:** OPEN
+- **Status:** SCHEDULED
+- **Scheduled:** Improvement Sprint 1, assigned to .switchboard/state/REFACTOR_TODO1.md
 
 ### FIND-019 — Test Failures: 26 tests failing
 - **Category:** Structure
@@ -259,7 +264,8 @@
 - **Description:** 31+ clippy errors including: unused_imports, unused_variables, dead_code, clippy::needless_borrow, clippy::redundant_pattern_matching
 - **Evidence:** Running `cargo clippy --all-targets --all-features -- -D warnings` fails
 - **Suggested Fix:** Fix each clippy warning - remove unused imports, use proper borrowing, fix pattern matching
-- **Status:** OPEN
+- **Status:** SCHEDULED
+- **Scheduled:** Improvement Sprint 1, assigned to .switchboard/state/REFACTOR_TODO2.md
 
 ### FIND-021 — Debug Print in Production Code
 - **Category:** Documentation
