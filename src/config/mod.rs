@@ -3452,6 +3452,7 @@ mod tests {
 
     #[test]
     #[allow(dead_code)]
+    #[allow(unnameable_test_items)]
     fn test_switchboard_toml_skills_parsing() {
         // Test that switchboard.toml loads with skills parsed correctly for agents that have them
         // This verifies the agent-specific skill parsing works correctly

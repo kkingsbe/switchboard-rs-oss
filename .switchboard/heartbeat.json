@@ -1,6 +1,6 @@
 {
-  "pid": 45980,
-  "last_heartbeat": "2026-02-27T16:37:48.449242900+00:00",
+  "pid": 47708,
+  "last_heartbeat": "2026-02-27T17:46:51.065616+00:00",
   "state": "running",
   "agents": [
     {
@@ -15,12 +15,12 @@
     },
     {
       "name": "sb-refactor-1",
-      "schedule": "*/45 * * * *",
-      "current_run": null
+      "schedule": "*/30 * * * *",
+      "current_run": "starting"
     },
     {
       "name": "sb-refactor-2",
-      "schedule": "*/45 * * * *",
+      "schedule": "10,40 * * * *",
       "current_run": null
     },
     {

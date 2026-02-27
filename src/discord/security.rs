@@ -393,7 +393,7 @@ mod tests {
         let allowed_dir = temp_dir.path();
 
         // Test a path that doesn't exist but should be valid
-        let result = validate_path(&Path::new("nonexistent/file.txt"), allowed_dir);
+        let result = validate_path(Path::new("nonexistent/file.txt"), allowed_dir);
         assert!(result.is_ok());
         assert!(result.unwrap().starts_with(allowed_dir));
     }

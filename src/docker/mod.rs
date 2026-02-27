@@ -21,7 +21,7 @@ pub use crate::traits::{
 };
 
 pub mod run;
-pub use run::{run_agent, AgentExecutionResult, ContainerConfig};
+pub use run::{run_agent, AgentExecutionResult, ContainerConfig, find_preexisting_skills};
 
 pub mod skills;
 

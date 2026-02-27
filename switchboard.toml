@@ -14,7 +14,7 @@ env = { AGENT_COUNT = "2" }
 
 [[agent]]
 name = "sb-improvement-planner"
-schedule = "30 */2 * * *"             # 30 min after auditor
+schedule = "30 */1 * * *"              # Every 1 hour at minute 30
 readonly = false
 timeout = "30m"
 prompt_file = ".switchboard/prompts/workflows/codebase-maintinance/IMPROVEMENT_PLANNER.md"
@@ -22,7 +22,7 @@ env = { AGENT_COUNT = "2" }
 
 [[agent]]
 name = "sb-refactor-1"
-schedule = "*/45 * * * *"             # Every 45 min
+schedule = "*/30 * * * *"             # Every 30 min
 readonly = false
 timeout = "30m"
 prompt_file = ".switchboard/prompts/workflows/codebase-maintinance/REFACTOR_DEV.md"
@@ -30,7 +30,7 @@ env = { AGENT_ID = "1" }
 
 [[agent]]
 name = "sb-refactor-2"
-schedule = "*/45 * * * *"
+schedule = "10,40 * * * *"
 readonly = false
 timeout = "30m"
 prompt_file = ".switchboard/prompts/workflows/codebase-maintinance/REFACTOR_DEV.md"
