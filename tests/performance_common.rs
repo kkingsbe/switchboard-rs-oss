@@ -398,6 +398,7 @@ pub fn restore_env_var(key: &str, restore_guard: Option<Mutex<Option<String>>>) 
 ///
 /// This struct provides microsecond-level precision for timing operations,
 /// with additional features like lap timing and automatic duration formatting.
+#[allow(dead_code)]
 #[derive(Clone)]
 pub struct Timer {
     name: String,
@@ -414,6 +415,7 @@ impl std::fmt::Debug for Timer {
     }
 }
 
+#[allow(dead_code)]
 impl Timer {
     /// Creates a new timer with the given name
     pub fn new(name: impl Into<String>) -> Self {
@@ -476,6 +478,7 @@ impl Timer {
 ///
 /// Displays the duration with appropriate precision (microseconds for short
 /// durations, milliseconds for medium, seconds for long).
+#[allow(dead_code)]
 pub fn format_duration(duration: std::time::Duration) -> String {
     let micros = duration.as_micros();
     if micros < 1_000 {
@@ -502,6 +505,7 @@ pub fn format_duration(duration: std::time::Duration) -> String {
 /// println!("Operation took {:?}", duration);
 /// # }
 /// ```
+#[allow(dead_code)]
 pub async fn time_async<F, Fut>(name: &str, f: F) -> std::time::Duration
 where
     F: Fn() -> Fut,
@@ -539,6 +543,7 @@ impl std::fmt::Debug for PerformanceTestSetup {
     }
 }
 
+#[allow(dead_code)]
 impl PerformanceTestSetup {
     /// Creates a new empty test setup
     pub fn new() -> Self {
@@ -621,6 +626,7 @@ impl Default for PerformanceTestSetup {
 /// setup.teardown();  // Automatically cleans up
 /// # }
 /// ```
+#[allow(dead_code)]
 pub fn setup_performance_test() -> PerformanceTestSetup {
     let temp_dir = TempDir::new().expect("Failed to create temporary directory");
     PerformanceTestSetup::with_temp_dir(temp_dir)
@@ -634,6 +640,7 @@ pub fn setup_performance_test() -> PerformanceTestSetup {
 ///
 /// Stores the baseline performance data for a specific test, including
 /// the expected duration and optional throughput targets.
+#[allow(dead_code)]
 #[derive(Debug, Clone)]
 pub struct BaselineMetric {
     /// Test name
@@ -650,6 +657,7 @@ pub struct BaselineMetric {
     pub std_dev_secs: f64,
 }
 
+#[allow(dead_code)]
 impl BaselineMetric {
     /// Creates a new baseline metric
     pub fn new(name: impl Into<String>, avg_duration_secs: f64) -> Self {
@@ -715,6 +723,7 @@ impl BaselineMetric {
 }
 
 /// Regression status indicating whether performance has degraded
+#[allow(dead_code)]
 #[derive(Debug, Clone, PartialEq)]
 pub enum RegressionStatus {
     /// Performance is stable (within 30% of baseline)
@@ -727,6 +736,7 @@ pub enum RegressionStatus {
     Improvement,
 }
 
+#[allow(dead_code)]
 impl RegressionStatus {
     /// Returns true if this status indicates a regression
     pub fn is_regression(&self) -> bool {
@@ -751,12 +761,14 @@ impl RegressionStatus {
 ///
 /// This struct manages baseline metrics for multiple tests and provides
 /// functionality to check for regressions.
+#[allow(dead_code)]
 #[derive(Debug, Default)]
 pub struct BaselineTracker {
     metrics: std::collections::HashMap<String, BaselineMetric>,
     results: Vec<BenchmarkResult>,
 }
 
+#[allow(dead_code)]
 impl BaselineTracker {
     /// Creates a new baseline tracker
     pub fn new() -> Self {
@@ -889,6 +901,7 @@ impl BaselineTracker {
 /// # Returns
 ///
 /// A tuple of (regression_status, created_baseline)
+#[allow(dead_code)]
 pub fn detect_regression(
     tracker: &mut BaselineTracker,
     name: &str,
@@ -912,6 +925,7 @@ pub fn detect_regression(
 ///
 /// This function logs a warning message if the regression status indicates
 /// performance degradation.
+#[allow(dead_code)]
 pub fn log_regression_warning(name: &str, status: &RegressionStatus, duration_secs: f64) {
     if status.is_regression() {
         println!(
