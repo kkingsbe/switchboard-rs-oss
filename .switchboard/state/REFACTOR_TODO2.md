@@ -1,73 +1,90 @@
-# REFACTOR_TODO2.md - Agent 2: Core/Clippy Focus
+# REFACTOR_TODO2 - Refactor Agent 2
 
-Create this file with the following tasks ordered from safest to riskiest:
+> Sprint: Improvement Sprint 2  
+> Focus Area: Core Code Quality & Code Patterns
+> Last Updated: 2026-02-27
+> Source: .switchboard/state/IMPROVEMENT_BACKLOG.md findings
 
-**Task 1 - FIND-001 (Safe): Fix syntax error in traits/mod.rs**
-- [ ] [FIND-001] Fix invalid Rust syntax in src/traits/mod.rs:17
-  - 📚 SKILLS: `./skills/rust-best-practices/SKILL.md`
-  - 🎯 Goal: Change invalid `use std::io::self;` to valid `use std::io;` at line 17
-  - 📂 Files: `src/traits/mod.rs`
-  - 🧭 Context: Evidence - Line 17 has `use std::io::self;` which is invalid Rust syntax. Should be `use std::io;`. This is a blocker that prevents the build.
-  - ⚡ Pre-check: Build fails before starting (this is the blocker!)
+## Orientation
+
+Before starting any tasks, read these files to understand the current state:
+- Cargo.toml (project structure)
+- src/docker/mod.rs (Docker client - primary focus for patterns)
+- src/cli/mod.rs (CLI module)
+
+## Tasks
+
+### Task 1: [HIGH-002] Fix formatting issues
+- [ ] [FIND-HIGH-002] Run cargo fmt to fix formatting
+  - 📚 SKILLS: None required (automated tool)
+  - 🎯 Goal: Fix all formatting violations across 180+ files
+  - 📂 Files: src/*.rs, src/**/*.rs, tests/*.rs
+  - 🧭 Context: cargo fmt --check returns exit code 1 with 2321 lines of diff. Evidence includes:
+    - src/cli/mod.rs:973 - Long lines need wrapping
+    - src/cli/mod.rs:1079 - Single statement blocks need braces
+  - ⚡ Pre-check: Build passes
   - ✅ Acceptance:
-    - [ ] Change is complete
-    - [ ] Build passes (`cargo build`)
-    - [ ] No behavioral change
-  - 🔒 Risk: Safe
-  - ↩️ Revert: `git revert` safe
-
-**Task 2 - FIND-002 (Medium): Replace panic!() with proper error handling**
-- [ ] [FIND-002] Replace panic!() with proper error handling in logging.rs
-  - 📚 SKILLS: `./skills/rust-engineer/references/error-handling.md`
-  - 🎯 Goal: At logging.rs lines 86-88, replace the `panic!()` call with proper error propagation using `map_err` returning a SkillsError::Io variant.
-  - 📂 Files: `src/logging.rs`
-  - 🧭 Context: Evidence - Current code: `std::fs::create_dir_all(&log_dir).unwrap_or_else(|_| { panic!("Failed to create log directory: {}", log_dir.display()) });`. Should be: `std::fs::create_dir_all(&log_dir).map_err(|e| SkillsError::Io { path: log_dir.display().to_string(), source: e })?;`
-  - ⚡ Pre-check: Build passes before starting
-  - ✅ Acceptance:
-    - [ ] Change is complete
+    - [ ] cargo fmt --check passes (exit code 0)
     - [ ] Build passes
-    - [ ] Tests pass
-    - [ ] No behavioral change
-  - 🔒 Risk: Medium
-  - ↩️ Revert: `git revert` safe
+  - 🔒 Risk: Safe (automated formatter)
+  - ↩️ Revert: git checkout safe
 
-**Task 3 - FIND-020 (Safe/Medium): Fix clippy violations across codebase**
-- [ ] [FIND-020] Fix clippy errors - unused_imports, unused_variables, dead_code
-  - 📚 SKILLS: `./skills/rust-best-practices/SKILL.md`
-  - 🎯 Goal: Run `cargo clippy --all-targets --all-features -- -D warnings` and fix all violations. Common fixes: remove unused imports, remove unused variables (prefix with `_` if intentional), remove dead code.
-  - 📂 Files: Multiple (run clippy to find)
-  - 🧭 Context: Evidence - Running clippy produces 31+ violations including unused_imports, unused_variables, dead_code, clippy::needless_borrow. This is blocking CI.
-  - ⚡ Pre-check: Run `cargo clippy --all-targets --all-features -- -D warnings` to see current errors
+### Task 2: [CONV-004] Add documentation to private functions
+- [ ] [FIND-CONV-004] Add doc comments to public API entry points
+  - 📚 SKILLS: None required
+  - 🎯 Goal: Add missing doc comments to module interfaces
+  - 📂 Files: Multiple modules
+  - 🧭 Context: Multiple private functions lack doc comments. Evidence: Lines 243-247 in backlog state "Some private functions lack doc comments"
+  - ⚡ Pre-check: Build passes
   - ✅ Acceptance:
-    - [ ] Change is complete
+    - [ ] Key public APIs documented
     - [ ] Build passes
-    - [ ] Clippy passes with no warnings (`cargo clippy --all-targets --all-features -- -D warnings`)
-    - [ ] Tests pass
-    - [ ] No behavioral change
   - 🔒 Risk: Safe
-  - ↩️ Revert: `git revert` safe (but may have many files)
+  - ↩️ Revert: git checkout safe
 
-**Task 4 - FIND-005 (Low): Fix swallowed errors in docker/mod.rs**
-- [ ] [FIND-005] Replace `let _ =` with proper error handling in docker/mod.rs
-  - 📚 SKILLS: `./skills/rust-engineer/references/error-handling.md`
-  - 🎯 Goal: At docker/mod.rs line 890, replace `let _ = std::fs::remove_file(&dockerfile_path);` with proper error handling that logs or returns the error.
-  - 📂 Files: `src/docker/mod.rs`
-  - 🧭 Context: Evidence - Line 890 has `let _ = std::fs::remove_file(&dockerfile_path);` which silently ignores file removal errors.
-  - ⚡ Pre-check: Build passes before starting
+### Task 3: [MED-001] Extract Docker client helper method
+- [ ] [FIND-MED-001] Create get_docker() helper to eliminate expect pattern
+  - 📚 SKILLS: ./skills/rust-best-practices/SKILL.md, ./skills/rust-engineer/SKILL.md
+  - 🎯 Goal: Replace 10+ occurrences of .expect("Docker client not available") with a helper method
+  - 📂 Files: src/docker/mod.rs (lines 909, 922, 956, 1021, 1054, 1091, 1119, 1138, 1157, 1174)
+  - 🧭 Context: Duplicate code pattern violates DRY. Evidence:
+    ```rust
+    let docker = self.docker.as_ref().expect("Docker client not available");
+    // Repeated 10+ times
+    ```
+    Create helper:
+    ```rust
+    fn get_docker(&self) -> Result<&Docker, DockerError> {
+        self.docker.as_ref().ok_or(DockerError::ConnectionError(
+            "Docker client not available".to_string()
+        ))
+    }
+    ```
+  - ⚡ Pre-check: Build passes, tests pass
   - ✅ Acceptance:
-    - [ ] Change is complete
+    - [ ] Helper method created
+    - [ ] All 10+ occurrences replaced
     - [ ] Build passes
     - [ ] Tests pass
     - [ ] No behavioral change
   - 🔒 Risk: Low
-  - ↩️ Revert: `git revert` safe
+  - ↩️ Revert: git checkout safe
 
-**ORIENTATION SECTION:**
-Before starting any tasks, read these files to understand the current state:
-- Cargo.toml
-- src/lib.rs
-- src/logging.rs
-- src/traits/mod.rs
+### Task 4: [MED-002] Extract magic strings to constants
+- [ ] [FIND-MED-002] Create constants for repeated error messages
+  - 📚 SKILLS: None required
+  - 🎯 Goal: Replace hardcoded error strings with constants
+  - 📂 Files: src/docker/mod.rs
+  - 🧭 Context: Error message strings repeated across codebase. Evidence:
+    - "Docker client not available" - appears 10+ times
+    - "Failed to create temp dir" - appears in tests
+  - ⚡ Pre-check: Build passes, tests pass
+  - ✅ Acceptance:
+    - [ ] Constants defined
+    - [ ] All occurrences replaced
+    - [ ] Build passes
+    - [ ] Tests pass
+  - 🔒 Risk: Low
+  - ↩️ Revert: git checkout safe
 
-**QA TASK:**
 - [ ] AGENT QA: Run full build and test suite. Verify ALL changes maintain behavioral equivalence. If green, create '.switchboard/state/.refactor_done_2' with the current date. If ALL '.switchboard/state/.refactor_done_*' files exist, also create '.switchboard/state/.refactor_sprint_complete'.

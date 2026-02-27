@@ -1,23 +1,39 @@
 {
-  "last_audit": "2026-02-27T16:08:00Z",
-  "last_commit_audited": "6eb7e9576a9821a27cdc873ccc9ac34d9a722f84",
+  "last_audit": "2026-02-27T18:07:00Z",
+  "last_commit_audited": "893b49eff269e0dd4ffa34e763ee1d02bc605d26",
   "findings_hash": {
-    "FIND-001": "sha256_of_clippy_10_errors",
-    "FIND-002": "sha256_of_god_module_run_rs",
-    "FIND-003": "sha256_of_test_failures",
-    "FIND-004": "sha256_of_unwrap_production",
-    "FIND-005": "sha256_of_unsafe_no_docs",
-    "FIND-006": "sha256_of_formatting",
-    "FIND-007": "sha256_of_god_module_config",
-    "FIND-008": "sha256_of_orphan_file",
-    "FIND-009": "sha256_of_manual_error",
-    "FIND-010": "sha256_of_unnecessary_clone",
-    "FIND-011": "sha256_of_missing_docs"
+    "CRIT-001": "sha256_of_25_test_failures",
+    "CRIT-002": "sha256_of_god_module_config_3505",
+    "CRIT-003": "sha256_of_god_module_skills_2716",
+    "HIGH-001": "sha256_of_unwrap_in_production",
+    "HIGH-002": "sha256_of_formatting_issues",
+    "HIGH-003": "sha256_of_god_module_cli_2131",
+    "HIGH-004": "sha256_of_god_module_commands_skills",
+    "MED-001": "sha256_of_duplicate_docker_expect",
+    "MED-002": "sha256_of_magic_strings",
+    "MED-003": "sha256_of_unused_config_key",
+    "MED-004": "sha256_of_large_discord_tools",
+    "MED-005": "sha256_of_large_discord_llm",
+    "MED-006": "sha256_of_large_docker_skills",
+    "MED-007": "sha256_of_large_commands_validate",
+    "MED-008": "sha256_of_large_docker_mod",
+    "LOW-001": "sha256_of_clippy_warnings_tests",
+    "LOW-002": "sha256_of_dead_code_timer",
+    "LOW-003": "sha256_of_dead_code_format_duration",
+    "LOW-004": "sha256_of_unused_test_functions",
+    "LOW-005": "sha256_of_todos_without_issues",
+    "CONV-001": "sha256_of_inconsistent_error_handling",
+    "CONV-002": "sha256_of_module_organization",
+    "CONV-003": "sha256_of_test_organization",
+    "CONV-004": "sha256_of_missing_docs",
+    "CONV-005": "sha256_of_backup_file",
+    "CONV-006": "sha256_of_example_docs"
   },
   "health_history": [
     { "date": "2025-02-25", "total_findings": 12, "critical": 2, "high": 4, "medium": 6, "low": 0 },
     { "date": "2026-02-27T04:44", "total_findings": 29, "critical": 17, "high": 8, "medium": 14, "low": 8 },
     { "date": "2026-02-27T15:12", "total_findings": 46, "critical": 18, "high": 9, "medium": 11, "low": 8 },
-    { "date": "2026-02-27T16:08", "total_findings": 11, "critical": 4, "high": 3, "medium": 3, "low": 1 }
+    { "date": "2026-02-27T16:08", "total_findings": 11, "critical": 4, "high": 3, "medium": 3, "low": 1 },
+    { "date": "2026-02-27T18:07", "total_findings": 26, "critical": 3, "high": 4, "medium": 8, "low": 5, "convention": 6 }
   ]
 }

@@ -117,7 +117,6 @@ Ok(GLOBAL_LOG_DIR.as_ref().unwrap().as_path())
 - **Risk**: Inconsistent code style across team
 - **Recommendation**: Run `cargo fmt` to fix, add pre-commit hook
 - **Effort**: S
-- **Status**: SCHEDULED - Scheduled: Improvement Sprint 2, assigned to .switchboard/state/REFACTOR_TODO2.md
 
 #### [HIGH-003] CLI Module - 2131 Lines
 - **File**: `src/cli/mod.rs` (2131 lines)
@@ -140,7 +139,6 @@ Ok(GLOBAL_LOG_DIR.as_ref().unwrap().as_path())
 - **Issue**: Same `.expect("Docker client not available")` repeated 10+ times
 - **Recommendation**: Add helper method `fn get_docker(&self) -> Result<&Docker, DockerError>`
 - **Effort**: S
-- **Status**: SCHEDULED - Scheduled: Improvement Sprint 2, assigned to .switchboard/state/REFACTOR_TODO2.md
 
 #### [MED-002] Magic Strings - Error Messages
 - **Files**: Multiple
@@ -151,7 +149,6 @@ Ok(GLOBAL_LOG_DIR.as_ref().unwrap().as_path())
 ```
 - **Recommendation**: Create constants in respective error modules
 - **Effort**: S
-- **Status**: SCHEDULED - Scheduled: Improvement Sprint 2, assigned to .switchboard/state/REFACTOR_TODO2.md
 
 #### [MED-003] Unused Config Key Warning
 - **File**: `.cargo/config.toml`
@@ -198,21 +195,18 @@ Ok(GLOBAL_LOG_DIR.as_ref().unwrap().as_path())
 - **Issue**: Unused imports, mutable variables
 - **Recommendation**: Clean up test files with `cargo clippy --fix`
 - **Effort**: S
-- **Status**: SCHEDULED - Scheduled: Improvement Sprint 2, assigned to .switchboard/state/REFACTOR_TODO1.md
 
 #### [LOW-002] Dead Code - Timer Struct Never Used
 - **File**: `tests/performance_common.rs` (line 402)
 - **Issue**: `pub struct Timer` is never constructed
 - **Recommendation**: Remove or implement
 - **Effort**: S
-- **Status**: SCHEDULED - Scheduled: Improvement Sprint 2, assigned to .switchboard/state/REFACTOR_TODO1.md
 
 #### [LOW-003] Dead Code - format_duration Function
 - **File**: `tests/skills_install_performance.rs` (line 45)
 - **Issue**: Function never used
 - **Recommendation**: Remove
 - **Effort**: S
-- **Status**: SCHEDULED - Scheduled: Improvement Sprint 2, assigned to .switchboard/state/REFACTOR_TODO1.md
 
 #### [LOW-004] Unused Test Functions
 - **Files**: Multiple test files
@@ -251,14 +245,12 @@ Ok(GLOBAL_LOG_DIR.as_ref().unwrap().as_path())
 - **Issue**: Some private functions lack doc comments
 - **Recommendation**: Add docs to public API entry points
 - **Effort**: S
-- **Status**: SCHEDULED - Scheduled: Improvement Sprint 2, assigned to .switchboard/state/REFACTOR_TODO2.md
 
 #### [CONV-005] Backup File Present
 - **File**: `src/config/mod.rs.bak`
 - **Issue**: Backup file in source tree
 - **Recommendation**: Remove from version control, add to .gitignore
 - **Effort**: S
-- **Status**: SCHEDULED - Scheduled: Improvement Sprint 2, assigned to .switchboard/state/REFACTOR_TODO1.md
 
 #### [CONV-006] Example Config Files
 - **Files**: `examples/*.toml` 

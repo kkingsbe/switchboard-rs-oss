@@ -298,7 +298,10 @@ impl DiscordApiClient {
             // Convert Unix timestamp to Instant
             let now = std::time::SystemTime::now()
                 .duration_since(std::time::UNIX_EPOCH)
-                .unwrap_or_default()
+                .unwrap_or_else(|e| {
+                    warn!("System time before Unix epoch: {}", e);
+                    Duration::ZERO
+                })
                 .as_secs();
 
             if reset > now {
