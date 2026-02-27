@@ -1,61 +1,23 @@
 {
-  "last_audit": "2026-02-27T15:12:04Z",
-  "last_commit_audited": "488988e67aa876ca7cfac823be40982c702367ce",
-  "audit_status": "completed",
-  "health_trend": "degrading",
-  "findings_summary": {
-    "total": 46,
-    "critical": 18,
-    "high": 9,
-    "medium": 11,
-    "low": 8,
-    "resolved": 3
-  },
+  "last_audit": "2026-02-27T16:08:00Z",
+  "last_commit_audited": "6eb7e9576a9821a27cdc873ccc9ac34d9a722f84",
   "findings_hash": {
-    "FIND-001": "a1b2c3d4e5f6789012345678901234567890abcd",
-    "FIND-002": "b2c3d4e5f67890123456789012345678901abcde",
-    "FIND-003": "c3d4e5f678901234567890123456789012abcdef",
-    "FIND-004": "d4e5f6789012345678901234567890123abcdef0",
-    "FIND-005": "e5f67890123456789012345678901234abcdef01",
-    "FIND-006": "f678901234567890123456789012345abcdef012",
-    "FIND-007": "0789012345678901234567890123456abcdef0123",
-    "FIND-008": "789012345678901234567890123456789abcdef01",
-    "FIND-009": "89012345678901234567890123456789abcdef012",
-    "FIND-010": "9012345678901234567890123456789abcdef0123",
-    "FIND-011": "0123456789012345678901234567890abcdef0123",
-    "FIND-012": "1234567890123456789012345678901abcdef01234",
-    "FIND-013": "2345678901234567890123456789012abcdef01234",
-    "FIND-014": "3456789012345678901234567890123abcdef01234",
-    "FIND-015": "4567890123456789012345678901234abcdef01234",
-    "FIND-016": "5678901234567890123456789012345abcdef01234",
-    "FIND-017": "6789012345678901234567890123456abcdef01234",
-    "FIND-018": "7890123456789012345678901234567abcdef01234",
-    "FIND-019": "8901234567890123456789012345678abcdef01234",
-    "FIND-020": "9012345678901234567890123456789abcdef01234",
-    "FIND-021": "0123456789012345678901234567890abcdef01234",
-    "FIND-022": "1234567890123456789012345678901abcdef01234",
-    "FIND-023": "2345678901234567890123456789012abcdef01234",
-    "FIND-024": "3456789012345678901234567890123abcdef01234",
-    "FIND-025": "4567890123456789012345678901234abcdef01234",
-    "FIND-026": "5678901234567890123456789012345abcdef01234",
-    "FIND-027": "6789012345678901234567890123456abcdef01234",
-    "FIND-028": "7890123456789012345678901234567abcdef01234",
-    "FIND-029": "8901234567890123456789012345678abcdef01234",
-    "FIND-030": "9012345678901234567890123456789abcdef01234",
-    "FIND-031": "0123456789012345678901234567890abcdef01234",
-    "FIND-032": "1234567890123456789012345678901abcdef01234",
-    "FIND-033": "2345678901234567890123456789012abcdef01234",
-    "FIND-034": "3456789012345678901234567890123abcdef01234"
+    "FIND-001": "sha256_of_clippy_10_errors",
+    "FIND-002": "sha256_of_god_module_run_rs",
+    "FIND-003": "sha256_of_test_failures",
+    "FIND-004": "sha256_of_unwrap_production",
+    "FIND-005": "sha256_of_unsafe_no_docs",
+    "FIND-006": "sha256_of_formatting",
+    "FIND-007": "sha256_of_god_module_config",
+    "FIND-008": "sha256_of_orphan_file",
+    "FIND-009": "sha256_of_manual_error",
+    "FIND-010": "sha256_of_unnecessary_clone",
+    "FIND-011": "sha256_of_missing_docs"
   },
-  "resolved_findings": [
-    "FIND-001 (old): Bollard API Incompatibility",
-    "FIND-002 (old): Merge Conflicts in Test Files",
-    "FIND-014 (old): Broken Documentation Links"
-  ],
   "health_history": [
-    { "date": "2025-02-25", "total_findings": 12, "critical": 2, "high": 4, "medium": 6 },
+    { "date": "2025-02-25", "total_findings": 12, "critical": 2, "high": 4, "medium": 6, "low": 0 },
     { "date": "2026-02-27T04:44", "total_findings": 29, "critical": 17, "high": 8, "medium": 14, "low": 8 },
-    { "date": "2026-02-27T15:12", "total_findings": 46, "critical": 18, "high": 9, "medium": 11, "low": 8 }
-  ],
-  "improvement_backlog": ".switchboard/state/IMPROVEMENT_BACKLOG.md"
+    { "date": "2026-02-27T15:12", "total_findings": 46, "critical": 18, "high": 9, "medium": 11, "low": 8 },
+    { "date": "2026-02-27T16:08", "total_findings": 11, "critical": 4, "high": 3, "medium": 3, "low": 1 }
+  ]
 }
