@@ -6,7 +6,7 @@ timezone = "system"
 
 [[agent]]
 name = "sb-auditor"
-schedule = "0 0 */2 * *"              # Every 2 hours
+schedule = "0 */2 * * *"              # Every 2 hours
 readonly = false
 timeout = "40m"
 prompt_file = ".switchboard/prompts/workflows/codebase-maintinance/AUDITOR.md"
@@ -14,7 +14,7 @@ env = { AGENT_COUNT = "2" }
 
 [[agent]]
 name = "sb-improvement-planner"
-schedule = "0 30 */2 * *"             # 30 min after auditor
+schedule = "30 */2 * * *"             # 30 min after auditor
 readonly = false
 timeout = "30m"
 prompt_file = ".switchboard/prompts/workflows/codebase-maintinance/IMPROVEMENT_PLANNER.md"
@@ -22,7 +22,7 @@ env = { AGENT_COUNT = "2" }
 
 [[agent]]
 name = "sb-refactor-1"
-schedule = "0 */45 * * *"             # Every 45 min
+schedule = "*/45 * * * *"             # Every 45 min
 readonly = false
 timeout = "30m"
 prompt_file = ".switchboard/prompts/workflows/codebase-maintinance/REFACTOR_DEV.md"
@@ -30,7 +30,7 @@ env = { AGENT_ID = "1" }
 
 [[agent]]
 name = "sb-refactor-2"
-schedule = "15 */45 * * *"           # Staggered 15 min from refactor-1
+schedule = "*/45 * * * *"           # Staggered 15 min from refactor-1
 readonly = false
 timeout = "30m"
 prompt_file = ".switchboard/prompts/workflows/codebase-maintinance/REFACTOR_DEV.md"

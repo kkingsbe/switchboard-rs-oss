@@ -1,21 +1,26 @@
 {
-  "pid": 22680,
-  "last_heartbeat": "2026-02-27T14:24:17.434003900+00:00",
+  "pid": 21180,
+  "last_heartbeat": "2026-02-27T14:44:19.210630+00:00",
   "state": "running",
   "agents": [
     {
       "name": "sb-auditor",
-      "schedule": "0 0 */2 * *",
+      "schedule": "0 */2 * * *",
+      "current_run": null
+    },
+    {
+      "name": "sb-improvement-planner",
+      "schedule": "30 */2 * * *",
       "current_run": null
     },
     {
       "name": "sb-refactor-1",
-      "schedule": "0 */45 * * *",
+      "schedule": "*/45 * * * *",
       "current_run": null
     },
     {
       "name": "sb-refactor-2",
-      "schedule": "15 */45 * * *",
+      "schedule": "*/45 * * * *",
       "current_run": null
     },
     {
