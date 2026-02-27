@@ -14,7 +14,7 @@
 use bollard::Docker;
 use futures::StreamExt;
 use std::fmt::Debug;
-
+use std::io;
 use std::path::PathBuf;
 use std::process::Command;
 use tokio::time::Duration;
