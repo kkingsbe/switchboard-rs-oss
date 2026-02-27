@@ -7,6 +7,9 @@ use std::path::PathBuf;
 use tracing_appender::non_blocking::WorkerGuard;
 use tracing_subscriber::{fmt, EnvFilter};
 
+#[cfg(test)]
+use crate::skills::SkillsError;
+
 /// Initialize tracing subscriber with file appender
 ///
 /// This function sets up tracing to write scheduler logs to `<log_dir>/switchboard.log`.
@@ -72,20 +75,38 @@ mod tests {
     static mut GLOBAL_GUARD: Option<WorkerGuard> = None;
     static mut GLOBAL_LOG_DIR: Option<PathBuf> = None;
     static mut TEMP_DIR: Option<tempfile::TempDir> = None;
+    static INIT_ERROR: std::sync::Mutex<Option<SkillsError>> = std::sync::Mutex::new(None);
 
     /// Helper function to initialize logging for tests
     /// Uses a static flag to ensure tracing is only initialized once across all tests
     /// All tests share the same log directory and subscriber
     #[allow(static_mut_refs)]
-    fn get_test_log_dir() -> &'static Path {
+    fn get_test_log_dir() -> Result<&'static Path, SkillsError> {
         unsafe {
             INIT.call_once(|| {
                 // Create a temp dir that lives for the duration of the test run
-                let temp = tempdir().unwrap();
+                let temp = match tempdir() {
+                    Ok(t) => t,
+                    Err(e) => {
+                        let err = SkillsError::IoError {
+                            operation: "create temp directory".to_string(),
+                            path: "".to_string(),
+                            message: e.to_string(),
+                        };
+                        *INIT_ERROR.lock().unwrap() = Some(err);
+                        return;
+                    }
+                };
                 let log_dir = temp.path().join("logs");
-                std::fs::create_dir_all(&log_dir).unwrap_or_else(|_| {
-                    panic!("Failed to create log directory: {}", log_dir.display())
-                });
+                if let Err(e) = std::fs::create_dir_all(&log_dir) {
+                    let err = SkillsError::IoError {
+                        operation: "create directory".to_string(),
+                        path: log_dir.display().to_string(),
+                        message: e.to_string(),
+                    };
+                    *INIT_ERROR.lock().unwrap() = Some(err);
+                    return;
+                }
 
                 TEMP_DIR = Some(temp);
                 GLOBAL_LOG_DIR = Some(log_dir.clone());
@@ -101,19 +122,32 @@ mod tests {
                     )
                     .finish();
 
-                tracing::subscriber::set_global_default(subscriber)
-                    .expect("Failed to set tracing subscriber");
+                if let Err(e) = tracing::subscriber::set_global_default(subscriber) {
+                    let err = SkillsError::IoError {
+                        operation: "set tracing subscriber".to_string(),
+                        path: "".to_string(),
+                        message: e.to_string(),
+                    };
+                    *INIT_ERROR.lock().unwrap() = Some(err);
+                    return;
+                }
 
                 GLOBAL_GUARD = Some(guard);
             });
 
-            GLOBAL_LOG_DIR.as_ref().unwrap().as_path()
+            // Check if there was an error during initialization
+            let error = INIT_ERROR.lock().unwrap().take();
+            if let Some(err) = error {
+                return Err(err);
+            }
+
+            Ok(GLOBAL_LOG_DIR.as_ref().unwrap().as_path())
         }
     }
 
     #[test]
     fn test_init_logging_creates_directory() {
-        let log_dir = get_test_log_dir();
+        let log_dir = get_test_log_dir().unwrap();
 
         // Directory should exist
         assert!(log_dir.exists());
@@ -122,7 +156,7 @@ mod tests {
 
     #[test]
     fn test_init_logging_creates_log_file() {
-        let log_dir = get_test_log_dir();
+        let log_dir = get_test_log_dir().unwrap();
         let log_file_path = log_dir.join("switchboard.log");
 
         // Log file should exist
@@ -132,7 +166,7 @@ mod tests {
 
     #[test]
     fn test_logging_writes_to_file() {
-        let log_dir = get_test_log_dir();
+        let log_dir = get_test_log_dir().unwrap();
         let log_file_path = log_dir.join("switchboard.log");
 
         // Write a log message

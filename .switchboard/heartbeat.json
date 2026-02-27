@@ -1,6 +1,6 @@
 {
   "pid": 45980,
-  "last_heartbeat": "2026-02-27T16:01:48.137827700+00:00",
+  "last_heartbeat": "2026-02-27T16:28:48.374563+00:00",
   "state": "running",
   "agents": [
     {
@@ -26,7 +26,7 @@
     {
       "name": "gt-summarizer",
       "schedule": "0 0 * * * *",
-      "current_run": "starting"
+      "current_run": null
     }
   ]
 }
