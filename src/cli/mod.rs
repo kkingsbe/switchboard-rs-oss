@@ -945,7 +945,9 @@ pub async fn run_up(
                 #[cfg(not(feature = "discord"))]
                 {
                     // Wait indefinitely for Ctrl+C signal
-                    let _ = tokio::signal::ctrl_c().await;
+                    if let Err(e) = tokio::signal::ctrl_c().await {
+                        eprintln!("Failed to listen for Ctrl+C: {}", e);
+                    }
                     println!("\n\n⚠ Received Ctrl+C, shutting down scheduler...");
 
                     if let Err(e) = sched.stop().await {
