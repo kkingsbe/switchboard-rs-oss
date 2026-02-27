@@ -37,8 +37,6 @@ pub mod skills;
 async fn get_docker_socket_path(
     executor: Option<Arc<dyn ProcessExecutorTrait>>,
 ) -> Result<Option<String>, ProcessError> {
-    let executor = executor.unwrap_or_else(|| Arc::new(RealProcessExecutor::new()));
-
     // Use tokio::process::Command for async execution with timeout
     // This avoids the issues with spawn_blocking on Windows
     
