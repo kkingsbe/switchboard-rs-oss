@@ -5,8 +5,10 @@
 //! Switchboard does not implement HTTP/GitHub API code directly.
 
 mod error;
+pub mod validate;
 
 pub use error::SkillsError;
+pub use validate::{extract_skill_name, validate_skill_format};
 
 use crate::traits::{ProcessExecutorTrait, RealProcessExecutor};
 use serde::{Deserialize, Serialize};
