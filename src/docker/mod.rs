@@ -421,7 +421,7 @@ pub fn create_build_context_tarball(
                 let name = relative_path.file_name()
                     .and_then(|n| n.to_str())
                     .unwrap_or("");
-                if name != "kilocode" {
+                if name != ".kilocode" {
                     continue; // Skip everything except .kilocode
                 }
 

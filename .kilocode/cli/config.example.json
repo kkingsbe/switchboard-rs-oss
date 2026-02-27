@@ -10,13 +10,6 @@
       "kilocodeToken": "",
       "kilocodeModel": "z-ai/glm-4.7",
       "kilocodePosthogApiKey": ""
-    },
-    {
-      "id": "minimax",
-      "provider": "kilocode",
-      "kilocodeToken": "",
-      "kilocodeModel": "minimax/minimax-m2.5",
-      "kilocodePosthogApiKey": ""
     }
   ],
   "autoApproval": {
