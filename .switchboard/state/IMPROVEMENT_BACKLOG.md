@@ -1,9 +1,10 @@
 # Codebase Scan Report
 
 **Project**: switchboard  
-**Scanned**: 2026-02-27T18:01:07Z  
+**Scanned**: 2026-02-27T20:09:00Z  
 **Scope**: Full codebase (src/, tests/)  
 **Files Analyzed**: ~80 Rust source files  
+**Audit Type**: Continuation (previous audit: 2026-02-27T18:07:00Z)
 
 ---
 
@@ -13,16 +14,16 @@
 |----------|-------|------------------|
 | 🔴 Critical | 3 | 8h |
 | 🟠 High | 4 | 6h |
-| 🟡 Medium | 8 | 12h |
-| 🔵 Low | 5 | 4h |
-| ⚪ Convention | 6 | 3h |
+| 🟡 Medium | 7 | 10h |
+| 🔵 Low | 4 | 3h |
+| ⚪ Convention | 5 | 2h |
 
 **Overall Health Score**: 6.5/10  
 
 **Top 3 Priorities**:
 1. Fix failing tests (25 test failures)
 2. Address unwrap/expect in production code (skills compliance)
-3. Fix formatting issues (cargo fmt --check)
+3. Address clippy failures in test files
 
 ---
 
@@ -34,6 +35,17 @@
 - **Testing**: assert_cmd, tempfile, predicates, serial_test
 - **Linting**: cargo clippy
 - **Coverage**: cargo-llvm-cov
+
+---
+
+## Phase 2: Automated Health Check Results
+
+| Check | Status | Notes |
+|-------|--------|-------|
+| `cargo build` | ✅ PASS | 1 warning: unused config key |
+| `cargo test` | ❌ FAIL | 25 test failures |
+| `cargo clippy` | ❌ FAIL | Test file issues (unused imports, mut) |
+| `cargo fmt --check` | ✅ PASS | Formatting fixed since last audit |
 
 ---
 
@@ -53,30 +65,22 @@
 - **Effort**: L
 
 ```rust
-// Example failure - docker/run/run.rs:1629
+// Example failure - docker/run/run.rs:3959
 Failed to generate entrypoint script: ScriptGenerationFailed { 
     agent_name: "test-agent", 
     reason: "Skill 'repo' is not found in ./skills/ directory." 
 }
 ```
 
-#### [CRIT-002] God Module - config/mod.rs at 3505 Lines
-- **File**: `src/config/mod.rs` (lines 1-3505)
-- **Issue**: Single file contains 3505 lines with Config, Agent, Settings structs + all validation + tests inline
+#### [CRIT-002] God Module - config/mod.rs at 3512 Lines
+- **File**: `src/config/mod.rs` (lines 1-3512)
+- **Issue**: Single file contains 3512 lines with Config, Agent, Settings structs + all validation + tests inline
 - **Risk**: Maintainability nightmare, impossible to understand in one sitting
 - **Recommendation**: Split into: config/agent.rs, config/settings.rs, config/validation.rs, config/tests/
 - **Effort**: L
 
-```rust
-// Current structure混在
-pub struct Config { /* 50+ fields */ }
-pub struct Agent { /* 30+ fields */ }  
-pub struct Settings { /* 20+ fields */ }
-// Plus 1000+ lines of inline tests
-```
-
-#### [CRIT-003] Another God Module - skills/mod.rs at 2716 Lines  
-- **File**: `src/skills/mod.rs` (lines 1-2716)
+#### [CRIT-003] Another God Module - skills/mod.rs at 2709 Lines  
+- **File**: `src/skills/mod.rs` (lines 1-2709)
 - **Issue**: Single file contains all skills management logic
 - **Risk**: Hard to navigate, long compile times
 - **Recommendation**: Split into: skills/manager.rs, skills/lockfile.rs, skills/metadata.rs
@@ -86,7 +90,7 @@ pub struct Settings { /* 20+ fields */ }
 
 ### 🟠 High Priority Issues
 
-#### [HIGH-001] unwrap()/expect() in Production Code
+#### [HIGH-001] unwrap()/expect() in Production Code (Skills Violation)
 - **File**: Multiple files in `src/` (not tests)
 - **Issue**: According to rust-best-practices SKILL: "Never use unwrap()/expect() outside tests"
 - **Evidence**:
@@ -94,39 +98,41 @@ pub struct Settings { /* 20+ fields */ }
 // src/cli/mod.rs:348
 let docker = client.docker().expect("Docker client should be available");
 
-// src/docker/mod.rs:909
-let docker = self.docker.as_ref().expect("Docker client not available");
-
-// src/docker/mod.rs:957-1176 (12+ occurrences)
-let docker = self.docker.as_ref().expect("Docker client not available").clone();
-
 // src/scheduler/mod.rs:1164
 *self.queue_wait_time_seconds.lock().unwrap()
 
 // src/logging.rs:150
 Ok(GLOBAL_LOG_DIR.as_ref().unwrap().as_path())
+
+// src/logging.rs:102, 113, 137, 145 (mutex locks)
+*INIT_ERROR.lock().unwrap() = Some(err);
 ```
 - **Risk**: Runtime panics, poor error messages
 - **Recommendation**: Replace with proper Result handling and ? operator
 - **Effort**: M
+- **Status**: PREVIOUS - Recurring from last audit
 
-#### [HIGH-002] Formatting Issues - cargo fmt --check Fails
-- **File**: Multiple files (cli/mod.rs, commands/*, docker/*, skills/*)
-- **Issue**: 50+ files with formatting violations
-- **Evidence**: cargo fmt --check returns exit code 1
-- **Risk**: Inconsistent code style across team
-- **Recommendation**: Run `cargo fmt` to fix, add pre-commit hook
+#### [HIGH-002] Clippy Failures - Test Files
+- **Files**: tests/*.rs
+- **Issue**: Multiple clippy failures in test files:
+  - `tests/discord_listener_integration.rs` - unused imports (ToolCall, ToolFunction)
+  - `tests/discord_send_message.rs` - unused imports (ApiError, Message)
+  - `tests/container_skill_install_failure.rs` - useless_vec
+  - `tests/listener_conversation_tests.rs` - unused mut
+  - `tests/docker_availability_check.rs` - unused imports
+  - `src/config/mod.rs` - cannot test inner items
+- **Recommendation**: Clean up test files, move inline tests out
 - **Effort**: S
-- **Status**: SCHEDULED - Scheduled: Improvement Sprint 2, assigned to .switchboard/state/REFACTOR_TODO2.md
+- **Status**: NEW
 
-#### [HIGH-003] CLI Module - 2131 Lines
-- **File**: `src/cli/mod.rs` (2131 lines)
+#### [HIGH-003] CLI Module - 2144 Lines
+- **File**: `src/cli/mod.rs` (2144 lines)
 - **Issue**: Contains all CLI commands and handlers in single file
 - **Recommendation**: Extract commands to individual files in commands/ directory
 - **Effort**: M
 
-#### [HIGH-004] Commands Module Split - 2067 Lines  
-- **File**: `src/commands/skills.rs` (2067 lines)
+#### [HIGH-004] Commands Module Split - 2074 Lines  
+- **File**: `src/commands/skills.rs` (2074 lines)
 - **Issue**: Single file for all skills subcommands
 - **Recommendation**: Extract to skills/list.rs, skills/install.rs, etc.
 - **Effort**: M
@@ -136,22 +142,19 @@ Ok(GLOBAL_LOG_DIR.as_ref().unwrap().as_path())
 ### 🟡 Medium Priority (Refactoring)
 
 #### [MED-001] Duplicate Code - Docker Client Expect Pattern
-- **Files**: `src/docker/mod.rs` (lines 909, 922, 956, 1021, 1054, 1091, 1119, 1138, 1157, 1174)
-- **Issue**: Same `.expect("Docker client not available")` repeated 10+ times
+- **Files**: `src/docker/mod.rs`
+- **Issue**: Same `.expect("Docker client not available")` pattern repeated
 - **Recommendation**: Add helper method `fn get_docker(&self) -> Result<&Docker, DockerError>`
 - **Effort**: S
-- **Status**: SCHEDULED - Scheduled: Improvement Sprint 2, assigned to .switchboard/state/REFACTOR_TODO2.md
 
 #### [MED-002] Magic Strings - Error Messages
 - **Files**: Multiple
 - **Issue**: Error messages repeated across files
 ```rust
 "Docker client not available" // appears 10+ times
-"Failed to create temp dir" // appears in tests
 ```
 - **Recommendation**: Create constants in respective error modules
 - **Effort**: S
-- **Status**: SCHEDULED - Scheduled: Improvement Sprint 2, assigned to .switchboard/state/REFACTOR_TODO2.md
 
 #### [MED-003] Unused Config Key Warning
 - **File**: `.cargo/config.toml`
@@ -159,8 +162,8 @@ Ok(GLOBAL_LOG_DIR.as_ref().unwrap().as_path())
 - **Recommendation**: Remove or fix the config key
 - **Effort**: S
 
-#### [MED-004] discord/tools.rs - 1616 Lines
-- **File**: `src/discord/tools.rs` (1616 lines)
+#### [MED-004] discord/tools.rs - 1663 Lines
+- **File**: `src/discord/tools.rs` (1663 lines)
 - **Issue**: Large file with tool definitions and executions
 - **Recommendation**: Split into tools/definitions.rs, tools/execution.rs
 - **Effort**: M
@@ -177,14 +180,8 @@ Ok(GLOBAL_LOG_DIR.as_ref().unwrap().as_path())
 - **Recommendation**: Extract skill validation to separate module
 - **Effort**: M
 
-#### [MED-007] commands/validate.rs - 1420 Lines
-- **File**: `src/commands/validate.rs` (1420 lines)
-- **Issue**: Large validation command
-- **Recommendation**: Extract validation logic to config/validation.rs
-- **Effort**: M
-
-#### [MED-008] docker/mod.rs - 1391 Lines
-- **File**: `src/docker/mod.rs` (1391 lines)
+#### [MED-007] docker/mod.rs - 1394 Lines
+- **File**: `src/docker/mod.rs` (1394 lines)
 - **Issue**: Docker client wrapper module
 - **Recommendation**: Split into docker/client.rs, docker/build.rs
 - **Effort**: M
@@ -193,35 +190,27 @@ Ok(GLOBAL_LOG_DIR.as_ref().unwrap().as_path())
 
 ### 🔵 Low Priority
 
-#### [LOW-001] Clippy Warnings in Test Files
+#### [LOW-001] Clippy Warnings in Test Files (Pre-existing)
 - **Files**: `tests/*.rs`
 - **Issue**: Unused imports, mutable variables
 - **Recommendation**: Clean up test files with `cargo clippy --fix`
 - **Effort**: S
-- **Status**: SCHEDULED - Scheduled: Improvement Sprint 2, assigned to .switchboard/state/REFACTOR_TODO1.md
 
 #### [LOW-002] Dead Code - Timer Struct Never Used
 - **File**: `tests/performance_common.rs` (line 402)
 - **Issue**: `pub struct Timer` is never constructed
 - **Recommendation**: Remove or implement
 - **Effort**: S
-- **Status**: SCHEDULED - Scheduled: Improvement Sprint 2, assigned to .switchboard/state/REFACTOR_TODO1.md
 
 #### [LOW-003] Dead Code - format_duration Function
 - **File**: `tests/skills_install_performance.rs` (line 45)
 - **Issue**: Function never used
 - **Recommendation**: Remove
 - **Effort**: S
-- **Status**: SCHEDULED - Scheduled: Improvement Sprint 2, assigned to .switchboard/state/REFACTOR_TODO1.md
 
 #### [LOW-004] Unused Test Functions
 - **Files**: Multiple test files
 - **Issue**: Functions marked `#[test]` but unused
-- **Effort**: S
-
-#### [LOW-005] TODO Comments Without Issue References
-- **Issue**: Some TODO comments don't reference issue numbers
-- **Recommendation**: Add issue references per skill guidelines
 - **Effort**: S
 
 ---
@@ -251,19 +240,11 @@ Ok(GLOBAL_LOG_DIR.as_ref().unwrap().as_path())
 - **Issue**: Some private functions lack doc comments
 - **Recommendation**: Add docs to public API entry points
 - **Effort**: S
-- **Status**: SCHEDULED - Scheduled: Improvement Sprint 2, assigned to .switchboard/state/REFACTOR_TODO2.md
 
 #### [CONV-005] Backup File Present
 - **File**: `src/config/mod.rs.bak`
 - **Issue**: Backup file in source tree
 - **Recommendation**: Remove from version control, add to .gitignore
-- **Effort**: S
-- **Status**: SCHEDULED - Scheduled: Improvement Sprint 2, assigned to .switchboard/state/REFACTOR_TODO1.md
-
-#### [CONV-006] Example Config Files
-- **Files**: `examples/*.toml` 
-- **Issue**: Should have documentation explaining each example
-- **Recommendation**: Add README.md in examples/ directory
 - **Effort**: S
 
 ---
@@ -291,38 +272,34 @@ Ok(GLOBAL_LOG_DIR.as_ref().unwrap().as_path())
 ## Recommendations Roadmap
 
 ### Immediate (This Sprint)
-- [ ] Run `cargo fmt` to fix formatting - 0.5h
 - [ ] Fix 25 failing tests - 8h
-- [ ] Remove .bak file - 0.1h
+- [ ] Fix clippy test file issues - 2h
 
 ### Short-term (Next 2-4 weeks)
 - [ ] Replace unwrap/expect with proper error handling - 6h
-- [ ] Split config/mod.rs (3505 lines) - 4h
-- [ ] Split skills/mod.rs (2716 lines) - 4h
-- [ ] Fix clippy warnings - 2h
+- [ ] Split config/mod.rs (3512 lines) - 4h
+- [ ] Split skills/mod.rs (2709 lines) - 4h
 
 ### Long-term (Backlog)
-- [ ] Split cli/mod.rs (2131 lines) - 3h
-- [ ] Split commands/skills.rs (2067 lines) - 3h
+- [ ] Split cli/mod.rs (2144 lines) - 3h
+- [ ] Split commands/skills.rs (2074 lines) - 3h
 - [ ] Extract Docker helper methods - 2h
-- [ ] Add pre-commit hooks for formatting - 1h
 
 ---
 
 ## Appendix
 
-### Files Scanned (Top 30 by Line Count)
+### Files Scanned (Top 20 by Line Count)
 | File | Lines |
 |------|-------|
-| src/config/mod.rs | 3505 |
-| src/skills/mod.rs | 2716 |
-| src/cli/mod.rs | 2131 |
-| src/commands/skills.rs | 2067 |
-| src/discord/tools.rs | 1616 |
+| src/config/mod.rs | 3512 |
+| src/skills/mod.rs | 2709 |
+| src/cli/mod.rs | 2144 |
+| src/commands/skills.rs | 2074 |
+| src/discord/tools.rs | 1663 |
 | src/discord/llm.rs | 1539 |
 | src/docker/skills.rs | 1489 |
-| src/commands/validate.rs | 1420 |
-| src/docker/mod.rs | 1391 |
+| src/docker/mod.rs | 1394 |
 | src/scheduler/mod.rs | 1259 |
 | src/metrics/store.rs | 1091 |
 | src/discord/config.rs | 1091 |
@@ -334,21 +311,21 @@ Ok(GLOBAL_LOG_DIR.as_ref().unwrap().as_path())
 | src/skills/error.rs | 735 |
 | src/commands/metrics.rs | 596 |
 | src/logger/file.rs | 540 |
+| src/logger/terminal.rs | 447 |
 
 ### Skipped Files
 - None - full codebase scanned
 
-### Prior Findings (from state.json)
-| Finding ID | Status |
-|------------|--------|
-| FIND-001 | RECURRING - clippy warnings |
-| FIND-002 | RECURRING - god module run.rs |
-| FIND-003 | NEW - 25 test failures |
-| FIND-004 | RECURRING - unwrap in production |
-| FIND-005 | NEW - formatting issues |
-| FIND-006 | NEW - formatting issues |
-| FIND-007 | RECURRING - god module config |
-| FIND-008 | NEW - backup file present |
-| FIND-009 | NEW - test failures |
-| FIND-010 | NEW - unused code |
-| FIND-011 | NEW - missing docs |
+### Skills Compliance Notes
+The codebase has two active skills:
+1. **rust-best-practices** - Key violations found:
+   - unwrap()/expect() in production code (HIGH-001)
+   
+2. **rust-engineer** - Key violations found:
+   - Error handling patterns inconsistent
+
+### Changes Since Last Audit
+- **FIXED**: Formatting issues (cargo fmt --check now passes)
+- **SAME**: 25 test failures persist
+- **SAME**: God modules unchanged (slightly grew)
+- **NEW**: Clippy test file failures identified
