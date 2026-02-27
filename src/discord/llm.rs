@@ -32,6 +32,7 @@ use reqwest::header::{HeaderMap, HeaderValue, AUTHORIZATION, CONTENT_TYPE};
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
 use thiserror::Error;
+use tracing::warn;
 
 /// OpenRouter API endpoint
 const OPENROUTER_API_URL: &str = "https://openrouter.ai/api/v1/chat/completions";
@@ -456,7 +457,12 @@ impl OpenRouterClient {
                     .headers()
                     .get("retry-after")
                     .and_then(|v| v.to_str().ok())
-                    .and_then(|s| s.parse().ok())
+                    .map(|s| {
+                        s.parse().unwrap_or_else(|e| {
+                            warn!("Failed to parse retry-after header: {}", e);
+                            60
+                        })
+                    })
                     .unwrap_or(60);
                 Err(LlmError::RateLimited(wait_secs))
             }
