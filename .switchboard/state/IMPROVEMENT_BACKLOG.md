@@ -25,7 +25,7 @@
 - **Description:** Function `connect_with_named_pipe_defaults` does not exist in bollard 0.18.1. The Windows-specific Docker connection API has changed, causing compilation failure.
 - **Evidence:** `src/docker/mod.rs:140` - function call to non-existent bollard API
 - **Suggested Fix:** Update the Docker client initialization to use the new bollard API for Windows named pipe connections, or use cross-platform connection method
-- **Status:** OPEN
+- **Status:** SCHEDULED - Improvement Sprint 1, assigned to .switchboard/state/REFACTOR_TODO1.md
 
 ### FIND-002 — Merge Conflicts in Test Files
 - **Category:** Structure
@@ -37,7 +37,7 @@
 - **Description:** Unresolved merge conflicts in test files block the build and prevent tests from running.
 - **Evidence:** Merge conflict markers (<<<<<<<, =======, >>>>>>>) present in test files
 - **Suggested Fix:** Resolve merge conflicts in all affected test files - keep incoming changes for performance tests or remove conflicts if tests are no longer needed
-- **Status:** OPEN
+- **Status:** SCHEDULED - Improvement Sprint 1, assigned to .switchboard/state/REFACTOR_TODO1.md
 
 ### FIND-003 — panic!() in Production Code
 - **Category:** Error Handling
@@ -50,7 +50,7 @@
 - **Description:** Direct `panic!()` calls in production code can cause application crashes on invalid input.
 - **Evidence:** `panic!("Invalid skill format: {}", skill)`
 - **Suggested Fix:** Replace `panic!()` with proper error return using `Result<(), SkillsError>` or similar error type
-- **Status:** OPEN
+- **Status:** SCHEDULED - Improvement Sprint 1, assigned to .switchboard/state/REFACTOR_TODO2.md
 
 ### FIND-004 — .expect() in Production Code
 - **Category:** Error Handling
@@ -76,7 +76,7 @@
 - **Description:** Using `.ok()` silently converts errors to default values, hiding configuration errors and making debugging difficult.
 - **Evidence:** `value_str.parse().ok()?` and `.and_then(|s| s.timezone.parse::<Tz>().ok())`
 - **Suggested Fix:** Replace `.ok()` with proper error propagation to maintain error context
-- **Status:** OPEN
+- **Status:** SCHEDULED - Improvement Sprint 1, assigned to .switchboard/state/REFACTOR_TODO2.md
 
 ### FIND-006 — God Module: docker/run/run.rs
 - **Category:** Complexity
@@ -174,7 +174,7 @@
 - **Description:** 4 unused imports create noise and may indicate incomplete refactoring.
 - **Evidence:** Unused imports: `error` in gateway.rs, `error`, `info` in tools.rs, `std::io::Write` in traits/mod.rs
 - **Suggested Fix:** Remove unused imports or use them
-- **Status:** OPEN
+- **Status:** SCHEDULED - Improvement Sprint 1, assigned to .switchboard/state/REFACTOR_TODO2.md
 
 ### FIND-014 — Broken Documentation Links
 - **Category:** Documentation
@@ -186,7 +186,7 @@
 - **Description:** 6 broken links in documentation reference files that don't exist.
 - **Evidence:** Links to quickstart.md, cli.md, env-vars.md, CONTRIBUTING.md, ARCHITECTURE.md
 - **Suggested Fix:** Create missing documentation files or remove broken links
-- **Status:** OPEN
+- **Status:** SCHEDULED - Improvement Sprint 1, assigned to .switchboard/state/REFACTOR_TODO1.md
 
 ### FIND-015 — God Module: discord/tools.rs
 - **Category:** Complexity
@@ -258,7 +258,7 @@
 - **Description:** README shows 6-field cron examples while configuration.md describes 5-field format.
 - **Evidence:** Inconsistent documentation between README and configuration docs
 - **Suggested Fix:** Clarify in docs/configuration.md that both 5-field and 6-field cron expressions are supported
-- **Status:** OPEN
+- **Status:** SCHEDULED - Improvement Sprint 1, assigned to .switchboard/state/REFACTOR_TODO1.md
 
 ### FIND-021 — Missing API Documentation
 - **Category:** Documentation
@@ -270,7 +270,7 @@
 - **Description:** 3 public types lack complete documentation.
 - **Evidence:** RealProcessExecutor, SystemClock, DockerClient lack full doc comments
 - **Suggested Fix:** Add comprehensive doc comments to public types
-- **Status:** OPEN
+- **Status:** SCHEDULED - Improvement Sprint 1, assigned to .switchboard/state/REFACTOR_TODO2.md
 
 ### FIND-022 — Unused Allow(dead_code) Annotations
 - **Category:** Dead Code

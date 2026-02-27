@@ -580,12 +580,17 @@ or there may be network issues. Try again or check your network connection.".to_
         options: Option<bollard::container::CreateContainerOptions<String>>,
         config: bollard::container::Config<String>,
     ) -> Result<String, DockerError> {
-        tokio::runtime::Handle::current()
-            .block_on(async {
+        // Use block_in_place to properly handle being called from within an async context
+        // This is required because the Discord listener runs in a Tokio runtime and calls
+        // this synchronous trait method, which internally tries to call async bollard code
+        tokio::task::block_in_place(|| {
+            let handle = tokio::runtime::Handle::current();
+            handle.block_on(async {
                 let response = self.docker.create_container(options, config).await?;
                 Ok(response.id)
             })
-            .map_err(|e: bollard::errors::Error| DockerError::ConnectionError(e.to_string()))
+        })
+        .map_err(|e: bollard::errors::Error| DockerError::ConnectionError(e.to_string()))
     }
 
     fn start_container(
@@ -593,9 +598,12 @@ or there may be network issues. Try again or check your network connection.".to_
         container_id: &str,
         options: Option<bollard::container::StartContainerOptions<String>>,
     ) -> Result<(), DockerError> {
-        tokio::runtime::Handle::current()
-            .block_on(async { self.docker.start_container(container_id, options).await })
-            .map_err(|e| DockerError::ConnectionError(e.to_string()))
+        // Use block_in_place to properly handle being called from within an async context
+        tokio::task::block_in_place(|| {
+            let handle = tokio::runtime::Handle::current();
+            handle.block_on(async { self.docker.start_container(container_id, options).await })
+        })
+        .map_err(|e| DockerError::ConnectionError(e.to_string()))
     }
 
     fn inspect_container(
@@ -603,9 +611,12 @@ or there may be network issues. Try again or check your network connection.".to_
         container_id: &str,
         options: Option<bollard::container::InspectContainerOptions>,
     ) -> Result<bollard::service::ContainerInspectResponse, DockerError> {
-        tokio::runtime::Handle::current()
-            .block_on(async { self.docker.inspect_container(container_id, options).await })
-            .map_err(|e| DockerError::ConnectionError(e.to_string()))
+        // Use block_in_place to properly handle being called from within an async context
+        tokio::task::block_in_place(|| {
+            let handle = tokio::runtime::Handle::current();
+            handle.block_on(async { self.docker.inspect_container(container_id, options).await })
+        })
+        .map_err(|e| DockerError::ConnectionError(e.to_string()))
     }
 
     fn kill_container(
@@ -613,9 +624,12 @@ or there may be network issues. Try again or check your network connection.".to_
         container_id: &str,
         options: Option<bollard::container::KillContainerOptions<String>>,
     ) -> Result<(), DockerError> {
-        tokio::runtime::Handle::current()
-            .block_on(async { self.docker.kill_container(container_id, options).await })
-            .map_err(|e| DockerError::ConnectionError(e.to_string()))
+        // Use block_in_place to properly handle being called from within an async context
+        tokio::task::block_in_place(|| {
+            let handle = tokio::runtime::Handle::current();
+            handle.block_on(async { self.docker.kill_container(container_id, options).await })
+        })
+        .map_err(|e| DockerError::ConnectionError(e.to_string()))
     }
 }
 

@@ -1,11 +1,11 @@
 {
-  "pid": 3812,
-  "last_heartbeat": "2026-02-27T04:05:57.457436600+00:00",
+  "pid": 22680,
+  "last_heartbeat": "2026-02-27T14:24:17.434003900+00:00",
   "state": "running",
   "agents": [
     {
       "name": "sb-auditor",
-      "schedule": "0 0 */4 * *",
+      "schedule": "0 0 */2 * *",
       "current_run": null
     },
     {

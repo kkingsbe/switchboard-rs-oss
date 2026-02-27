@@ -6,7 +6,7 @@ timezone = "system"
 
 [[agent]]
 name = "sb-auditor"
-schedule = "0 0 */4 * *"              # Every 4 hours
+schedule = "0 0 */2 * *"              # Every 2 hours
 readonly = false
 timeout = "40m"
 prompt_file = ".switchboard/prompts/workflows/codebase-maintinance/AUDITOR.md"
@@ -14,7 +14,7 @@ env = { AGENT_COUNT = "2" }
 
 [[agent]]
 name = "sb-improvement-planner"
-schedule = "0 30 */4 * *"             # 30 min after auditor
+schedule = "0 30 */2 * *"             # 30 min after auditor
 readonly = false
 timeout = "30m"
 prompt_file = ".switchboard/prompts/workflows/codebase-maintinance/IMPROVEMENT_PLANNER.md"

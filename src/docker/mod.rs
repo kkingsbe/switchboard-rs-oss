@@ -902,10 +902,13 @@ impl AsRef<Arc<dyn DockerClientTrait>> for &DockerClient {
 impl crate::traits::DockerClientTrait for DockerClient {
     fn ping(&self) -> Result<(), DockerError> {
         let docker = self.docker.as_ref().expect("Docker client not available");
-        tokio::runtime::Handle::current()
-            .block_on(docker.ping())
-            .map(|_| ())
-            .map_err(|e| DockerError::ConnectionError(e.to_string()))
+        // Use block_in_place to properly handle being called from within an async context
+        tokio::task::block_in_place(|| {
+            let handle = tokio::runtime::Handle::current();
+            handle.block_on(docker.ping())
+        })
+        .map(|_| ())
+        .map_err(|e| DockerError::ConnectionError(e.to_string()))
     }
 
     fn image_exists(&self, name: &str, tag: &str) -> Result<bool, DockerError> {
@@ -914,8 +917,10 @@ impl crate::traits::DockerClientTrait for DockerClient {
         let image_name = format!("{}:{}", name, tag);
         let docker = self.docker.as_ref().expect("Docker client not available");
 
-        tokio::runtime::Handle::current()
-            .block_on(async {
+        // Use block_in_place to properly handle being called from within an async context
+        tokio::task::block_in_place(|| {
+            let handle = tokio::runtime::Handle::current();
+            handle.block_on(async {
                 let options = Some(ListImagesOptions::<String> {
                     all: false,
                     ..Default::default()
@@ -934,7 +939,8 @@ impl crate::traits::DockerClientTrait for DockerClient {
 
                 Ok(false)
             })
-            .map_err(|e: bollard::errors::Error| DockerError::ConnectionError(e.to_string()))
+        })
+        .map_err(|e: bollard::errors::Error| DockerError::ConnectionError(e.to_string()))
     }
 
     fn build_image(
