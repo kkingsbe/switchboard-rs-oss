@@ -71,12 +71,16 @@ fn truncate_text(text: &str, max_len: usize) -> String {
 }
 
 /// Get the timezone from config, defaulting to UTC
-fn get_timezone(config: &Config) -> Tz {
+fn get_timezone(config: &Config) -> Result<Tz, String> {
     config
         .settings
         .as_ref()
-        .and_then(|s| s.timezone.parse::<Tz>().ok())
-        .unwrap_or(Tz::UTC)
+        .ok_or_else(|| "Missing settings in config".to_string())
+        .and_then(|s| {
+            s.timezone
+                .parse::<Tz>()
+                .map_err(|e| format!("Invalid timezone '{}': {}", s.timezone, e))
+        })
 }
 
 /// Calculate the next run time for a cron schedule
@@ -151,7 +155,7 @@ pub fn list_agents(config: &Config) -> Result<(), String> {
     }
 
     // Get the timezone from config
-    let timezone = get_timezone(config);
+    let timezone = get_timezone(config)?;
 
     // Create a table with proper styling
     let mut table = Table::new();

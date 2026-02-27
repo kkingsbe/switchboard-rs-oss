@@ -30,7 +30,7 @@ env = { AGENT_ID = "1" }
 
 [[agent]]
 name = "sb-refactor-2"
-schedule = "*/45 * * * *"           # Staggered 15 min from refactor-1
+schedule = "*/45 * * * *"
 readonly = false
 timeout = "30m"
 prompt_file = ".switchboard/prompts/workflows/codebase-maintinance/REFACTOR_DEV.md"
