@@ -31,21 +31,60 @@ pub mod skills;
 /// this function queries the active Docker context to get the correct socket path.
 ///
 /// If no executor is provided, a default `RealProcessExecutor` is created.
+///
+/// This function has a 5-second timeout to prevent indefinite hangs when Docker
+/// is unavailable or slow.
 async fn get_docker_socket_path(
     executor: Option<Arc<dyn ProcessExecutorTrait>>,
 ) -> Result<Option<String>, ProcessError> {
     let executor = executor.unwrap_or_else(|| Arc::new(RealProcessExecutor::new()));
 
-    // Use docker context show to get the active context name
-    let output = executor.execute("docker", &["context".to_string(), "show".to_string()])?;
+    // Clone executor for first closure
+    let executor_clone1 = executor.clone();
+    // Use docker context show to get the active context name (with timeout)
+    let output = tokio::time::timeout(
+        Duration::from_secs(5),
+        tokio::task::spawn_blocking(move || {
+            executor_clone1.execute("docker", &["context".to_string(), "show".to_string()])
+        }),
+    )
+    .await
+    .map_err(|_| ProcessError::ExecutionFailed {
+        program: "docker".to_string(),
+        error_details: "Timeout getting Docker context (docker context show)".to_string(),
+        suggestion: "Check if Docker is running and responsive".to_string(),
+    })?
+    .map_err(|e| ProcessError::ExecutionFailed {
+        program: "docker".to_string(),
+        error_details: format!("Failed to get Docker context: {}", e),
+        suggestion: "Check if Docker is running".to_string(),
+    })??;
 
     let context_name = output.stdout.trim().to_string();
 
-    // Use docker context inspect to get the endpoint for the active context
-    let output = executor.execute(
-        "docker",
-        &["context".to_string(), "inspect".to_string(), context_name],
-    )?;
+    // Clone executor for second closure
+    let executor_clone2 = executor.clone();
+    // Use docker context inspect to get the endpoint for the active context (with timeout)
+    let output = tokio::time::timeout(
+        Duration::from_secs(5),
+        tokio::task::spawn_blocking(move || {
+            executor_clone2.execute(
+                "docker",
+                &["context".to_string(), "inspect".to_string(), context_name],
+            )
+        }),
+    )
+    .await
+    .map_err(|_| ProcessError::ExecutionFailed {
+        program: "docker".to_string(),
+        error_details: "Timeout inspecting Docker context (docker context inspect)".to_string(),
+        suggestion: "Check if Docker is running and responsive".to_string(),
+    })?
+    .map_err(|e| ProcessError::ExecutionFailed {
+        program: "docker".to_string(),
+        error_details: format!("Failed to inspect Docker context: {}", e),
+        suggestion: "Check if Docker is running".to_string(),
+    })??;
 
     let json_output = &output.stdout;
 

@@ -16,6 +16,7 @@ use futures::StreamExt;
 use std::fmt::Debug;
 use std::path::PathBuf;
 use std::process::Command;
+use tokio::time::Duration;
 
 pub use crate::commands::skills::ExitCode;
 pub use crate::docker::run::types::ContainerConfig;
@@ -336,39 +337,58 @@ impl DockerClientTrait for RealDockerClient {
 
         let image_id = tokio::runtime::Handle::current()
             .block_on(async {
-                let mut stream = self
-                    .docker
-                    .build_image(build_options, None, Some(tarball_bytes));
+                // Wrap the entire build operation with a 5-minute (300 second) timeout
+                tokio::time::timeout(
+                    Duration::from_secs(300),
+                    async {
+                        let mut stream = self
+                            .docker
+                            .build_image(build_options, None, Some(tarball_bytes));
 
-                let mut final_image_id = String::new();
+                        let mut final_image_id = String::new();
 
-                while let Some(build_result) = stream.next().await {
-                    match build_result {
-                        Ok(info) => {
-                            if let Some(id) = info.id {
-                                final_image_id = id;
-                            }
-                            // Log build output for debugging
-                            if let Some(stream_type) = info.stream {
-                                tracing::debug!("Build output: {}", stream_type);
+                        while let Some(build_result) = stream.next().await {
+                            match build_result {
+                                Ok(info) => {
+                                    if let Some(id) = info.id {
+                                        final_image_id = id;
+                                    }
+                                    // Log build output for debugging
+                                    if let Some(stream_type) = info.stream {
+                                        tracing::debug!("Build output: {}", stream_type);
+                                    }
+                                }
+                                Err(e) => {
+                                    return Err(e);
+                                }
                             }
                         }
-                        Err(e) => {
-                            return Err(e);
-                        }
-                    }
-                }
 
-                if final_image_id.is_empty() {
-                    // If no image ID from stream, use the image name
-                    Ok(image_name.clone())
-                } else {
-                    Ok(final_image_id)
-                }
+                        if final_image_id.is_empty() {
+                            // If no image ID from stream, use the image name
+                            Ok(image_name.clone())
+                        } else {
+                            Ok(final_image_id)
+                        }
+                    },
+                )
+                .await
+                .map_err(|_| {
+                    // Timeout error
+                    std::io::Error::new(
+                        std::io::ErrorKind::TimedOut,
+                        "Docker build timed out after 300 seconds",
+                    )
+                })?
             })
             .map_err(|e| DockerError::BuildError {
                 error_details: e.to_string(),
-                suggestion: "Check Docker build logs for details".to_string(),
+                suggestion: if e.to_string().contains("Timed out") {
+                    "Docker build timed out after 5 minutes. The build may be taking too long, 
+or there may be network issues. Try again or check your network connection.".to_string()
+                } else {
+                    "Check Docker build logs for details".to_string()
+                },
             })?;
 
         Ok(image_id)

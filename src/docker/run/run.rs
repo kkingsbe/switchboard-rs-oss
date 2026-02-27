@@ -217,7 +217,16 @@ pub fn build_host_config(workspace: &str, readonly: bool) -> HostConfig {
     };
 
     // Convert backslashes to forward slashes for Docker compatibility
-    let docker_path = normalized_workspace.replace("\\", "/");
+    // If workspace is ".", convert to absolute path to avoid Docker interpreting it as a volume name
+    let docker_path = if normalized_workspace == "." {
+        std::env::current_dir()
+            .unwrap_or_else(|_| std::path::PathBuf::from("."))
+            .to_string_lossy()
+            .to_string()
+            .replace("\\", "/")
+    } else {
+        normalized_workspace.replace("\\", "/")
+    };
 
     // Build the list of bind mounts, starting with the workspace
     let mut binds = vec![format!(
