@@ -8,7 +8,7 @@
 <p align="center">
 
 [![Build](https://github.com/switchboard-ai/switchboard/actions/workflows/build.yml/badge.svg)](https://github.com/switchboard-ai/switchboard/actions/workflows/build.yml)
-[![Crates.io](https://img.shields.io/crates/v/switchboard.svg)](https://crates.io/crates/switchboard)
+
 [![Discord](https://img.shields.io/discord/123456789?label=Discord)](https://discord.gg/switchboard)
 
 </p>
@@ -19,9 +19,12 @@
 
 ```bash
 # 1. Install
-cargo install switchboard
+cargo install --path .
 
-# 2. Create config (switchboard.toml)
+# 2. Build Docker image
+switchboard build
+
+# 3. Create config (switchboard.toml)
 echo '[settings]
 image_name = "kilosynth/prompter:latest"
 
@@ -30,7 +33,7 @@ name = "daily-coder"
 schedule = "0 9 * * *"
 prompt = "Review PRs and summarize changes."' > switchboard.toml
 
-# 3. Run
+# 4. Run
 switchboard up
 ```
 
@@ -66,10 +69,16 @@ docker --version
 ### Step 2: Install Switchboard
 
 ```bash
-cargo install switchboard
+cargo install --path .
 ```
 
-### Step 3: Create a configuration file
+### Step 3: Build Docker image
+
+```bash
+switchboard build
+```
+
+### Step 4: Create a configuration file
 
 Create `switchboard.toml` in your project:
 
@@ -83,7 +92,7 @@ schedule = "0 9 * * *"
 prompt = "Review any open PRs and summarize the changes."
 ```
 
-### Step 4: Validate your configuration
+### Step 5: Validate your configuration
 
 > ✅ **Tip**: Use `switchboard validate` before running
 
@@ -91,7 +100,7 @@ prompt = "Review any open PRs and summarize the changes."
 switchboard validate
 ```
 
-### Step 5: Start the scheduler
+### Step 6: Start the scheduler
 
 ```bash
 switchboard up
@@ -110,18 +119,18 @@ The scheduler will run in the foreground. Press `Ctrl+C` to stop.
 | **Docker** | 20.10+ | Container runtime for agent isolation |
 | **Rust** | 1.70+ | Required for `cargo install` |
 
-### Install from Crates.io
-
-```bash
-cargo install switchboard
-```
-
 ### Install from Source
 
 ```bash
 git clone https://github.com/switchboard-ai/switchboard.git
 cd switchboard
 cargo install --path .
+```
+
+### Build Docker Image
+
+```bash
+switchboard build
 ```
 
 ### Verify Installation
