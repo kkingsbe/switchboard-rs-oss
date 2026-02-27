@@ -359,7 +359,9 @@ mod tests {
             let result = validate_path(&Path::new("link/test_symlink_target"), allowed_dir);
 
             // Clean up
-            let _ = fs::remove_file(&target_file);
+            if let Err(e) = fs::remove_file(&target_file) {
+                eprintln!("Warning: Failed to clean up test file: {}", e);
+            }
 
             // This should fail because the symlink resolves to temp_dir which is outside allowed_dir
             // (unless temp_dir happens to be inside our allowed_dir, which is unlikely)
