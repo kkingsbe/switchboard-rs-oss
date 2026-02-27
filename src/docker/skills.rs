@@ -97,26 +97,31 @@ use crate::skills::SkillsError;
 ///
 /// * `Ok(String)` - The extracted skill name
 ///
-/// # Panics
+/// # Errors
 ///
-/// This function panics if the skill format is invalid (should be validated before calling).
-/// It assumes the skill has already been validated by `validate_skill_format()`.
-fn extract_skill_name(skill: &str) -> String {
+/// Returns `Err(SkillsError::Configuration)` if the skill format is invalid.
+fn extract_skill_name(skill: &str) -> Result<String, SkillsError> {
     if skill.contains('@') {
         // Format: owner/repo@skill-name
         let parts: Vec<&str> = skill.split('@').collect();
         if parts.len() == 2 {
-            parts[1].to_string()
+            Ok(parts[1].to_string())
         } else {
-            panic!("Invalid skill format: {}", skill);
+            return Err(SkillsError::InvalidSkillFormat {
+                skill_source: skill.to_string(),
+                reason: "Invalid skill format".to_string(),
+            });
         }
     } else {
         // Format: owner/repo - use the repo part as the skill name
         let parts: Vec<&str> = skill.split('/').collect();
         if parts.len() == 2 {
-            parts[1].to_string()
+            Ok(parts[1].to_string())
         } else {
-            panic!("Invalid skill format: {}", skill);
+            return Err(SkillsError::InvalidSkillFormat {
+                skill_source: skill.to_string(),
+                reason: "Invalid skill format".to_string(),
+            });
         }
     }
 }
@@ -372,7 +377,7 @@ pub fn generate_entrypoint_script(
     // Per Section 3.6 requirements: If a skill doesn't exist on host, container launch FAILS immediately
     // This enforces the "bind-mount skills instead of runtime npx" requirement
     for skill in skills {
-        let skill_name = extract_skill_name(skill);
+        let skill_name = extract_skill_name(skill)?;
         if !preexisting_skills.contains(&skill_name) {
             // Check if skill file exists in ./skills/ directory
             let skill_path = Path::new("./skills").join(&skill_name).join("SKILL.md");
