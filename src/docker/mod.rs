@@ -135,10 +135,13 @@ pub async fn connect_to_docker(
                 return Ok(docker);
             }
         } else if socket_path.starts_with("npipe://") {
-            // Windows named pipe
-            let path = socket_path.strip_prefix("npipe://").unwrap();
-            if let Ok(docker) = Docker::connect_with_named_pipe_defaults() {
-                return Ok(docker);
+            // Windows named pipe - only compile on Windows
+            #[cfg(target_os = "windows")]
+            {
+                let path = socket_path.strip_prefix("npipe://").unwrap();
+                if let Ok(docker) = Docker::connect_with_named_pipe_defaults() {
+                    return Ok(docker);
+                }
             }
         }
     }

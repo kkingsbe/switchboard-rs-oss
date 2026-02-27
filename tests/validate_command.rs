@@ -30,7 +30,7 @@ prompt_file = "./prompt.txt"
     fs::write(&config_path, config_content).unwrap();
 
     // Create and run the validate command
-    let command = ValidateCommand {};
+    let command = ValidateCommand { sync: false };
 
     let result = command.run(config_path).await;
 
@@ -45,7 +45,7 @@ async fn test_validate_missing_config() {
     let config_path = temp_dir.path().join("nonexistent.toml");
 
     // Create and run the validate command with a missing config file
-    let command = ValidateCommand {};
+    let command = ValidateCommand { sync: false };
 
     let result = command.run(config_path).await;
 
@@ -79,7 +79,7 @@ name = "test-agent"
     fs::write(&config_path, invalid_toml).unwrap();
 
     // Create and run the validate command
-    let command = ValidateCommand {};
+    let command = ValidateCommand { sync: false };
 
     let result = command.run(config_path).await;
 
@@ -114,7 +114,7 @@ prompt_file = "./prompt.txt"
     fs::write(&config_path, config_content).unwrap();
 
     // Create and run the validate command
-    let command = ValidateCommand {};
+    let command = ValidateCommand { sync: false };
 
     let result = command.run(config_path).await;
 
@@ -154,7 +154,7 @@ prompt_file = "./prompt.txt"
     fs::write(&config_path, config_content).unwrap();
 
     // Create and run the validate command
-    let command = ValidateCommand {};
+    let command = ValidateCommand { sync: false };
 
     let result = command.run(config_path).await;
 
@@ -182,7 +182,7 @@ prompt_file = "./nonexistent.txt"
     fs::write(&config_path, config_content).unwrap();
 
     // Create and run the validate command
-    let command = ValidateCommand {};
+    let command = ValidateCommand { sync: false };
 
     let result = command.run(config_path).await;
 
@@ -214,7 +214,7 @@ prompt_file = "./prompt.txt"
     fs::write(&config_path, config_content).unwrap();
 
     // Create and run the validate command
-    let command = ValidateCommand {};
+    let command = ValidateCommand { sync: false };
 
     let result = command.run(config_path).await;
 
@@ -442,7 +442,7 @@ prompt = "test"
     fs::write(&config_path, invalid_toml).unwrap();
 
     // Create and run the validate command
-    let command = ValidateCommand {};
+    let command = ValidateCommand { sync: false };
     let result = command.run(config_path).await;
 
     // Verify it returns a parse error
@@ -695,7 +695,7 @@ skills = []
     fs::write(&config_path, config_content).unwrap();
 
     // Create and run the validate command
-    let command = ValidateCommand {};
+    let command = ValidateCommand { sync: false };
 
     let result = command.run(config_path).await;
 
@@ -732,7 +732,7 @@ skills = [
     fs::write(&config_path, config_content).unwrap();
 
     // Create and run the validate command
-    let command = ValidateCommand {};
+    let command = ValidateCommand { sync: false };
 
     let result = command.run(config_path).await;
 
@@ -776,7 +776,7 @@ skills = [
     fs::write(&config_path, config_content).unwrap();
 
     // Create and run the validate command
-    let command = ValidateCommand {};
+    let command = ValidateCommand { sync: false };
 
     let result = command.run(config_path).await;
 
@@ -814,7 +814,7 @@ skills = ["owner/repo", "owner/repo", "owner/other"]
     fs::write(&config_path, config_content).unwrap();
 
     // Create and run the validate command
-    let command = ValidateCommand {};
+    let command = ValidateCommand { sync: false };
 
     let result = command.run(config_path).await;
 
@@ -845,7 +845,7 @@ skills = [
     fs::write(&config_path, config_content).unwrap();
 
     // Create and run the validate command
-    let command = ValidateCommand {};
+    let command = ValidateCommand { sync: false };
 
     let result = command.run(config_path).await;
 
@@ -903,7 +903,7 @@ skills = [
     fs::write(&config_path, config_content).unwrap();
 
     // Create and run the validate command
-    let command = ValidateCommand {};
+    let command = ValidateCommand { sync: false };
 
     let result = command.run(config_path).await;
 
@@ -976,7 +976,7 @@ skills = [
     fs::write(&config_path, config_content).unwrap();
 
     // Create and run the validate command
-    let command = ValidateCommand {};
+    let command = ValidateCommand { sync: false };
 
     let result = command.run(config_path).await;
 
@@ -1048,7 +1048,7 @@ skills = [
     fs::write(&config_path, config_content).unwrap();
 
     // Create and run the validate command
-    let command = ValidateCommand {};
+    let command = ValidateCommand { sync: false };
 
     let result = command.run(config_path).await;
 
@@ -1098,7 +1098,7 @@ skills = []
     fs::write(&config_path, config_content).unwrap();
 
     // Create and run the validate command
-    let command = ValidateCommand {};
+    let command = ValidateCommand { sync: false };
 
     let result = command.run(config_path).await;
 
@@ -1128,7 +1128,7 @@ async fn test_validate_config_with_no_agents() {
     fs::write(&config_path, config_content).unwrap();
 
     // Create and run the validate command
-    let command = ValidateCommand {};
+    let command = ValidateCommand { sync: false };
 
     let result = command.run(config_path).await;
 
@@ -1190,7 +1190,7 @@ skills = [
     fs::write(&config_path, config_content).unwrap();
 
     // Create and run the validate command
-    let command = ValidateCommand {};
+    let command = ValidateCommand { sync: false };
 
     let result = command.run(config_path).await;
 
@@ -1222,7 +1222,7 @@ prompt = "Test prompt"
     fs::write(&config_path, config_content).unwrap();
 
     // Create and run the validate command
-    let command = ValidateCommand {};
+    let command = ValidateCommand { sync: false };
 
     let result = command.run(config_path).await;
 

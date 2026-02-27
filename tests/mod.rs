@@ -5,11 +5,8 @@ mod down_command;
 mod metrics_command;
 mod performance_common;
 mod skill_install_error_handling;
-<<<<<<< HEAD
-=======
 mod skills_install_error_handling;
 mod skills_install_performance;
->>>>>>> skills-improvements
 mod skills_install_performance_command;
 mod skills_log_prefix;
 mod timeout_parsing;

@@ -725,7 +725,7 @@ mod tests {
         fs::write(&config_path, toml_content).expect("Failed to write config file");
 
         // Create the validate command and run it
-        let validate_cmd = ValidateCommand {};
+        let validate_cmd = ValidateCommand { sync: false };
         let result = validate_cmd.run(config_path).await;
 
         // Expected behavior: Validation should pass because */5 * * * * is a valid

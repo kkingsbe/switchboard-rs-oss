@@ -43,41 +43,6 @@ use std::time::Instant;
 
 use switchboard::skills::{scan_global_skills, scan_skill_directory, SkillMetadata};
 
-<<<<<<< HEAD
-/// High-precision timer for performance measurements
-#[derive(Clone)]
-struct Timer {
-    name: String,
-    start: std::time::Instant,
-}
-
-impl Timer {
-    fn new(name: impl Into<String>) -> Self {
-        Self {
-            name: name.into(),
-            start: std::time::Instant::now(),
-        }
-    }
-
-    fn elapsed(&self) -> std::time::Duration {
-        self.start.elapsed()
-    }
-}
-
-/// Formats a duration in a human-readable format
-fn format_duration(duration: std::time::Duration) -> String {
-    let micros = duration.as_micros();
-    if micros < 1_000 {
-        format!("{}μs", micros)
-    } else if micros < 1_000_000 {
-        format!("{:.2}ms", micros as f64 / 1_000.0)
-    } else {
-        format!("{:.4}s", duration.as_secs_f64())
-    }
-}
-
-=======
->>>>>>> skills-improvements
 /// Setup function for performance tests
 ///
 /// Creates a clean test environment with a temporary directory.
@@ -419,15 +384,12 @@ This is a mock skill for search performance testing.
 #[tokio::test]
 async fn test_global_skills_scan_performance() {
     // Setup: ensure clean state with temp dir
-<<<<<<< HEAD
     let temp_dir = setup();
     let temp_dir_path = temp_dir.path();
-=======
     let _setup = setup();
 
     // Create a temp directory for testing
     let temp_dir = TempDir::new().unwrap();
->>>>>>> skills-improvements
 
     // Temporarily override HOME environment variable to point to temp dir
     // This ensures we don't actually read the user's global skills directory
@@ -436,11 +398,8 @@ async fn test_global_skills_scan_performance() {
     std::env::set_var("HOME", temp_dir_path);
 
     // Create empty global skills directory
-<<<<<<< HEAD
     let global_skills_dir = temp_dir_path.join(".kilocode").join("skills");
-=======
     let global_skills_dir = temp_dir.path().join(".kilocode").join("skills");
->>>>>>> skills-improvements
     fs::create_dir_all(&global_skills_dir).unwrap();
 
     // Measure execution time for scanning global skills directory using high-precision Timer
