@@ -1,29 +1,30 @@
 # Codebase Scan Report
 
 **Project**: switchboard  
-**Scanned**: 2026-02-27T20:09:00Z  
+**Scanned**: 2026-02-27T22:14:15Z  
+**Commit Audited**: a58094e
 **Scope**: Full codebase (src/, tests/)  
 **Files Analyzed**: ~80 Rust source files  
-**Audit Type**: Continuation (previous audit: 2026-02-27T18:07:00Z)
+**Audit Type**: Continuation (previous audit: 2026-02-27T20:09:00Z)
 
 ---
 
 ## Executive Summary
 
-| Severity | Count | Estimated Effort |
-|----------|-------|------------------|
-| 🔴 Critical | 3 | 8h |
-| 🟠 High | 4 | 6h |
-| 🟡 Medium | 7 | 10h |
-| 🔵 Low | 4 | 3h |
-| ⚪ Convention | 5 | 2h |
+| Severity | Count | Change vs Last Audit |
+|----------|-------|---------------------|
+| 🔴 Critical | 3 | - |
+| 🟠 High | 4 | -1 (resolved CONV-005) |
+| 🟡 Medium | 6 | -1 (resolved MED-001, MED-002) |
+| 🔵 Low | 3 | -1 |
+| ⚪ Convention | 4 | -1 |
 
 **Overall Health Score**: 6.5/10  
 
 **Top 3 Priorities**:
 1. Fix failing tests (25 test failures)
 2. Address unwrap/expect in production code (skills compliance)
-3. Address clippy failures in test files
+3. Split god modules for maintainability
 
 ---
 
@@ -43,9 +44,9 @@
 | Check | Status | Notes |
 |-------|--------|-------|
 | `cargo build` | ✅ PASS | 1 warning: unused config key |
-| `cargo test` | ❌ FAIL | 25 test failures |
-| `cargo clippy` | ❌ FAIL | Test file issues (unused imports, mut) |
-| `cargo fmt --check` | ✅ PASS | Formatting fixed since last audit |
+| `cargo test` | ❌ FAIL | 25 test failures (same as last audit) |
+| `cargo clippy` | ⚠️ WARN | Dead code in test files |
+| `cargo fmt --check` | ✅ PASS | Formatting consistent |
 
 ---
 
@@ -54,46 +55,84 @@
 ### 🔴 Critical Issues
 
 #### [CRIT-001] Test Failures - 25 Tests Failing
-- **File**: Multiple test files in `tests/` and `src/`
-- **Issue**: 25 tests failing, including:
-  - `docker::run::run::tests::test_skills_*` (16 failures) - skill validation errors
-  - `discord::config::tests::test_env_config_*` (2 failures) - environment config
-  - `commands::validate::tests::test_validate_lockfile_*` (2 failures)
-  - `skills::tests::test_check_npx_available_*` (2 failures)
-- **Risk**: CI pipeline likely broken, regression detection compromised
-- **Recommendation**: Fix skill validation mock in tests, update environment handling
-- **Effort**: L
 
-```rust
-// Example failure - docker/run/run.rs:3959
-Failed to generate entrypoint script: ScriptGenerationFailed { 
-    agent_name: "test-agent", 
-    reason: "Skill 'repo' is not found in ./skills/ directory." 
-}
+- **Category:** Testing
+- **Severity:** Critical
+- **Effort:** L
+- **Risk:** High
+- **Priority Score:** 17/22
+- **Files:** Multiple test files in `tests/` and `src/`
+- **Description:** 25 tests failing, including docker skill tests, discord config tests, and validate tests. This indicates regression detection is compromised and CI pipeline is likely broken.
+- **Evidence:**
 ```
+test docker::run::run::tests::test_skills_single_generates_custom_entrypoint ... FAILED
+thread 'docker::run::run::tests::test_skills_single_generates_custom_entrypoint' panicked at src/docker/run/run.rs:1463:17:
+Valid skill should generate script successfully
 
-#### [CRIT-002] God Module - config/mod.rs at 3512 Lines
-- **File**: `src/config/mod.rs` (lines 1-3512)
-- **Issue**: Single file contains 3512 lines with Config, Agent, Settings structs + all validation + tests inline
-- **Risk**: Maintainability nightmare, impossible to understand in one sitting
-- **Recommendation**: Split into: config/agent.rs, config/settings.rs, config/validation.rs, config/tests/
-- **Effort**: L
+test skills::tests::test_check_npx_available_with_mock_error ... FAILED
+thread 'skills::tests::test_check_npx_available_with_mock_error' panicked at src/skills/mod.rs:2539:9:
+Expected error when mock returns error
 
-#### [CRIT-003] Another God Module - skills/mod.rs at 2709 Lines  
-- **File**: `src/skills/mod.rs` (lines 1-2709)
-- **Issue**: Single file contains all skills management logic
-- **Risk**: Hard to navigate, long compile times
-- **Recommendation**: Split into: skills/manager.rs, skills/lockfile.rs, skills/metadata.rs
-- **Effort**: L
+test result: FAILED. 583 passed; 25 failed; 1 ignored
+```
+- **Suggested Fix:** Fix skill validation mocks in docker/run/run.rs tests. Update test setup for environment config tests. Ensure test isolation is properly configured.
+- **Status:** 🔄 RECURRING (×2)
+
+---
+
+#### [CRIT-002] God Module - docker/run/run.rs at 5115 Lines
+
+- **Category:** Structure
+- **Severity:** Critical
+- **Effort:** L
+- **Risk:** Medium
+- **Priority Score:** 14/22
+- **Files:** `src/docker/run/run.rs` (lines 1-5115)
+- **Description:** Single file contains over 5000 lines with all Docker run logic. This is a major maintainability issue - the file is too large to comprehend in one sitting and creates long compile times.
+- **Evidence:**
+```rust
+// File line count confirms size
+$ wc -l src/docker/run/run.rs
+5115 src/docker/run/run.rs
+```
+- **Suggested Fix:** Split into: docker/run/container.rs (container creation), docker/run/network.rs (networking), docker/run/volumes.rs (volume management), docker/run/wait.rs (already exists but imported here)
+- **Status:** 🆕 NEW - This file has grown significantly since last audit
+
+---
+
+#### [CRIT-003] God Module - config/mod.rs at 3512 Lines
+
+- **Category:** Structure
+- **Severity:** Critical
+- **Effort:** L
+- **Risk:** Medium
+- **Priority Score:** 14/22
+- **Files:** `src/config/mod.rs` (lines 1-3512)
+- **Description:** Single file contains Config, Agent, Settings structs + all validation + tests inline. This is a maintainability nightmare.
+- **Evidence:**
+```rust
+// From previous audit - file still exists at same size
+$ wc -l src/config/mod.rs
+3512 src/config/mod.rs
+```
+- **Suggested Fix:** Split into: config/agent.rs, config/settings.rs, config/validation.rs, config/tests/
+- **Status:** 🔄 RECURRING
 
 ---
 
 ### 🟠 High Priority Issues
 
 #### [HIGH-001] unwrap()/expect() in Production Code (Skills Violation)
-- **File**: Multiple files in `src/` (not tests)
-- **Issue**: According to rust-best-practices SKILL: "Never use unwrap()/expect() outside tests"
-- **Evidence**:
+
+- **Category:** Skill Violation
+- **Severity:** High
+- **Effort:** M
+- **Risk:** Medium
+- **Priority Score:** 13/22
+- **Skill:** `skills/rust-best-practices/SKILL.md` §4.2, `skills/rust-engineer/SKILL.md` §MUST NOT DO
+- **Files:** `src/cli/mod.rs` (line 348), `src/scheduler/mod.rs` (lines 1164, 1173, 1182, 1257), `src/logging.rs` (lines 102, 113, 137, 145, 150), `src/docker/run/streams.rs` (line 41), `src/discord/llm.rs` (lines 333, 350)
+- **Description:** According to rust-best-practices skill: "Never use unwrap()/expect() outside tests". These patterns violate the project's skill conventions and can cause runtime panics.
+- **Evidence:**
 ```rust
 // src/cli/mod.rs:348
 let docker = client.docker().expect("Docker client should be available");
@@ -101,171 +140,290 @@ let docker = client.docker().expect("Docker client should be available");
 // src/scheduler/mod.rs:1164
 *self.queue_wait_time_seconds.lock().unwrap()
 
-// src/logging.rs:150
-Ok(GLOBAL_LOG_DIR.as_ref().unwrap().as_path())
-
-// src/logging.rs:102, 113, 137, 145 (mutex locks)
+// src/logging.rs:102
 *INIT_ERROR.lock().unwrap() = Some(err);
-```
-- **Risk**: Runtime panics, poor error messages
-- **Recommendation**: Replace with proper Result handling and ? operator
-- **Effort**: M
-- **Status**: PREVIOUS - Recurring from last audit
 
-#### [HIGH-002] Clippy Failures - Test Files
-- **Files**: tests/*.rs
-- **Issue**: Multiple clippy failures in test files:
-  - `tests/discord_listener_integration.rs` - unused imports (ToolCall, ToolFunction)
-  - `tests/discord_send_message.rs` - unused imports (ApiError, Message)
-  - `tests/container_skill_install_failure.rs` - useless_vec
-  - `tests/listener_conversation_tests.rs` - unused mut
-  - `tests/docker_availability_check.rs` - unused imports
-  - `src/config/mod.rs` - cannot test inner items
-- **Recommendation**: Clean up test files, move inline tests out
-- **Effort**: S
-- **Status**: NEW
+// src/docker/run/streams.rs:41
+let docker = client.docker().expect("Docker client should be available");
+
+// src/discord/llm.rs:333
+.build().expect("Failed to build HTTP client");
+```
+- **Suggested Fix:** Replace with proper Result handling and ? operator, or use expect with meaningful error context for truly impossible failures
+- **Status:** 🔄 RECURRING (×2)
+
+---
+
+#### [HIGH-002] Clippy Warnings - Dead Code in Test Files
+
+- **Category:** Code Quality
+- **Severity:** High
+- **Effort:** S
+- **Risk:** Safe
+- **Priority Score:** 16/22
+- **Files:** `tests/performance_common.rs` (multiple unused items)
+- **Description:** Multiple unused functions, structs, and enums in test files trigger clippy warnings. While not critical, these reduce signal-to-noise ratio.
+- **Evidence:**
+```rust
+// tests/performance_common.rs
+warning: enum `RegressionStatus` is never used
+warning: struct `BaselineTracker` is never constructed
+warning: function `detect_regression` is never used
+warning: function `log_regression_warning` is never used
+```
+- **Suggested Fix:** Remove unused test code or mark as #[allow(unused)]
+- **Status:** 🔄 RECURRING
+
+---
 
 #### [HIGH-003] CLI Module - 2144 Lines
-- **File**: `src/cli/mod.rs` (2144 lines)
-- **Issue**: Contains all CLI commands and handlers in single file
-- **Recommendation**: Extract commands to individual files in commands/ directory
-- **Effort**: M
 
-#### [HIGH-004] Commands Module Split - 2074 Lines  
-- **File**: `src/commands/skills.rs` (2074 lines)
-- **Issue**: Single file for all skills subcommands
-- **Recommendation**: Extract to skills/list.rs, skills/install.rs, etc.
-- **Effort**: M
+- **Category:** Structure
+- **Severity:** High
+- **Effort:** M
+- **Risk:** Low
+- **Priority Score:** 13/22
+- **Files:** `src/cli/mod.rs` (2144 lines)
+- **Description:** Contains all CLI commands and handlers in single file, making it hard to navigate.
+- **Suggested Fix:** Extract commands to individual files in commands/ directory
+- **Status:** 🔄 RECURRING
+
+---
+
+#### [HIGH-004] Commands Module - 2074 Lines
+
+- **Category:** Structure
+- **Severity:** High
+- **Effort:** M
+- **Risk:** Low
+- **Priority Score:** 13/22
+- **Files:** `src/commands/skills.rs` (2074 lines)
+- **Description:** Single file for all skills subcommands, difficult to maintain.
+- **Suggested Fix:** Extract to skills/list.rs, skills/install.rs, skills/update.rs
+- **Status:** 🔄 RECURRING
 
 ---
 
 ### 🟡 Medium Priority (Refactoring)
 
-#### [MED-001] Duplicate Code - Docker Client Expect Pattern
-- **Files**: `src/docker/mod.rs`
-- **Issue**: Same `.expect("Docker client not available")` pattern repeated
-- **Recommendation**: Add helper method `fn get_docker(&self) -> Result<&Docker, DockerError>`
-- **Effort**: S
+#### [MED-001] discord/tools.rs - 1663 Lines
 
-#### [MED-002] Magic Strings - Error Messages
-- **Files**: Multiple
-- **Issue**: Error messages repeated across files
-```rust
-"Docker client not available" // appears 10+ times
+- **Category:** Structure
+- **Severity:** Medium
+- **Effort:** M
+- **Risk:** Low
+- **Priority Score:** 10/22
+- **Files:** `src/discord/tools.rs` (1663 lines)
+- **Description:** Large file with tool definitions and executions.
+- **Suggested Fix:** Split into tools/definitions.rs, tools/execution.rs
+- **Status:** 🔄 RECURRING
+
+---
+
+#### [MED-002] discord/llm.rs - 1539 Lines
+
+- **Category:** Structure
+- **Severity:** Medium
+- **Effort:** M
+- **Risk:** Low
+- **Priority Score:** 10/22
+- **Files:** `src/discord/llm.rs` (1539 lines)
+- **Description:** Large LLM client module.
+- **Suggested Fix:** Split into llm/client.rs, llm/response.rs
+- **Status:** 🔄 RECURRING
+
+---
+
+#### [MED-003] docker/skills.rs - 1489 Lines
+
+- **Category:** Structure
+- **Severity:** Medium
+- **Effort:** M
+- **Risk:** Low
+- **Priority Score:** 10/22
+- **Files:** `src/docker/skills.rs` (1489 lines)
+- **Description:** Skill-related Docker integration module.
+- **Suggested Fix:** Extract skill validation to separate module
+- **Status:** 🔄 RECURRING
+
+---
+
+#### [MED-004] docker/mod.rs - 1394 Lines
+
+- **Category:** Structure
+- **Severity:** Medium
+- **Effort:** M
+- **Risk:** Low
+- **Priority Score:** 10/22
+- **Files:** `src/docker/mod.rs` (1394 lines)
+- **Description:** Docker client wrapper module.
+- **Suggested Fix:** Split into docker/client.rs, docker/build.rs
+- **Status:** 🔄 RECURRING
+
+---
+
+#### [MED-005] skills/mod.rs - 2709 Lines
+
+- **Category:** Structure
+- **Severity:** Medium
+- **Effort:** M
+- **Risk:** Low
+- **Priority Score:** 10/22
+- **Files:** `src/skills/mod.rs` (2709 lines)
+- **Description:** All skills management logic in single file.
+- **Suggested Fix:** Split into skills/manager.rs, skills/lockfile.rs, skills/metadata.rs
+- **Status:** 🔄 RECURRING
+
+---
+
+#### [MED-006] Unused Config Key Warning
+
+- **Category:** Dependency
+- **Severity:** Medium
+- **Effort:** S
+- **Risk:** Safe
+- **Priority Score:** 12/22
+- **Files:** `.cargo/config.toml`
+- **Description:** Warning: unused config key `profile.test.features`
+- **Evidence:**
 ```
-- **Recommendation**: Create constants in respective error modules
-- **Effort**: S
-
-#### [MED-003] Unused Config Key Warning
-- **File**: `.cargo/config.toml`
-- **Issue**: Warning: unused config key `profile.test.features`
-- **Recommendation**: Remove or fix the config key
-- **Effort**: S
-
-#### [MED-004] discord/tools.rs - 1663 Lines
-- **File**: `src/discord/tools.rs` (1663 lines)
-- **Issue**: Large file with tool definitions and executions
-- **Recommendation**: Split into tools/definitions.rs, tools/execution.rs
-- **Effort**: M
-
-#### [MED-005] discord/llm.rs - 1539 Lines
-- **File**: `src/discord/llm.rs` (1539 lines)
-- **Issue**: Large LLM client module
-- **Recommendation**: Split into llm/client.rs, llm/response.rs
-- **Effort**: M
-
-#### [MED-006] docker/skills.rs - 1489 Lines
-- **File**: `src/docker/skills.rs` (1489 lines)
-- **Issue**: Skill-related Docker integration
-- **Recommendation**: Extract skill validation to separate module
-- **Effort**: M
-
-#### [MED-007] docker/mod.rs - 1394 Lines
-- **File**: `src/docker/mod.rs` (1394 lines)
-- **Issue**: Docker client wrapper module
-- **Recommendation**: Split into docker/client.rs, docker/build.rs
-- **Effort**: M
+warning: unused config key `profile.test.features` in `/workspace/.cargo/config.toml`
+```
+- **Suggested Fix:** Remove or fix the config key in .cargo/config.toml
+- **Status:** 🔄 RECURRING
 
 ---
 
 ### 🔵 Low Priority
 
-#### [LOW-001] Clippy Warnings in Test Files (Pre-existing)
-- **Files**: `tests/*.rs`
-- **Issue**: Unused imports, mutable variables
-- **Recommendation**: Clean up test files with `cargo clippy --fix`
-- **Effort**: S
+#### [LOW-001] scheduler/mod.rs - 1259 Lines
 
-#### [LOW-002] Dead Code - Timer Struct Never Used
-- **File**: `tests/performance_common.rs` (line 402)
-- **Issue**: `pub struct Timer` is never constructed
-- **Recommendation**: Remove or implement
-- **Effort**: S
+- **Category:** Structure
+- **Severity:** Low
+- **Effort:** M
+- **Risk:** Low
+- **Priority Score:** 7/22
+- **Files:** `src/scheduler/mod.rs` (1259 lines)
+- **Description:** Large scheduler module - borderline acceptable size.
+- **Suggested Fix:** Consider splitting into scheduler/clock.rs, scheduler/queue.rs
+- **Status:** 🔄 RECURRING
 
-#### [LOW-003] Dead Code - format_duration Function
-- **File**: `tests/skills_install_performance.rs` (line 45)
-- **Issue**: Function never used
-- **Recommendation**: Remove
-- **Effort**: S
+---
 
-#### [LOW-004] Unused Test Functions
-- **Files**: Multiple test files
-- **Issue**: Functions marked `#[test]` but unused
-- **Effort**: S
+#### [LOW-002] metrics/store.rs - 1091 Lines
+
+- **Category:** Structure
+- **Severity:** Low
+- **Effort:** M
+- **Risk:** Low
+- **Priority Score:** 7/22
+- **Files:** `src/metrics/store.rs` (1091 lines)
+- **Description:** Large metrics storage module.
+- **Suggested Fix:** Consider splitting
+- **Status:** 🔄 RECURRING
+
+---
+
+#### [LOW-003] discord/config.rs - 1095 Lines
+
+- **Category:** Structure
+- **Severity:** Low
+- **Effort:** M
+- **Risk:** Low
+- **Priority Score:** 7/22
+- **Files:** `src/discord/config.rs` (1095 lines)
+- **Description:** Large discord config module.
+- **Suggested Fix:** Consider splitting
+- **Status:** 🔄 RECURRING
 
 ---
 
 ### ⚪ Convention Issues
 
 #### [CONV-001] Inconsistent Error Handling
-- **Files**: Mixed Result<T,E> vs Box<dyn Error>
-- **Issue**: Some functions use Result<T,E>, others Box<dyn std::error::Error>
-- **Recommendation**: Standardize on Result<T,E> with custom error types
-- **Effort**: M
+
+- **Category:** Convention
+- **Severity:** Low
+- **Effort:** M
+- **Risk:** Medium
+- **Priority Score:** 7/22
+- **Files:** Mixed Result<T,E> vs Box<dyn Error>
+- **Description:** Some functions use Result<T,E>, others Box<dyn std::error::Error>. Standardize on Result<T,E> with custom error types per skill guidelines.
+- **Suggested Fix:** Standardize on Result<T,E> with custom error types using thiserror
+- **Status:** 🔄 RECURRING
+
+---
 
 #### [CONV-002] Module Organization - Discord
-- **File**: `src/discord/*.rs` (8 files)
-- **Issue**: Some modules could be reorganized (api, gateway, listener in same level)
-- **Recommendation**: Consider discord/api/, discord/gateway/ subdirectories
-- **Effort**: M
+
+- **Category:** Convention
+- **Severity:** Low
+- **Effort:** M
+- **Risk:** Low
+- **Priority Score:** 7/22
+- **Files:** `src/discord/*.rs` (8 files)
+- **Description:** Some modules could be reorganized into subdirectories.
+- **Suggested Fix:** Consider discord/api/, discord/gateway/ subdirectories
+- **Status:** 🔄 RECURRING
+
+---
 
 #### [CONV-003] Test Organization
-- **File**: `tests/` (25+ test files)
-- **Issue**: Mix of unit tests in src/ and integration tests in tests/
-- **Recommendation**: Follow standard Rust conventions strictly
-- **Effort**: S
 
-#### [CONV-004] Missing Documentation - Private Functions
-- **Files**: Multiple
-- **Issue**: Some private functions lack doc comments
-- **Recommendation**: Add docs to public API entry points
-- **Effort**: S
+- **Category:** Convention
+- **Severity:** Low
+- **Effort:** S
+- **Risk:** Safe
+- **Priority Score:** 8/22
+- **Files:** `tests/` (25+ test files)
+- **Description:** Mix of unit tests in src/ and integration tests in tests/. Follow standard Rust conventions strictly.
+- **Suggested Fix:** Move inline tests to tests/ directory
+- **Status:** 🔄 RECURRING
 
-#### [CONV-005] Backup File Present
-- **File**: `src/config/mod.rs.bak`
-- **Issue**: Backup file in source tree
-- **Recommendation**: Remove from version control, add to .gitignore
-- **Effort**: S
+---
+
+#### [CONV-004] Missing Documentation
+
+- **Category:** Documentation
+- **Severity:** Low
+- **Effort:** S
+- **Risk:** Safe
+- **Priority Score:** 8/22
+- **Files:** Multiple
+- **Description:** Some private functions lack doc comments.
+- **Suggested Fix:** Add docs to public API entry points
+- **Status:** 🔄 RECURRING
+
+---
+
+## Recently Resolved
+
+### FIND-MED-001 — Duplicate Docker Expect Pattern
+- **Resolved:** 2026-02-27 (commit fe7aff0)
+- **Resolution:** Extracted get_docker helper method in docker/mod.rs
+
+### FIND-MED-002 — Magic Strings
+- **Resolved:** 2026-02-27 (commit 10b4c76)
+- **Resolution:** Extracted DOCKER_NOT_AVAILABLE constant in docker/mod.rs
+
+### FIND-CONV-005 — Backup File Present
+- **Resolved:** 2026-02-27 (commit 28ee418)
+- **Resolution:** Deleted src/config/mod.rs.bak
 
 ---
 
 ## Systemic Patterns
 
 ### Pattern: Expect on Internal State
-- **Occurrences**: 15+ files
-- **Files Affected**: docker/mod.rs, scheduler/mod.rs, logging.rs, cli/mod.rs
-- **Description**: Using .expect() on internal state that should never fail (like Arc<Mutex> locks, Option fields that are set at construction)
-- **Recommendation**: Create type-safe wrappers or use expect_with() for internal invariants
+- **Occurrences:** 15+ files
+- **Files Affected:** docker/run/streams.rs, scheduler/mod.rs, logging.rs, cli/mod.rs, discord/llm.rs
+- **Description:** Using .expect() on internal state that should never fail (like Arc<Mutex> locks, Option fields that are set at construction)
+- **Recommendation:** Create type-safe wrappers or use expect_with() for internal invariants
 
 ### Pattern: Giant Test Modules in Source
-- **Occurrences**: config/mod.rs (2000+ lines tests), skills/mod.rs, discord/config.rs
-- **Description**: Tests inline in source files make files huge
-- **Recommendation**: Move tests to tests/ directory
-
-### Pattern: Error Messages as Literals
-- **Occurrences**: 50+ occurrences
-- **Description**: Error strings repeated across codebase
-- **Recommendation**: Centralize in error modules
+- **Occurrences:** config/mod.rs (2000+ lines tests), skills/mod.rs, discord/config.rs
+- **Description:** Tests inline in source files make files huge
+- **Recommendation:** Move tests to tests/ directory
 
 ---
 
@@ -273,17 +431,17 @@ Ok(GLOBAL_LOG_DIR.as_ref().unwrap().as_path())
 
 ### Immediate (This Sprint)
 - [ ] Fix 25 failing tests - 8h
-- [ ] Fix clippy test file issues - 2h
+- [ ] Remove dead code in test files (clippy warnings) - 1h
 
 ### Short-term (Next 2-4 weeks)
 - [ ] Replace unwrap/expect with proper error handling - 6h
+- [ ] Split docker/run/run.rs (5115 lines) - 4h
 - [ ] Split config/mod.rs (3512 lines) - 4h
-- [ ] Split skills/mod.rs (2709 lines) - 4h
 
 ### Long-term (Backlog)
+- [ ] Split skills/mod.rs (2709 lines) - 3h
 - [ ] Split cli/mod.rs (2144 lines) - 3h
 - [ ] Split commands/skills.rs (2074 lines) - 3h
-- [ ] Extract Docker helper methods - 2h
 
 ---
 
@@ -292,6 +450,7 @@ Ok(GLOBAL_LOG_DIR.as_ref().unwrap().as_path())
 ### Files Scanned (Top 20 by Line Count)
 | File | Lines |
 |------|-------|
+| src/docker/run/run.rs | 5115 |
 | src/config/mod.rs | 3512 |
 | src/skills/mod.rs | 2709 |
 | src/cli/mod.rs | 2144 |
@@ -299,19 +458,18 @@ Ok(GLOBAL_LOG_DIR.as_ref().unwrap().as_path())
 | src/discord/tools.rs | 1663 |
 | src/discord/llm.rs | 1539 |
 | src/docker/skills.rs | 1489 |
+| src/commands/validate.rs | 1445 |
 | src/docker/mod.rs | 1394 |
 | src/scheduler/mod.rs | 1259 |
+| src/discord/config.rs | 1095 |
 | src/metrics/store.rs | 1091 |
-| src/discord/config.rs | 1091 |
 | src/discord/security.rs | 899 |
-| src/traits/mod.rs | 882 |
-| src/discord/api.rs | 876 |
-| src/discord/mod.rs | 858 |
+| src/discord/api.rs | 882 |
+| src/traits/mod.rs | 879 |
+| src/discord/mod.rs | 877 |
 | src/discord/conversation.rs | 823 |
 | src/skills/error.rs | 735 |
-| src/commands/metrics.rs | 596 |
-| src/logger/file.rs | 540 |
-| src/logger/terminal.rs | 447 |
+| src/commands/metrics.rs | 604 |
 
 ### Skipped Files
 - None - full codebase scanned
@@ -322,10 +480,12 @@ The codebase has two active skills:
    - unwrap()/expect() in production code (HIGH-001)
    
 2. **rust-engineer** - Key violations found:
-   - Error handling patterns inconsistent
+   - Error handling patterns inconsistent (CONV-001)
 
 ### Changes Since Last Audit
-- **FIXED**: Formatting issues (cargo fmt --check now passes)
+- **NEW**: docker/run/run.rs grew to 5115 lines (now a god module)
+- **FIXED**: Duplicate docker expect pattern (MED-001 resolved)
+- **FIXED**: Magic strings (MED-002 resolved)
+- **FIXED**: Backup file removed (CONV-005 resolved)
 - **SAME**: 25 test failures persist
-- **SAME**: God modules unchanged (slightly grew)
-- **NEW**: Clippy test file failures identified
+- **SAME**: Other god modules unchanged
