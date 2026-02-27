@@ -7,6 +7,7 @@
 
 #[cfg(feature = "discord")]
 mod discord_listener_tests {
+    use std::sync::{Arc, Mutex};
     #[cfg(feature = "discord")]
     use switchboard::discord::conversation::{
         ConversationConfig, ConversationManager, ToolCall, ToolFunction,
@@ -15,7 +16,6 @@ mod discord_listener_tests {
     use switchboard::discord::llm::LlmResponse;
     #[cfg(feature = "discord")]
     use switchboard::discord::tools::tools_schema;
-    use std::sync::{Arc, Mutex};
     use tokio::sync::Mutex as TokioMutex;
 
     // ===========================================================================
@@ -200,7 +200,9 @@ mod discord_listener_tests {
                 let messages = conv_manager
                     .get_messages_for_llm(author_id, &self.system_prompt)
                     .unwrap_or_else(|| {
-                        vec![switchboard::discord::conversation::ChatMessage::user(content)]
+                        vec![switchboard::discord::conversation::ChatMessage::user(
+                            content,
+                        )]
                     });
 
                 // Get tools schema

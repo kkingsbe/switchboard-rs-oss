@@ -274,7 +274,12 @@ prompt_file = "./prompt.txt"
 fn test_run_command_missing_config_file() {
     // Run the run command with a non-existent config file
     Command::new(assert_cmd::cargo::cargo_bin!("switchboard"))
-        .args(["--config", "/nonexistent/switchboard.toml", "run", "test-agent"])
+        .args([
+            "--config",
+            "/nonexistent/switchboard.toml",
+            "run",
+            "test-agent",
+        ])
         .assert()
         .failure()
         .stderr(predicates::str::contains("Configuration parsing failed"));

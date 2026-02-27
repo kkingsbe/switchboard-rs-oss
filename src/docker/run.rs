@@ -15,7 +15,7 @@ pub mod streams;
 pub mod types;
 pub mod wait;
 
-pub use self::run::{run_agent, AgentExecutionResult, find_preexisting_skills};
+pub use self::run::{find_preexisting_skills, run_agent, AgentExecutionResult};
 pub use self::streams::attach_and_stream_logs;
 pub use self::types::{ContainerConfig, ContainerError};
 pub use self::wait::{parse_timeout, wait_for_exit, wait_with_timeout, ExitStatus};

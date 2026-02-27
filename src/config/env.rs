@@ -37,7 +37,10 @@ pub fn load_env_file(path: &Path) -> Result<HashMap<String, String>, String> {
     let content = match fs::read_to_string(path) {
         Ok(c) => c,
         Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
-            debug!("No .env file found at {:?}, using system environment variables only", path);
+            debug!(
+                "No .env file found at {:?}, using system environment variables only",
+                path
+            );
             return Ok(HashMap::new());
         }
         Err(e) => return Err(format!("Failed to read .env file: {}", e)),
@@ -71,7 +74,11 @@ pub fn load_env_file(path: &Path) -> Result<HashMap<String, String>, String> {
         }
     }
 
-    debug!("Loaded {} variables from .env file: {:?}", vars.len(), vars.keys().collect::<Vec<_>>());
+    debug!(
+        "Loaded {} variables from .env file: {:?}",
+        vars.len(),
+        vars.keys().collect::<Vec<_>>()
+    );
     Ok(vars)
 }
 
@@ -174,7 +181,7 @@ pub fn resolve_env_vars(input: &str, env_file_vars: &HashMap<String, String>) ->
                     ':' if !has_default => {
                         has_default = true;
                         chars.next(); // consume ':'
-                        // Next char must be '-'
+                                      // Next char must be '-'
                         if chars.peek() == Some(&'-') {
                             chars.next(); // consume '-'
                         }
@@ -193,7 +200,14 @@ pub fn resolve_env_vars(input: &str, env_file_vars: &HashMap<String, String>) ->
             // Try to resolve the variable
             if var_name.is_empty() {
                 // Empty variable name, keep as-is
-                result.push_str(&format!("${{{}}}", if has_default { format!(":-{}", default_value) } else { String::new() }));
+                result.push_str(&format!(
+                    "${{{}}}",
+                    if has_default {
+                        format!(":-{}", default_value)
+                    } else {
+                        String::new()
+                    }
+                ));
             } else {
                 let env_ref = format!("${{{}}}", var_name);
                 let resolved = resolve_env_var(&env_ref, env_file_vars);

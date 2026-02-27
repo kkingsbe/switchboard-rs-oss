@@ -21,7 +21,7 @@ pub use crate::traits::{
 };
 
 pub mod run;
-pub use run::{run_agent, AgentExecutionResult, ContainerConfig, find_preexisting_skills};
+pub use run::{find_preexisting_skills, run_agent, AgentExecutionResult, ContainerConfig};
 
 pub mod skills;
 
@@ -39,25 +39,20 @@ async fn get_docker_socket_path(
 ) -> Result<Option<String>, ProcessError> {
     // Use tokio::process::Command for async execution with timeout
     // This avoids the issues with spawn_blocking on Windows
-    
+
     // Try to get Docker context with timeout
-    let output = tokio::time::timeout(
-        Duration::from_secs(5),
-        async {
-            let output = tokio::process::Command::new("docker")
-                .args(["context", "show"])
-                .output()
-                .await
-                .map_err(|e| {
-                    ProcessError::ExecutionFailed {
-                        program: "docker".to_string(),
-                        error_details: format!("Failed to run docker context show: {}", e),
-                        suggestion: "Check if Docker is installed".to_string(),
-                    }
-                })?;
-            Ok::<_, ProcessError>(output)
-        }
-    )
+    let output = tokio::time::timeout(Duration::from_secs(5), async {
+        let output = tokio::process::Command::new("docker")
+            .args(["context", "show"])
+            .output()
+            .await
+            .map_err(|e| ProcessError::ExecutionFailed {
+                program: "docker".to_string(),
+                error_details: format!("Failed to run docker context show: {}", e),
+                suggestion: "Check if Docker is installed".to_string(),
+            })?;
+        Ok::<_, ProcessError>(output)
+    })
     .await
     .map_err(|_| {
         eprintln!("DEBUG: Timeout occurred for docker context show!");
@@ -71,23 +66,18 @@ async fn get_docker_socket_path(
     let context_name = String::from_utf8_lossy(&output.stdout).trim().to_string();
 
     // Use docker context inspect to get the endpoint for the active context (with timeout)
-    let output = tokio::time::timeout(
-        Duration::from_secs(5),
-        async {
-            let output = tokio::process::Command::new("docker")
-                .args(["context", "inspect", &context_name])
-                .output()
-                .await
-                .map_err(|e| {
-                    ProcessError::ExecutionFailed {
-                        program: "docker".to_string(),
-                        error_details: format!("Failed to run docker context inspect: {}", e),
-                        suggestion: "Check if Docker is installed".to_string(),
-                    }
-                })?;
-            Ok::<_, ProcessError>(output)
-        }
-    )
+    let output = tokio::time::timeout(Duration::from_secs(5), async {
+        let output = tokio::process::Command::new("docker")
+            .args(["context", "inspect", &context_name])
+            .output()
+            .await
+            .map_err(|e| ProcessError::ExecutionFailed {
+                program: "docker".to_string(),
+                error_details: format!("Failed to run docker context inspect: {}", e),
+                suggestion: "Check if Docker is installed".to_string(),
+            })?;
+        Ok::<_, ProcessError>(output)
+    })
     .await
     .map_err(|_| {
         eprintln!("DEBUG: Timeout occurred for docker context inspect!");
@@ -127,7 +117,9 @@ pub async fn connect_to_docker(
     if let Ok(Some(socket_path)) = get_docker_socket_path(Some(executor.clone())).await {
         // Handle unix:// socket paths
         if socket_path.starts_with("unix://") {
-            let path = socket_path.strip_prefix("unix://").expect("socket_path starts with 'unix://' so strip_prefix should succeed");
+            let path = socket_path
+                .strip_prefix("unix://")
+                .expect("socket_path starts with 'unix://' so strip_prefix should succeed");
             // Try connecting to the context's socket
             if let Ok(docker) = Docker::connect_with_socket(path, 5, bollard::API_DEFAULT_VERSION) {
                 return Ok(docker);
@@ -136,7 +128,9 @@ pub async fn connect_to_docker(
             // Windows named pipe - only compile on Windows
             #[cfg(target_os = "windows")]
             {
-                let path = socket_path.strip_prefix("npipe://").expect("socket_path starts with 'npipe://' so strip_prefix should succeed");
+                let path = socket_path
+                    .strip_prefix("npipe://")
+                    .expect("socket_path starts with 'npipe://' so strip_prefix should succeed");
                 if let Ok(docker) = Docker::connect_with_named_pipe_defaults() {
                     return Ok(docker);
                 }
@@ -416,7 +410,8 @@ pub fn create_build_context_tarball(
 
                 // Only include .kilocode directory - everything else is not needed
                 // (the Dockerfile only copies .kilocode into the image)
-                let name = relative_path.file_name()
+                let name = relative_path
+                    .file_name()
                     .and_then(|n| n.to_str())
                     .unwrap_or("");
                 if name != ".kilocode" {
@@ -646,11 +641,7 @@ impl DockerClient {
         })?;
 
         // Verify Docker is available by pinging the daemon (with timeout)
-        let ping_result = tokio::time::timeout(
-            Duration::from_secs(10),
-            docker.ping(),
-        )
-        .await;
+        let ping_result = tokio::time::timeout(Duration::from_secs(10), docker.ping()).await;
 
         ping_result
             .map_err(|_| {
@@ -954,37 +945,41 @@ impl crate::traits::DockerClientTrait for DockerClient {
         context: std::path::PathBuf,
     ) -> Result<String, DockerError> {
         // Clone the internal docker client (it's Arc-based)
-        let docker = self.docker.as_ref().expect("Docker client not available").clone();
-        
+        let docker = self
+            .docker
+            .as_ref()
+            .expect("Docker client not available")
+            .clone();
+
         // Clone values needed for block_in_place
         let dockerfile = options
             .dockerfile
             .unwrap_or_else(|| "Dockerfile".to_string());
         let image_name = options.image_name.clone();
         let tag = options.tag.clone();
-        
+
         // Use block_in_place to handle both sync and async contexts properly
         let result = tokio::task::block_in_place(|| {
             let handle = tokio::runtime::Handle::current();
             handle.block_on(async move {
                 use bollard::image::BuildImageOptions;
                 use futures::StreamExt;
-                
+
                 // Create tarball
                 let tarball = crate::docker::create_build_context_tarball(&context, &dockerfile)
                     .map_err(|e| std::io::Error::other(e.to_string()))?;
                 let tarball_bytes = bytes::Bytes::from(tarball.into_inner());
-                
+
                 let build_options = BuildImageOptions {
                     dockerfile: "Dockerfile",
                     t: &format!("{}:{}", image_name, tag),
                     rm: true,
                     ..Default::default()
                 };
-                
+
                 let mut stream = docker.build_image(build_options, None, Some(tarball_bytes));
                 let mut final_image_id = String::new();
-                
+
                 while let Some(build_result) = stream.next().await {
                     match build_result {
                         Ok(info) => {
@@ -997,11 +992,12 @@ impl crate::traits::DockerClientTrait for DockerClient {
                         }
                     }
                 }
-                
+
                 Ok(final_image_id)
             })
-        }).map_err(|e| DockerError::ConnectionError(e.to_string()))?;
-        
+        })
+        .map_err(|e| DockerError::ConnectionError(e.to_string()))?;
+
         Ok(result)
     }
 
@@ -1019,17 +1015,20 @@ impl crate::traits::DockerClientTrait for DockerClient {
         use bollard::container::StopContainerOptions;
 
         let options = StopContainerOptions { t: timeout as i64 };
-        let docker = self.docker.as_ref().expect("Docker client not available").clone();
+        let docker = self
+            .docker
+            .as_ref()
+            .expect("Docker client not available")
+            .clone();
         let container_id = container_id.to_string();
 
         // Use block_in_place to handle both sync and async contexts properly
         tokio::task::block_in_place(|| {
             let handle = tokio::runtime::Handle::current();
-            handle.block_on(async {
-                docker.stop_container(&container_id, Some(options)).await
-            })
-        }).map_err(|e: bollard::errors::Error| DockerError::ConnectionError(e.to_string()))?;
-        
+            handle.block_on(async { docker.stop_container(&container_id, Some(options)).await })
+        })
+        .map_err(|e: bollard::errors::Error| DockerError::ConnectionError(e.to_string()))?;
+
         Ok(())
     }
 
@@ -1052,7 +1051,11 @@ impl crate::traits::DockerClientTrait for DockerClient {
             ..Default::default()
         };
 
-        let docker = self.docker.as_ref().expect("Docker client not available").clone();
+        let docker = self
+            .docker
+            .as_ref()
+            .expect("Docker client not available")
+            .clone();
         let container_id = container_id.to_string();
 
         // Use block_in_place to handle both sync and async contexts properly
@@ -1075,7 +1078,8 @@ impl crate::traits::DockerClientTrait for DockerClient {
 
                 Ok(logs)
             })
-        }).map_err(|e| DockerError::ConnectionError(e.to_string()))?;
+        })
+        .map_err(|e| DockerError::ConnectionError(e.to_string()))?;
 
         Ok(logs)
     }
@@ -1089,7 +1093,11 @@ impl crate::traits::DockerClientTrait for DockerClient {
         use futures::StreamExt;
 
         let options = WaitContainerOptions { condition: "exit" };
-        let docker = self.docker.as_ref().expect("Docker client not available").clone();
+        let docker = self
+            .docker
+            .as_ref()
+            .expect("Docker client not available")
+            .clone();
         let container_id = container_id.to_string();
 
         // Use block_in_place to handle both sync and async contexts properly
@@ -1107,7 +1115,8 @@ impl crate::traits::DockerClientTrait for DockerClient {
                     Ok(0)
                 }
             })
-        }).map_err(|e| DockerError::ConnectionError(e.to_string()))?;
+        })
+        .map_err(|e| DockerError::ConnectionError(e.to_string()))?;
 
         Ok(crate::traits::ExitCode::from_i32(exit_code))
     }
@@ -1117,17 +1126,20 @@ impl crate::traits::DockerClientTrait for DockerClient {
         options: Option<bollard::container::CreateContainerOptions<String>>,
         config: bollard::container::Config<String>,
     ) -> Result<String, DockerError> {
-        let docker = self.docker.as_ref().expect("Docker client not available").clone();
-        
+        let docker = self
+            .docker
+            .as_ref()
+            .expect("Docker client not available")
+            .clone();
+
         // Use block_in_place to handle both sync and async contexts properly
         // This avoids the "Cannot start a runtime from within a runtime" error
         let result = tokio::task::block_in_place(|| {
             let handle = tokio::runtime::Handle::current();
-            handle.block_on(async {
-                docker.create_container(options, config).await
-            })
-        }).map_err(|e: bollard::errors::Error| DockerError::ConnectionError(e.to_string()))?;
-        
+            handle.block_on(async { docker.create_container(options, config).await })
+        })
+        .map_err(|e: bollard::errors::Error| DockerError::ConnectionError(e.to_string()))?;
+
         Ok(result.id)
     }
 
@@ -1136,17 +1148,20 @@ impl crate::traits::DockerClientTrait for DockerClient {
         container_id: &str,
         options: Option<bollard::container::StartContainerOptions<String>>,
     ) -> Result<(), DockerError> {
-        let docker = self.docker.as_ref().expect("Docker client not available").clone();
+        let docker = self
+            .docker
+            .as_ref()
+            .expect("Docker client not available")
+            .clone();
         let container_id = container_id.to_string();
-        
+
         // Use block_in_place to handle both sync and async contexts properly
         tokio::task::block_in_place(|| {
             let handle = tokio::runtime::Handle::current();
-            handle.block_on(async {
-                docker.start_container(&container_id, options).await
-            })
-        }).map_err(|e: bollard::errors::Error| DockerError::ConnectionError(e.to_string()))?;
-        
+            handle.block_on(async { docker.start_container(&container_id, options).await })
+        })
+        .map_err(|e: bollard::errors::Error| DockerError::ConnectionError(e.to_string()))?;
+
         Ok(())
     }
 
@@ -1155,16 +1170,19 @@ impl crate::traits::DockerClientTrait for DockerClient {
         container_id: &str,
         options: Option<bollard::container::InspectContainerOptions>,
     ) -> Result<bollard::service::ContainerInspectResponse, DockerError> {
-        let docker = self.docker.as_ref().expect("Docker client not available").clone();
+        let docker = self
+            .docker
+            .as_ref()
+            .expect("Docker client not available")
+            .clone();
         let container_id = container_id.to_string();
-        
+
         // Use block_in_place to handle both sync and async contexts properly
         tokio::task::block_in_place(|| {
             let handle = tokio::runtime::Handle::current();
-            handle.block_on(async {
-                docker.inspect_container(&container_id, options).await
-            })
-        }).map_err(|e: bollard::errors::Error| DockerError::ConnectionError(e.to_string()))
+            handle.block_on(async { docker.inspect_container(&container_id, options).await })
+        })
+        .map_err(|e: bollard::errors::Error| DockerError::ConnectionError(e.to_string()))
     }
 
     fn kill_container(
@@ -1172,16 +1190,19 @@ impl crate::traits::DockerClientTrait for DockerClient {
         container_id: &str,
         options: Option<bollard::container::KillContainerOptions<String>>,
     ) -> Result<(), DockerError> {
-        let docker = self.docker.as_ref().expect("Docker client not available").clone();
+        let docker = self
+            .docker
+            .as_ref()
+            .expect("Docker client not available")
+            .clone();
         let container_id = container_id.to_string();
-        
+
         // Use block_in_place to handle both sync and async contexts properly
         tokio::task::block_in_place(|| {
             let handle = tokio::runtime::Handle::current();
-            handle.block_on(async {
-                docker.kill_container(&container_id, options).await
-            })
-        }).map_err(|e: bollard::errors::Error| DockerError::ConnectionError(e.to_string()))
+            handle.block_on(async { docker.kill_container(&container_id, options).await })
+        })
+        .map_err(|e: bollard::errors::Error| DockerError::ConnectionError(e.to_string()))
     }
 }
 

@@ -8,9 +8,9 @@
 //! See [`BACKWARDS_COMPATIBILITY_SKILLS.md`](../../BACKWARDS_COMPATIBILITY_SKILLS.md:1) for
 //! detailed documentation on backwards compatibility behavior.
 
+use std::path::Path;
 use switchboard::docker::run::find_preexisting_skills;
 use switchboard::docker::skills::generate_entrypoint_script;
-use std::path::Path;
 
 /// Test that `find_preexisting_skills()` correctly detects manual skills in `.kilocode/skills/`
 ///

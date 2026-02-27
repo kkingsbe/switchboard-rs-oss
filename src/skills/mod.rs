@@ -665,12 +665,11 @@ pub fn load_lockfile() -> Result<SkillsLockfile, SkillsError> {
     }
 
     // Read the file contents
-    let contents = fs::read_to_string(&lockfile_path).map_err(|e| {
-        SkillsError::LockfileReadError {
+    let contents =
+        fs::read_to_string(&lockfile_path).map_err(|e| SkillsError::LockfileReadError {
             path: lockfile_path.to_string_lossy().to_string(),
             message: e.to_string(),
-        }
-    })?;
+        })?;
 
     // Parse the JSON
     let lockfile = serde_json::from_str::<SkillsLockfile>(&contents).map_err(|e| {
@@ -714,29 +713,24 @@ pub fn save_lockfile(lockfile: &SkillsLockfile) -> Result<(), SkillsError> {
     // Ensure the parent directory exists
     if let Some(parent) = lockfile_path.parent() {
         if !parent.exists() {
-            fs::create_dir_all(parent).map_err(|e| {
-                SkillsError::LockfileWriteError {
-                    path: lockfile_path.to_string_lossy().to_string(),
-                    message: format!("Failed to create directory: {}", e),
-                }
+            fs::create_dir_all(parent).map_err(|e| SkillsError::LockfileWriteError {
+                path: lockfile_path.to_string_lossy().to_string(),
+                message: format!("Failed to create directory: {}", e),
             })?;
         }
     }
 
     // Serialize to pretty-printed JSON
-    let json = serde_json::to_string_pretty(lockfile).map_err(|e| {
-        SkillsError::LockfileWriteError {
+    let json =
+        serde_json::to_string_pretty(lockfile).map_err(|e| SkillsError::LockfileWriteError {
             path: lockfile_path.to_string_lossy().to_string(),
             message: format!("Failed to serialize lockfile: {}", e),
-        }
-    })?;
+        })?;
 
     // Write to file
-    fs::write(&lockfile_path, json).map_err(|e| {
-        SkillsError::LockfileWriteError {
-            path: lockfile_path.to_string_lossy().to_string(),
-            message: e.to_string(),
-        }
+    fs::write(&lockfile_path, json).map_err(|e| SkillsError::LockfileWriteError {
+        path: lockfile_path.to_string_lossy().to_string(),
+        message: e.to_string(),
     })?;
 
     Ok(())
@@ -978,10 +972,7 @@ pub fn sync_skills_to_lockfile(directory: &Path) -> Result<Vec<String>, SkillsEr
 
             lockfile.skills.insert(skill_name.clone(), entry);
 
-            warnings.push(format!(
-                "Info: Added skill '{}' to lockfile",
-                skill_name
-            ));
+            warnings.push(format!("Info: Added skill '{}' to lockfile", skill_name));
         } else {
             // Skill exists - update version if present in metadata
             if let Some(version) = &skill_metadata.version {
@@ -1804,7 +1795,9 @@ mod tests {
 
         // We expect either success (if somehow this works) or NpxCommandFailed error
         // The important thing is that it returns a proper Result type
-        assert!(result.is_ok() || matches!(result.unwrap_err(), SkillsError::NpxCommandFailed { .. }));
+        assert!(
+            result.is_ok() || matches!(result.unwrap_err(), SkillsError::NpxCommandFailed { .. })
+        );
     }
 
     #[test]

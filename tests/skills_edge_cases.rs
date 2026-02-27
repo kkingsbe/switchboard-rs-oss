@@ -14,8 +14,8 @@
 //! cargo test --test skills_edge_cases
 //! ```
 
-use switchboard::skills::{parse_skill_frontmatter, read_skill_file, SkillsError};
 use std::fs;
+use switchboard::skills::{parse_skill_frontmatter, read_skill_file, SkillsError};
 use tempfile::TempDir;
 
 /// Test: Extremely long skill name (>200 characters)

@@ -17,7 +17,7 @@ async fn main() {
             // On error, we need to determine color mode - use Auto as default
             // since we can't get the parsed CLI value on error path
             let color_mode = ColorMode::Auto;
-            
+
             if should_use_colors(color_mode) {
                 eprintln!("{}", color_error(&format!("Error: {}", e)));
             } else {

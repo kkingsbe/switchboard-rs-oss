@@ -52,4 +52,3 @@ fn format_duration(duration: std::time::Duration) -> String {
         format!("{:.4}s", duration.as_secs_f64())
     }
 }
-

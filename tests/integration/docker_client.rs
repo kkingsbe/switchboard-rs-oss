@@ -8,6 +8,10 @@
 
 #[cfg(feature = "integration")]
 use super::docker_available;
+#[cfg(feature = "integration")]
+use std::fs;
+#[cfg(feature = "integration")]
+use std::sync::{Arc, Mutex};
 #[cfg(feature = "streams")]
 use switchboard::docker::run::attach_and_stream_logs;
 #[cfg(feature = "integration")]
@@ -16,10 +20,6 @@ use switchboard::docker::run::types::ContainerConfig;
 use switchboard::docker::DockerClient;
 #[cfg(feature = "integration")]
 use switchboard::logger::Logger;
-#[cfg(feature = "integration")]
-use std::fs;
-#[cfg(feature = "integration")]
-use std::sync::{Arc, Mutex};
 
 /// Test that DockerClient can connect to the Docker daemon successfully.
 /// This is a basic smoke test to ensure the Docker client wrapper works.

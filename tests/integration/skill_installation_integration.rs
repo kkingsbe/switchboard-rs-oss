@@ -13,6 +13,10 @@
 #[cfg(feature = "integration")]
 use super::docker_available;
 #[cfg(feature = "integration")]
+use std::fs;
+#[cfg(feature = "integration")]
+use std::sync::{Arc, Mutex};
+#[cfg(feature = "integration")]
 use switchboard::docker::run::types::ContainerConfig;
 #[cfg(feature = "integration")]
 use switchboard::docker::{run_agent, DockerClient};
@@ -20,10 +24,6 @@ use switchboard::docker::{run_agent, DockerClient};
 use switchboard::logger::Logger;
 #[cfg(feature = "integration")]
 use switchboard::metrics::MetricsStore;
-#[cfg(feature = "integration")]
-use std::fs;
-#[cfg(feature = "integration")]
-use std::sync::{Arc, Mutex};
 
 /// Integration test for successful skill installation in container
 ///

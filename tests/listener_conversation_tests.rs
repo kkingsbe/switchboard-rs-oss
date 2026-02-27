@@ -7,7 +7,9 @@
 #![cfg(feature = "discord")]
 
 use switchboard::discord::conversation::{ConversationConfig, ConversationManager};
-use switchboard::discord::listener::{process_message, DiscordMessage, DiscordUser, ListenerConfig};
+use switchboard::discord::listener::{
+    process_message, DiscordMessage, DiscordUser, ListenerConfig,
+};
 
 /// Creates a test listener configuration.
 fn create_test_config() -> ListenerConfig {
@@ -40,8 +42,7 @@ fn test_process_message_creates_conversation_for_user() {
     let message = create_test_message(config.channel_id, 111111111, "Hello, bot!");
 
     // Create a conversation manager
-    let mut conversation_manager =
-        ConversationManager::new(ConversationConfig::default());
+    let mut conversation_manager = ConversationManager::new(ConversationConfig::default());
 
     // Process the message - this should create a conversation for the user
     // Note: Currently process_message doesn't interact with conversation_manager
@@ -73,8 +74,7 @@ fn test_different_users_have_separate_conversations() {
     let config = create_test_config();
 
     // Create a conversation manager
-    let mut conversation_manager =
-        ConversationManager::new(ConversationConfig::default());
+    let mut conversation_manager = ConversationManager::new(ConversationConfig::default());
 
     // Process message from user 1
     let message1 = create_test_message(config.channel_id, 111111111, "Hello from user 1");
@@ -105,8 +105,7 @@ fn test_separate_conversations_per_user_in_same_channel() {
     let channel_id = config.channel_id;
 
     // Create a conversation manager
-    let mut conversation_manager =
-        ConversationManager::new(ConversationConfig::default());
+    let mut conversation_manager = ConversationManager::new(ConversationConfig::default());
 
     // User 1 sends first message
     let user1_id = 111111111u64;
@@ -132,13 +131,11 @@ fn test_separate_conversations_per_user_in_same_channel() {
 
     // Verify the conversations are separate (different message counts)
     let conv1_len = {
-        let conv1 = conversation_manager
-            .get_or_create_conversation(&user1_id.to_string());
+        let conv1 = conversation_manager.get_or_create_conversation(&user1_id.to_string());
         conv1.len()
     };
     let conv2_len = {
-        let conv2 = conversation_manager
-            .get_or_create_conversation(&user2_id.to_string());
+        let conv2 = conversation_manager.get_or_create_conversation(&user2_id.to_string());
         conv2.len()
     };
 

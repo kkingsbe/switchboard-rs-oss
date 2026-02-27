@@ -12,6 +12,12 @@
 #[cfg(feature = "integration")]
 use super::docker_available;
 #[cfg(feature = "integration")]
+use std::fs;
+#[cfg(feature = "integration")]
+use std::path::Path;
+#[cfg(feature = "integration")]
+use std::sync::{Arc, Mutex};
+#[cfg(feature = "integration")]
 use switchboard::config::Config;
 #[cfg(feature = "integration")]
 use switchboard::docker::run::find_preexisting_skills;
@@ -25,12 +31,6 @@ use switchboard::docker::{run_agent, DockerClient};
 use switchboard::logger::Logger;
 #[cfg(feature = "integration")]
 use switchboard::metrics::MetricsStore;
-#[cfg(feature = "integration")]
-use std::fs;
-#[cfg(feature = "integration")]
-use std::path::Path;
-#[cfg(feature = "integration")]
-use std::sync::{Arc, Mutex};
 
 /// Test that config parsing succeeds without the skills field
 ///

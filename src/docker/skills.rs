@@ -15,8 +15,8 @@
 //!
 //! All coverage metrics exceed the project standard of >80%.
 
-use std::path::Path;
 use crate::skills::SkillsError;
+use std::path::Path;
 
 /// Validates that a skill source string conforms to the expected format.
 ///
@@ -397,7 +397,7 @@ pub fn generate_entrypoint_script(
     // Generate simple entrypoint script that just runs kilocode
     // No npx skills add needed - skills are already available via bind-mount
     let mut script = String::from("#!/bin/sh\nset -e\n\n");
-    
+
     // Add the kilocode execution command
     // Skills are already mounted at /workspace/skills/<skill-name>/ via Docker bind-mounts
     script.push_str("exec kilocode --yes \"$@\"\n");

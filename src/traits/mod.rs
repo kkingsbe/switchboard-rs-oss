@@ -340,40 +340,37 @@ impl DockerClientTrait for RealDockerClient {
             tokio::runtime::Handle::current()
                 .block_on(async {
                     // Wrap the entire build operation with a 10-minute (600 second) timeout
-                    tokio::time::timeout(
-                        Duration::from_secs(600),
-                        async {
-                            let mut stream = self
-                                .docker
+                    tokio::time::timeout(Duration::from_secs(600), async {
+                        let mut stream =
+                            self.docker
                                 .build_image(build_options, None, Some(tarball_bytes));
 
-                            let mut final_image_id = String::new();
+                        let mut final_image_id = String::new();
 
-                            while let Some(build_result) = stream.next().await {
-                                match build_result {
-                                    Ok(info) => {
-                                        if let Some(id) = info.id {
-                                            final_image_id = id;
-                                        }
-                                        // Print build output to user so they can see progress
-                                        if let Some(stream_type) = info.stream {
-                                            print!("{}", stream_type);
-                                        }
+                        while let Some(build_result) = stream.next().await {
+                            match build_result {
+                                Ok(info) => {
+                                    if let Some(id) = info.id {
+                                        final_image_id = id;
                                     }
-                                    Err(e) => {
-                                        return Err(e);
+                                    // Print build output to user so they can see progress
+                                    if let Some(stream_type) = info.stream {
+                                        print!("{}", stream_type);
                                     }
                                 }
+                                Err(e) => {
+                                    return Err(e);
+                                }
                             }
+                        }
 
-                            if final_image_id.is_empty() {
-                                // If no image ID from stream, use the image name
-                                Ok(image_name.clone())
-                            } else {
-                                Ok(final_image_id)
-                            }
-                        },
-                    )
+                        if final_image_id.is_empty() {
+                            // If no image ID from stream, use the image name
+                            Ok(image_name.clone())
+                        } else {
+                            Ok(final_image_id)
+                        }
+                    })
                     .await
                     .map_err(|_| {
                         // Timeout error
@@ -387,7 +384,8 @@ impl DockerClientTrait for RealDockerClient {
                     error_details: e.to_string(),
                     suggestion: if e.to_string().contains("Timed out") {
                         "Docker build timed out after 10 minutes. The build may be taking too long, 
-or there may be network issues. Try again or check your network connection.".to_string()
+or there may be network issues. Try again or check your network connection."
+                            .to_string()
                     } else {
                         "Check Docker build logs for details".to_string()
                     },
@@ -448,7 +446,7 @@ or there may be network issues. Try again or check your network connection.".to_
         // Clone for block_in_place
         let docker = self.docker.clone();
         let container_name_clone = container_name.clone();
-        
+
         let response = tokio::task::block_in_place(|| {
             let handle = tokio::runtime::Handle::current();
             handle.block_on(async {
@@ -456,7 +454,8 @@ or there may be network issues. Try again or check your network connection.".to_
                     .create_container(Some(create_options), container_config)
                     .await
             })
-        }).map_err(|e| DockerError::ContainerCreateError {
+        })
+        .map_err(|e| DockerError::ContainerCreateError {
             container_name: container_name_clone,
             error_details: e.to_string(),
             suggestion: "Check that the Docker image exists and is valid".to_string(),
@@ -466,7 +465,7 @@ or there may be network issues. Try again or check your network connection.".to_
         let docker = self.docker.clone();
         let container_id = response.id.clone();
         let container_name_clone = container_name.clone();
-        
+
         tokio::task::block_in_place(|| {
             let handle = tokio::runtime::Handle::current();
             handle.block_on(async {
@@ -474,7 +473,8 @@ or there may be network issues. Try again or check your network connection.".to_
                     .start_container(&container_id, None::<StartContainerOptions<String>>)
                     .await
             })
-        }).map_err(|e| DockerError::ContainerStartError {
+        })
+        .map_err(|e| DockerError::ContainerStartError {
             container_name: container_name_clone,
             error_details: e.to_string(),
             suggestion: "Check Docker logs for details".to_string(),
@@ -493,16 +493,13 @@ or there may be network issues. Try again or check your network connection.".to_
         // Use block_in_place to handle async context
         tokio::task::block_in_place(|| {
             let handle = tokio::runtime::Handle::current();
-            handle.block_on(async {
-                docker
-                    .stop_container(&container_id, Some(options))
-                    .await
-            })
-        }).map_err(|e| DockerError::ContainerStopError {
+            handle.block_on(async { docker.stop_container(&container_id, Some(options)).await })
+        })
+        .map_err(|e| DockerError::ContainerStopError {
             container_name: container_id.to_string(),
             error_details: e.to_string(),
-                suggestion: "Check if the container is running".to_string(),
-            })?;
+            suggestion: "Check if the container is running".to_string(),
+        })?;
 
         Ok(())
     }

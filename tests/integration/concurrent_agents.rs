@@ -13,15 +13,15 @@ use bollard::container::ListContainersOptions;
 #[cfg(feature = "integration")]
 use futures::future::join_all;
 #[cfg(feature = "integration")]
-use switchboard::docker::run::types::ContainerConfig;
-#[cfg(feature = "integration")]
-use switchboard::docker::DockerClient;
-#[cfg(feature = "integration")]
 use std::collections::HashMap;
 #[cfg(feature = "integration")]
 use std::sync::{Arc, Mutex};
 #[cfg(feature = "integration")]
 use std::time::Duration;
+#[cfg(feature = "integration")]
+use switchboard::docker::run::types::ContainerConfig;
+#[cfg(feature = "integration")]
+use switchboard::docker::DockerClient;
 #[cfg(feature = "integration")]
 use tokio::time::sleep;
 
@@ -199,7 +199,9 @@ async fn test_multiple_concurrent_agent_runs() {
             labels.contains_key("switchboard.agent"),
             "Container should have switchboard.agent label"
         );
-        let agent_name = labels.get("switchboard.agent").expect("Should have agent name");
+        let agent_name = labels
+            .get("switchboard.agent")
+            .expect("Should have agent name");
         assert!(
             agent_name.starts_with("concurrent-agent-"),
             "Container should be a concurrent agent, got: {}",

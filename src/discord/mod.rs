@@ -357,18 +357,27 @@ pub async fn start_discord_listener_with_shutdown(
     // NOTE: MESSAGE_CONTENT is 16384, NOT 1024 (1024 is GUILD_MESSAGE_REACTIONS)
     // Using GUILD_MESSAGES | DIRECT_MESSAGES | MESSAGE_CONTENT to receive all message types
     const DEFAULT_INTENTS: u32 = 512 | 4096 | 16384;
-    
+
     // Get intents from config if provided, otherwise use default
     let gateway_intents = if let Some(ref toml_cfg) = toml_config {
         if let Some(intents) = toml_cfg.intents {
-            eprintln!("[DEBUG] Discord Gateway: Using custom intents from config: {}", intents);
+            eprintln!(
+                "[DEBUG] Discord Gateway: Using custom intents from config: {}",
+                intents
+            );
             intents
         } else {
-            eprintln!("[DEBUG] Discord Gateway: Using default intents: {}", DEFAULT_INTENTS);
+            eprintln!(
+                "[DEBUG] Discord Gateway: Using default intents: {}",
+                DEFAULT_INTENTS
+            );
             DEFAULT_INTENTS
         }
     } else {
-        eprintln!("[DEBUG] Discord Gateway: Using default intents (no config): {}", DEFAULT_INTENTS);
+        eprintln!(
+            "[DEBUG] Discord Gateway: Using default intents (no config): {}",
+            DEFAULT_INTENTS
+        );
         DEFAULT_INTENTS
     };
 
@@ -409,14 +418,22 @@ pub async fn start_discord_listener_with_shutdown(
             tokio::spawn(async move {
                 // Debug: Log token prefix and intents
                 let token_prefix = if gateway_token.len() > 10 {
-                    format!("{}...{}", &gateway_token[..5], &gateway_token[gateway_token.len()-5..])
+                    format!(
+                        "{}...{}",
+                        &gateway_token[..5],
+                        &gateway_token[gateway_token.len() - 5..]
+                    )
                 } else {
                     "[token too short]".to_string()
                 };
-                eprintln!("[DEBUG] Discord Gateway: Token prefix: {}, Intents: {}", token_prefix, gateway_intents);
-                
+                eprintln!(
+                    "[DEBUG] Discord Gateway: Token prefix: {}, Intents: {}",
+                    token_prefix, gateway_intents
+                );
+
                 // Create the gateway instance
-                let mut gateway = DiscordGateway::new(gateway_token.clone(), gateway_intents, event_sender);
+                let mut gateway =
+                    DiscordGateway::new(gateway_token.clone(), gateway_intents, event_sender);
 
                 eprintln!("[DEBUG] Discord Gateway: About to connect...");
                 tracing::info!("Discord Gateway: Starting connection...");
@@ -448,12 +465,19 @@ pub async fn start_discord_listener_with_shutdown(
             tokio::spawn(async move {
                 // Debug: Log token prefix and intents
                 let token_prefix = if gateway_token.len() > 10 {
-                    format!("{}...{}", &gateway_token[..5], &gateway_token[gateway_token.len()-5..])
+                    format!(
+                        "{}...{}",
+                        &gateway_token[..5],
+                        &gateway_token[gateway_token.len() - 5..]
+                    )
                 } else {
                     "[token too short]".to_string()
                 };
-                eprintln!("[DEBUG] Discord Gateway: Token prefix: {}, Intents: {}", token_prefix, gateway_intents);
-                
+                eprintln!(
+                    "[DEBUG] Discord Gateway: Token prefix: {}, Intents: {}",
+                    token_prefix, gateway_intents
+                );
+
                 // Create the gateway instance
                 let mut gateway = DiscordGateway::new(gateway_token, gateway_intents, event_sender);
 
@@ -463,10 +487,7 @@ pub async fn start_discord_listener_with_shutdown(
                 // Connect to the gateway - use a channel that never signals
                 // (use a receiver that's never populated, which is the opposite of the broken code)
                 let (_tx, rx) = tokio::sync::oneshot::channel();
-                match gateway
-                    .connect_with_shutdown(rx)
-                    .await
-                {
+                match gateway.connect_with_shutdown(rx).await {
                     Ok(_) => {
                         tracing::info!("Discord Gateway connection closed normally");
                     }
@@ -848,11 +869,9 @@ struct DiscordToolExecutor;
 impl llm::ToolExecutor for DiscordToolExecutor {
     fn execute(&self, name: &str, arguments: &str) -> Result<String, String> {
         // Parse the tool from LLM format
-        let tool = tools::parse_tool_from_llm(name, arguments)
-            .map_err(|e| e.to_string())?;
-        
+        let tool = tools::parse_tool_from_llm(name, arguments).map_err(|e| e.to_string())?;
+
         // Execute the tool and return the result
-        tools::execute_tool(tool)
-            .map_err(|e| e.to_string())
+        tools::execute_tool(tool).map_err(|e| e.to_string())
     }
 }

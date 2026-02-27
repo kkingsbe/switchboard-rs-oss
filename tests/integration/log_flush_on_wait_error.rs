@@ -20,17 +20,17 @@
 #[cfg(feature = "integration")]
 use super::docker_available;
 #[cfg(feature = "integration")]
-use switchboard::docker::run::types::ContainerConfig;
-#[cfg(feature = "integration")]
-use switchboard::docker::DockerClient;
-#[cfg(feature = "integration")]
-use switchboard::logger::Logger;
-#[cfg(feature = "integration")]
 use std::fs;
 #[cfg(feature = "integration")]
 use std::sync::{Arc, Mutex};
 #[cfg(feature = "integration")]
 use std::time::Duration;
+#[cfg(feature = "integration")]
+use switchboard::docker::run::types::ContainerConfig;
+#[cfg(feature = "integration")]
+use switchboard::docker::DockerClient;
+#[cfg(feature = "integration")]
+use switchboard::logger::Logger;
 #[cfg(feature = "integration")]
 use tokio::task::JoinHandle;
 

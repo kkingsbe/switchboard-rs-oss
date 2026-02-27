@@ -611,7 +611,10 @@ mod tests {
     fn test_rate_limit_constants() {
         // Test that MAX_MESSAGE_LENGTH is correctly defined
         assert_eq!(MAX_MESSAGE_LENGTH, 2000);
-        const _: () = assert!(MAX_MESSAGE_LENGTH > 0, "MAX_MESSAGE_LENGTH must be positive");
+        const _: () = assert!(
+            MAX_MESSAGE_LENGTH > 0,
+            "MAX_MESSAGE_LENGTH must be positive"
+        );
     }
 
     #[test]

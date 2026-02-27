@@ -426,7 +426,10 @@ fn is_process_running_with_executor(pid: u32, executor: Arc<dyn ProcessExecutorT
             // tasklist returns the process info if it exists, empty string otherwise
             stdout.contains(&pid.to_string()) || !stdout.trim().is_empty()
         }
-        Err(_) => false,
+        Err(e) => {
+            tracing::warn!("Failed to execute tasklist: {}", e);
+            false
+        }
     }
 }
 
@@ -973,7 +976,10 @@ pub async fn run_up(
                 let switchboard_dir = Path::new(".switchboard");
                 if !switchboard_dir.exists() {
                     if let Err(e) = std::fs::create_dir_all(switchboard_dir) {
-                        eprintln!("  ⚠ Warning: Failed to create .switchboard directory: {}", e);
+                        eprintln!(
+                            "  ⚠ Warning: Failed to create .switchboard directory: {}",
+                            e
+                        );
                         return Err(e.into());
                     }
                 }
@@ -1022,7 +1028,8 @@ pub async fn run_up(
 
                             let discord_handle = tokio::spawn(async move {
                                 if let Err(e) =
-                                    start_discord_listener_with_shutdown(Some(shutdown_rx), None).await
+                                    start_discord_listener_with_shutdown(Some(shutdown_rx), None)
+                                        .await
                                 {
                                     tracing::warn!("Discord listener failed to start: {}. Scheduler will continue running.", e);
                                 }
@@ -1079,7 +1086,9 @@ pub async fn run_up(
                                 )
                                 .await
                                 {
-                                    Ok(_) => tracing::info!("Discord listener shut down gracefully"),
+                                    Ok(_) => {
+                                        tracing::info!("Discord listener shut down gracefully")
+                                    }
                                     Err(_) => tracing::warn!("Discord listener shutdown timed out"),
                                 }
                             }
@@ -1104,7 +1113,9 @@ pub async fn run_up(
                                 )
                                 .await
                                 {
-                                    Ok(_) => tracing::info!("Discord listener shut down gracefully"),
+                                    Ok(_) => {
+                                        tracing::info!("Discord listener shut down gracefully")
+                                    }
                                     Err(_) => tracing::warn!("Discord listener shutdown timed out"),
                                 }
                             }
@@ -1675,7 +1686,9 @@ pub fn run_metrics(
     _config: Option<String>,
 ) -> Result<(), Box<dyn std::error::Error>> {
     // Load config to get log directory and agent schedules
-    let config_path = args.config.unwrap_or_else(|| "./switchboard.toml".to_string());
+    let config_path = args
+        .config
+        .unwrap_or_else(|| "./switchboard.toml".to_string());
     let path = Path::new(&config_path);
 
     let config = match Config::from_toml(path) {

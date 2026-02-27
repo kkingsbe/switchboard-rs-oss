@@ -16,6 +16,10 @@ use std::time::Duration;
 #[cfg(feature = "integration")]
 use super::docker_available;
 #[cfg(feature = "integration")]
+use std::fs;
+#[cfg(feature = "integration")]
+use std::sync::{Arc, Mutex};
+#[cfg(feature = "integration")]
 use switchboard::docker::run::types::ContainerConfig;
 #[cfg(feature = "integration")]
 use switchboard::docker::run::wait::{wait_with_timeout, TerminationSignal};
@@ -25,10 +29,6 @@ use switchboard::docker::DockerClient;
 use switchboard::logger::Logger;
 #[cfg(feature = "integration")]
 use switchboard::metrics::MetricsStore;
-#[cfg(feature = "integration")]
-use std::fs;
-#[cfg(feature = "integration")]
-use std::sync::{Arc, Mutex};
 
 /// Test that a container sleeping longer than the timeout is killed
 ///

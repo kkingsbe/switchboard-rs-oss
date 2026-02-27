@@ -10,9 +10,9 @@
 //! These tests focus on data accuracy, not performance thresholds.
 
 use chrono::{Duration, Utc};
-use switchboard::metrics::{update_all_metrics, AgentRunResult, AllMetrics, MetricsStore};
 use serde_json::Value;
 use std::fs;
+use switchboard::metrics::{update_all_metrics, AgentRunResult, AllMetrics, MetricsStore};
 use tempfile::TempDir;
 
 /// Test 1: Skill installation time is recorded when skills are installed

@@ -8,6 +8,8 @@
 
 #[cfg(feature = "discord")]
 mod discord_tests {
+    use serde_json::json;
+    use std::sync::{Arc, Mutex};
     #[cfg(feature = "discord")]
     use switchboard::discord::conversation::{
         ChatMessage, ConversationConfig, ConversationManager, MessageRole, ToolCall, ToolFunction,
@@ -16,8 +18,6 @@ mod discord_tests {
     use switchboard::discord::llm::{LlmError, LlmResponse, ToolCallResult, ToolExecutor};
     #[cfg(feature = "discord")]
     use switchboard::discord::tools::tools_schema;
-    use serde_json::json;
-    use std::sync::{Arc, Mutex};
     use tempfile::TempDir;
 
     /// Create a system message.

@@ -29,7 +29,8 @@ fn get_test_log_dir() -> &'static Path {
             let log_dir = temp.path().join("logs");
 
             // Initialize logging using switchboard's init_logging
-            let guard = switchboard::logging::init_logging(log_dir.clone()).expect("Failed to initialize logging");
+            let guard = switchboard::logging::init_logging(log_dir.clone())
+                .expect("Failed to initialize logging");
 
             TEMP_DIR = Some(temp);
             GLOBAL_LOG_DIR = Some(log_dir);

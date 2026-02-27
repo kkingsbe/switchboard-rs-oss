@@ -3,9 +3,9 @@
 //! This test module verifies that all Docker-dependent commands consistently
 //! check Docker availability before attempting Docker operations.
 
+use std::sync::Arc;
 use switchboard::docker::check_docker_available;
 use switchboard::traits::ProcessExecutorTrait;
-use std::sync::Arc;
 
 /// Test that check_docker_available returns Ok when Docker is running
 ///

@@ -109,24 +109,24 @@ pub fn get_discord_token() -> Result<String, String> {
             DISCORD_TOKEN_ENV
         )
     })?;
-    
+
     // Validate the token format
     validate_discord_token(&token)?;
-    
+
     Ok(token)
 }
 
 /// Validates the Discord bot token format.
-/// 
+///
 /// Discord bot tokens are typically 80+ characters and contain dots.
 /// This function provides helpful warnings if the token format looks incorrect.
-/// 
+///
 /// # Arguments
-/// 
+///
 /// * `token` - The Discord bot token to validate
-/// 
+///
 /// # Returns
-/// 
+///
 /// * `Ok(())` - If the token appears valid
 /// * `Err(String)` - If the token format is definitely invalid
 pub fn validate_discord_token(token: &str) -> Result<(), String> {
@@ -138,24 +138,26 @@ pub fn validate_discord_token(token: &str) -> Result<(), String> {
             token.len()
         ));
     }
-    
+
     // Discord tokens contain dots (separator between parts)
     if !token.contains('.') {
         return Err(
             "Discord token doesn't contain expected dots. Bot tokens typically have format: \
-             XXXXX.YYYYY.ZZZZZ. Please verify your token is correct.".to_string()
+             XXXXX.YYYYY.ZZZZZ. Please verify your token is correct."
+                .to_string(),
         );
     }
-    
+
     // Token should only contain alphanumeric characters and dots
     let valid_chars = token.chars().all(|c| c.is_alphanumeric() || c == '.');
     if !valid_chars {
         return Err(
             "Discord token contains invalid characters. Tokens should only contain \
-             alphanumeric characters and dots.".to_string()
+             alphanumeric characters and dots."
+                .to_string(),
         );
     }
-    
+
     Ok(())
 }
 
@@ -398,13 +400,13 @@ pub struct DiscordSection {
     /// Optional gateway intents to use for the Discord connection.
     ///
     /// Intents determine which events the bot receives from Discord.
-    /// 
+    ///
     /// Common values:
     /// - `512` = GUILD_MESSAGES (messages in servers)
     /// - `4096` = DIRECT_MESSAGES (direct messages)
     /// - `16384` = MESSAGE_CONTENT (message content - requires verification!)
     /// - `21504` = 512 + 4096 + 16384 (all message intents)
-    /// 
+    ///
     /// NOTE: The MESSAGE_CONTENT intent (16384) requires verification in the
     /// Discord Developer Portal. If you get 400 errors, you may need to either:
     /// 1. Enable MESSAGE_CONTENT intent in your bot's settings (if verified)
@@ -1033,13 +1035,15 @@ mod tests {
         let discord = config.unwrap();
 
         // Verify enabled = true from switchboard.toml
-        assert!(discord.enabled, "Expected enabled = true from switchboard.toml");
+        assert!(
+            discord.enabled,
+            "Expected enabled = true from switchboard.toml"
+        );
 
         // Verify token_env is read from switchboard.toml (it's set to a token value in the file)
         // Note: switchboard.toml has token_env set to an actual token, not the default "DISCORD_TOKEN"
         assert_eq!(
-            discord.token_env,
-            "${DISCORD_TOKEN}",
+            discord.token_env, "${DISCORD_TOKEN}",
             "Expected token_env from switchboard.toml"
         );
 

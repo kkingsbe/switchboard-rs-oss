@@ -213,7 +213,9 @@ pub fn list_agents(config: &Config) -> Result<(), String> {
         // Determine timeout color - yellow for short timeouts (< 5 minutes)
         let timeout_cell = if !timeout.is_empty() {
             // Parse timeout and check if less than 5 minutes (300 seconds)
-            let is_short_timeout = parse_timeout_secs(timeout).map(|secs| secs < 300).unwrap_or(false);
+            let is_short_timeout = parse_timeout_secs(timeout)
+                .map(|secs| secs < 300)
+                .unwrap_or(false);
             if is_short_timeout {
                 // Less than 5 minutes - use warning color
                 Cell::new(color_warning(timeout))

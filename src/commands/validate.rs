@@ -6,7 +6,9 @@
 //! - Validation of skill declarations against skills directory and lockfile
 
 use crate::config::{validate_cron_expression, Agent, Config, ConfigError};
-use crate::skills::{read_lockfile, scan_skill_directory, sync_skills_to_lockfile, LOCKFILE_FILENAME};
+use crate::skills::{
+    read_lockfile, scan_skill_directory, sync_skills_to_lockfile, LOCKFILE_FILENAME,
+};
 use crate::ui::colors::{color_error, color_info, color_success, color_warning};
 use clap::Parser;
 use regex::Regex;
@@ -294,7 +296,7 @@ fn extract_skill_name(skill_source: &str) -> Option<String> {
     if skill_source.is_empty() {
         return None;
     }
-    
+
     // Check for @ delimiter (owner/repo@skill-name format)
     if let Some(at_pos) = skill_source.find('@') {
         let skill_name = skill_source[at_pos + 1..].to_string();
@@ -303,7 +305,7 @@ fn extract_skill_name(skill_source: &str) -> Option<String> {
         }
         return None;
     }
-    
+
     // Check for / delimiter (owner/repo format)
     if let Some(slash_pos) = skill_source.find('/') {
         // Extract repo part after /
@@ -313,13 +315,16 @@ fn extract_skill_name(skill_source: &str) -> Option<String> {
         }
         return None;
     }
-    
+
     // Simple skill name (e.g., "frontend-design")
     // Only allow valid skill names: alphanumeric with hyphens and underscores
-    if skill_source.chars().all(|c| c.is_alphanumeric() || c == '-' || c == '_') {
+    if skill_source
+        .chars()
+        .all(|c| c.is_alphanumeric() || c == '-' || c == '_')
+    {
         return Some(skill_source.to_string());
     }
-    
+
     None
 }
 
@@ -530,7 +535,11 @@ pub(crate) fn validate_lockfile_consistency(config: &Config, skills_dir: &Path) 
 )]
 pub struct ValidateCommand {
     /// Synchronize the skills lockfile with skills in the skills/ directory
-    #[arg(long, short, help = "Synchronize skills lockfile with skills directory")]
+    #[arg(
+        long,
+        short,
+        help = "Synchronize skills lockfile with skills directory"
+    )]
     pub sync: bool,
 }
 
@@ -562,7 +571,10 @@ impl ValidateCommand {
     /// - If any validation fails, the function returns an error
     /// - The error message is descriptive to help identify the issue
     pub async fn run(&self, config_path: PathBuf) -> Result<(), Box<dyn std::error::Error>> {
-        println!("{}", color_info(&format!("Validating: {}...", config_path.display())));
+        println!(
+            "{}",
+            color_info(&format!("Validating: {}...", config_path.display()))
+        );
 
         // Load the config file
         let config = match Config::from_toml(&config_path) {
@@ -577,7 +589,10 @@ impl ValidateCommand {
                 cfg
             }
             Err(e @ ConfigError::ParseError { .. }) => {
-                eprintln!("{}", color_error(&format!("✗ Configuration parsing failed: {}", e)));
+                eprintln!(
+                    "{}",
+                    color_error(&format!("✗ Configuration parsing failed: {}", e))
+                );
                 return Err(format!("Configuration parsing failed: {}", e).into());
             }
             Err(ConfigError::ValidationError { .. }) => {
@@ -606,7 +621,10 @@ impl ValidateCommand {
         for agent in &config.agents {
             match validate_cron_expression(&agent.schedule) {
                 Ok(_) => {
-                    println!("  {}", color_success(&format!("✓ Agent '{}': cron schedule valid", agent.name)));
+                    println!(
+                        "  {}",
+                        color_success(&format!("✓ Agent '{}': cron schedule valid", agent.name))
+                    );
                 }
                 Err(e) => {
                     println!(
@@ -663,7 +681,10 @@ impl ValidateCommand {
                     println!("{}", color_success("✓ Skills lockfile synchronized"));
                 }
                 Err(e) => {
-                    eprintln!("{}", color_error(&format!("✗ Failed to synchronize skills lockfile: {}", e)));
+                    eprintln!(
+                        "{}",
+                        color_error(&format!("✗ Failed to synchronize skills lockfile: {}", e))
+                    );
                     has_errors = true;
                 }
             }
@@ -877,10 +898,10 @@ mod tests {
             overlap_mode: None,
             max_queue_size: None,
             skills: Some(vec![
-                "bad@format".to_string(),        // Invalid: contains @
-                "invalid/format".to_string(),    // Invalid: contains /
-                "".to_string(),                  // Invalid: empty string
-                "owner/@skill".to_string(),      // Invalid: contains @ and /
+                "bad@format".to_string(),     // Invalid: contains @
+                "invalid/format".to_string(), // Invalid: contains /
+                "".to_string(),               // Invalid: empty string
+                "owner/@skill".to_string(),   // Invalid: contains @ and /
             ]),
         };
 
@@ -929,9 +950,9 @@ mod tests {
             overlap_mode: None,
             max_queue_size: None,
             skills: Some(vec![
-                "frontend-design".to_string(),   // Valid: skill-name format
-                "security-audit".to_string(),   // Valid: skill-name format
-                "backend_api".to_string(),      // Valid: skill-name format with underscore
+                "frontend-design".to_string(), // Valid: skill-name format
+                "security-audit".to_string(),  // Valid: skill-name format
+                "backend_api".to_string(),     // Valid: skill-name format with underscore
                 "skill123".to_string(),        // Valid: skill-name with numbers
             ]),
         };
@@ -1306,13 +1327,17 @@ mod tests {
         // Create a temp skills directory with the skill
         let temp_dir = TempDir::new().expect("Failed to create temp dir");
         let skills_dir = temp_dir.path().to_path_buf();
-        
+
         // Create the skill directory with a SKILL.md file
         let skill_dir = skills_dir.join("frontend-design");
         fs::create_dir(&skill_dir).expect("Failed to create skill dir");
         let skill_file = skill_dir.join("SKILL.md");
-        fs::write(&skill_file, "---\nname: frontend-design\ndescription: Test skill\n---").expect("Failed to write skill file");
-        
+        fs::write(
+            &skill_file,
+            "---\nname: frontend-design\ndescription: Test skill\n---",
+        )
+        .expect("Failed to write skill file");
+
         let agent = Agent {
             name: "test-agent".to_string(),
             prompt: Some("Test prompt".to_string()),

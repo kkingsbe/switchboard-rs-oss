@@ -122,15 +122,23 @@ impl BuildCommand {
 
         // Step 3: Check Docker availability
         println!("[2/5] {}", color_info("Checking Docker availability..."));
-        check_docker_available()
-            .await
-            .map_err(|e| format!("{}: Docker availability check failed: {}", color_error("Error"), e))?;
+        check_docker_available().await.map_err(|e| {
+            format!(
+                "{}: Docker availability check failed: {}",
+                color_error("Error"),
+                e
+            )
+        })?;
 
         // Step 4: Read Dockerfile
         println!("[3/5] {}", color_info("Reading Dockerfile..."));
         let dockerfile_content = std::fs::read_to_string(&dockerfile_path).map_err(|e| {
             if e.kind() == std::io::ErrorKind::NotFound {
-                format!("{}: Dockerfile not found at: {}", color_error("Error"), dockerfile_path.display())
+                format!(
+                    "{}: Dockerfile not found at: {}",
+                    color_error("Error"),
+                    dockerfile_path.display()
+                )
             } else {
                 format!("{}: Failed to read Dockerfile: {}", color_error("Error"), e)
             }
@@ -169,7 +177,13 @@ impl BuildCommand {
             .map_err(|e| format!("{}: {}", color_error("Build failed"), e))?;
 
         // Step 5: Print success message
-        println!("[5/5] {}", color_success(&format!("Image built successfully: {}:{}", image_name, image_tag)));
+        println!(
+            "[5/5] {}",
+            color_success(&format!(
+                "Image built successfully: {}:{}",
+                image_name, image_tag
+            ))
+        );
 
         Ok(())
     }

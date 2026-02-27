@@ -15,7 +15,6 @@ use tracing::debug;
 
 use chrono::Local;
 
-
 /// Maximum character limit for file reads.
 const MAX_FILE_SIZE: usize = 3000;
 
@@ -258,9 +257,17 @@ fn validate_path(path: &str) -> Result<(), ToolError> {
 pub fn execute_read_file(path: &str) -> Result<String, ToolError> {
     // Debug: Log the current working directory and requested path
     let cwd = std::env::current_dir().unwrap_or_else(|_| std::path::PathBuf::from("unknown"));
-    debug!("execute_read_file called with path: '{}', cwd: {}", path, cwd.display());
-    eprintln!("[DISCORD TOOL] execute_read_file: path='{}', cwd={}", path, cwd.display());
-    
+    debug!(
+        "execute_read_file called with path: '{}', cwd: {}",
+        path,
+        cwd.display()
+    );
+    eprintln!(
+        "[DISCORD TOOL] execute_read_file: path='{}', cwd={}",
+        path,
+        cwd.display()
+    );
+
     validate_path(path)?;
 
     let file_path = Path::new(path);
@@ -292,9 +299,17 @@ pub fn execute_read_file(path: &str) -> Result<String, ToolError> {
 pub fn execute_list_directory(path: &str) -> Result<String, ToolError> {
     // Debug: Log the current working directory and requested path
     let cwd = std::env::current_dir().unwrap_or_else(|_| std::path::PathBuf::from("unknown"));
-    debug!("execute_list_directory called with path: '{}', cwd: {}", path, cwd.display());
-    eprintln!("[DISCORD TOOL] execute_list_directory: path='{}', cwd={}", path, cwd.display());
-    
+    debug!(
+        "execute_list_directory called with path: '{}', cwd: {}",
+        path,
+        cwd.display()
+    );
+    eprintln!(
+        "[DISCORD TOOL] execute_list_directory: path='{}', cwd={}",
+        path,
+        cwd.display()
+    );
+
     validate_path(path)?;
 
     let dir_path = Path::new(path);
@@ -340,7 +355,7 @@ pub fn get_status() -> Result<String, ToolError> {
     let cwd = std::env::current_dir().unwrap_or_else(|_| std::path::PathBuf::from("unknown"));
     debug!("get_status called, cwd: {}", cwd.display());
     eprintln!("[DISCORD TOOL] get_status: cwd={}", cwd.display());
-    
+
     let mut status = String::new();
 
     // Check for agent done files
@@ -746,21 +761,26 @@ pub fn execute_tool(tool: Tool) -> Result<String, ToolError> {
 ///
 /// This is used by the ToolExecutor to convert LLM tool calls into executable Tool variants.
 pub fn parse_tool_from_llm(name: &str, arguments: &str) -> Result<Tool, ToolError> {
-    let args: serde_json::Value = serde_json::from_str(arguments)
-        .map_err(ToolError::Json)?;
+    let args: serde_json::Value = serde_json::from_str(arguments).map_err(ToolError::Json)?;
 
     match name {
         "read_file" => {
-            let path = args.get("path")
+            let path = args
+                .get("path")
                 .and_then(|v| v.as_str())
-                .ok_or_else(|| ToolError::Execution("Missing required parameter: path".to_string()))?
+                .ok_or_else(|| {
+                    ToolError::Execution("Missing required parameter: path".to_string())
+                })?
                 .to_string();
             Ok(Tool::ReadFile { path })
         }
         "list_directory" => {
-            let path = args.get("path")
+            let path = args
+                .get("path")
                 .and_then(|v| v.as_str())
-                .ok_or_else(|| ToolError::Execution("Missing required parameter: path".to_string()))?
+                .ok_or_else(|| {
+                    ToolError::Execution("Missing required parameter: path".to_string())
+                })?
                 .to_string();
             Ok(Tool::ListDirectory { path })
         }
@@ -768,49 +788,76 @@ pub fn parse_tool_from_llm(name: &str, arguments: &str) -> Result<Tool, ToolErro
         "list_inbox" => Ok(Tool::ListInbox),
         "read_outbox" => Ok(Tool::ReadOutbox),
         "read_todos" => {
-            let agent = args.get("agent")
+            let agent = args
+                .get("agent")
                 .and_then(|v| v.as_str())
                 .map(|s| s.to_string());
             Ok(Tool::ReadTodos { agent })
         }
         "read_backlog" => Ok(Tool::ReadBacklog),
         "add_to_backlog" => {
-            let item = args.get("item")
+            let item = args
+                .get("item")
                 .and_then(|v| v.as_str())
-                .ok_or_else(|| ToolError::Execution("Missing required parameter: item".to_string()))?
+                .ok_or_else(|| {
+                    ToolError::Execution("Missing required parameter: item".to_string())
+                })?
                 .to_string();
-            let tag = args.get("tag")
+            let tag = args
+                .get("tag")
                 .and_then(|v| v.as_str())
                 .map(|s| s.to_string());
             Ok(Tool::AddToBacklog { item, tag })
         }
         "file_task" => {
-            let title = args.get("title")
+            let title = args
+                .get("title")
                 .and_then(|v| v.as_str())
-                .ok_or_else(|| ToolError::Execution("Missing required parameter: title".to_string()))?
+                .ok_or_else(|| {
+                    ToolError::Execution("Missing required parameter: title".to_string())
+                })?
                 .to_string();
-            let description = args.get("description")
+            let description = args
+                .get("description")
                 .and_then(|v| v.as_str())
-                .ok_or_else(|| ToolError::Execution("Missing required parameter: description".to_string()))?
+                .ok_or_else(|| {
+                    ToolError::Execution("Missing required parameter: description".to_string())
+                })?
                 .to_string();
-            let priority = args.get("priority")
+            let priority = args
+                .get("priority")
                 .and_then(|v| v.as_str())
                 .map(|s| s.to_string());
-            Ok(Tool::FileTask { title, description, priority })
+            Ok(Tool::FileTask {
+                title,
+                description,
+                priority,
+            })
         }
         "file_bug" => {
-            let title = args.get("title")
+            let title = args
+                .get("title")
                 .and_then(|v| v.as_str())
-                .ok_or_else(|| ToolError::Execution("Missing required parameter: title".to_string()))?
+                .ok_or_else(|| {
+                    ToolError::Execution("Missing required parameter: title".to_string())
+                })?
                 .to_string();
-            let description = args.get("description")
+            let description = args
+                .get("description")
                 .and_then(|v| v.as_str())
-                .ok_or_else(|| ToolError::Execution("Missing required parameter: description".to_string()))?
+                .ok_or_else(|| {
+                    ToolError::Execution("Missing required parameter: description".to_string())
+                })?
                 .to_string();
-            let severity = args.get("severity")
+            let severity = args
+                .get("severity")
                 .and_then(|v| v.as_str())
                 .map(|s| s.to_string());
-            Ok(Tool::FileBug { title, description, severity })
+            Ok(Tool::FileBug {
+                title,
+                description,
+                severity,
+            })
         }
         _ => Err(ToolError::UnknownTool(name.to_string())),
     }

@@ -2,14 +2,14 @@ use crate::config::Config;
 use crate::skills::{
     add_skill_to_lockfile, create_npx_command, find_skill_directory, get_agents_using_skill,
     read_lockfile, remove_skill_directory, remove_skill_from_lockfile, scan_global_skills,
-    scan_project_skills, skills_sh_search, LockfileStruct, SkillLockEntry, SkillMetadata,
-    SkillsError, SkillsManager, NPX_NOT_FOUND_ERROR, write_lockfile,
+    scan_project_skills, skills_sh_search, write_lockfile, LockfileStruct, SkillLockEntry,
+    SkillMetadata, SkillsError, SkillsManager, NPX_NOT_FOUND_ERROR,
 };
-use std::fs;
-use std::path::PathBuf;
 use clap::{Args, Parser, Subcommand};
 use comfy_table::{Attribute, Cell, Table};
+use std::fs;
 use std::io::{self, Write};
+use std::path::PathBuf;
 
 /// Exit code for command execution
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -347,18 +347,20 @@ async fn run_skills_list(args: SkillsList, _config: &Config) -> ExitCode {
         eprintln!("{}", NPX_NOT_FOUND_ERROR);
         return ExitCode::Error;
     }
-    
+
     // Use search query if provided, otherwise use positional query
     // Default to "ai" to get popular skills if neither is provided
     // Note: Query must be at least 2 characters per requirements
-    let query = args.search.unwrap_or_else(|| args.query.unwrap_or_else(|| "ai".to_string()));
-    
+    let query = args
+        .search
+        .unwrap_or_else(|| args.query.unwrap_or_else(|| "ai".to_string()));
+
     // Validate query length (minimum 2 characters per requirements)
     if query.len() < 2 {
         eprintln!("Query must be at least 2 characters");
         return ExitCode::Error;
     }
-    
+
     // Per requirements: default limit is 10, not 20
     let limit = args.limit.unwrap_or(10);
 
@@ -454,7 +456,7 @@ async fn run_skills_install(args: SkillsInstall, _config: &Config) -> ExitCode {
     let mut cmd = create_npx_command();
     cmd.arg("skills");
     cmd.arg("add");
-    
+
     // Parse source to handle @skill-name format
     if let Some(at_pos) = args.source.rfind('@') {
         let repo = &args.source[..at_pos];
@@ -465,7 +467,7 @@ async fn run_skills_install(args: SkillsInstall, _config: &Config) -> ExitCode {
     } else {
         cmd.arg(&args.source);
     }
-    
+
     cmd.arg("-a");
     cmd.arg("kilo");
     cmd.arg("-y"); // Auto-confirm
@@ -489,15 +491,18 @@ async fn run_skills_install(args: SkillsInstall, _config: &Config) -> ExitCode {
         // Step 2-5: Move from .agents/skills/ to ./skills/, verify, update lockfile, cleanup
         match perform_post_install_move(&skills_dir, &skill_name, &args.source) {
             Ok(_) => {
-                println!("Moved to ./{}/
-Updated skills.lock.json", skill_name);
+                println!(
+                    "Moved to ./{}/
+Updated skills.lock.json",
+                    skill_name
+                );
             }
             Err(e) => {
                 eprintln!("Warning: Post-install move failed: {}", e);
                 // Still try to add to lockfile even if move failed
             }
         }
-        
+
         // Add to lockfile
         if let Err(e) = add_skill_to_lockfile(&skills_dir, &skill_name, &args.source) {
             eprintln!("Warning: Failed to update lockfile: {}", e);
@@ -560,7 +565,7 @@ fn perform_post_install_move(
 
         // Clean up empty .agents/skills/ and .agents/ directories
         cleanup_agents_directory()?;
-        
+
         println!("Done.");
     } else {
         // If .agents/skills/ doesn't exist, npx may have installed directly to ./skills/
@@ -570,7 +575,7 @@ fn perform_post_install_move(
                 skill_source: skill_name.to_string(),
             });
         }
-        
+
         // Verify SKILL.md exists
         let skill_md_path = dest_dir.join("SKILL.md");
         if !skill_md_path.exists() {
@@ -751,7 +756,13 @@ async fn run_skills_installed(args: SkillsInstalled, config: &Config) -> ExitCod
     }
 
     // Format and display the output
-    let output = format_skills_list(project_skills, global_skills, &warnings, config, lockfile.as_ref());
+    let output = format_skills_list(
+        project_skills,
+        global_skills,
+        &warnings,
+        config,
+        lockfile.as_ref(),
+    );
     println!("{}", output);
 
     ExitCode::Success
@@ -1016,7 +1027,8 @@ pub async fn handle_skills_update(args: SkillsUpdate, _config: &Config) -> ExitC
         let source = &skill_entry.source;
         println!("Updating skill '{}' from source '{}'", skill_name, source);
 
-        if reinstall_skill_from_source(&skills_dir, skill_name, source, false) == ExitCode::Success {
+        if reinstall_skill_from_source(&skills_dir, skill_name, source, false) == ExitCode::Success
+        {
             updated_skills.push(skill_name.clone());
         } else {
             all_success = false;
@@ -1067,7 +1079,7 @@ fn reinstall_skill_from_source(
     let mut cmd = create_npx_command();
     cmd.arg("skills");
     cmd.arg("add");
-    
+
     // Parse source to handle @skill-name format
     if let Some(at_pos) = source.rfind('@') {
         let repo = &source[..at_pos];
@@ -1078,7 +1090,7 @@ fn reinstall_skill_from_source(
     } else {
         cmd.arg(source);
     }
-    
+
     cmd.arg("-a");
     cmd.arg("kilo");
     cmd.arg("-y"); // Auto-confirm overwrite
@@ -1121,7 +1133,10 @@ fn reinstall_skill_from_source(
 /// Updates the installed_at timestamp for a specific skill in the lockfile.
 ///
 /// This is called after successfully re-installing a skill during an update.
-fn update_skill_timestamp(skills_dir: &std::path::Path, skill_name: &str) -> Result<(), SkillsError> {
+fn update_skill_timestamp(
+    skills_dir: &std::path::Path,
+    skill_name: &str,
+) -> Result<(), SkillsError> {
     use chrono::Utc;
 
     // Read the lockfile
@@ -1897,14 +1912,12 @@ mod tests {
         // Use try_parse_from to avoid clap picking up test binary args
         // Using skill-name format - SkillsInstall is a subcommand so we parse just the subcommand args
         let install =
-            SkillsInstall::try_parse_from(vec!["install", "frontend-design", "--global"])
-                .unwrap();
+            SkillsInstall::try_parse_from(vec!["install", "frontend-design", "--global"]).unwrap();
         assert_eq!(install.source, "frontend-design");
         assert!(install.global);
 
         // Test without --global flag (should default to false)
-        let install =
-            SkillsInstall::try_parse_from(vec!["install", "frontend-design"]).unwrap();
+        let install = SkillsInstall::try_parse_from(vec!["install", "frontend-design"]).unwrap();
         assert_eq!(install.source, "frontend-design");
         assert!(!install.global);
     }
@@ -1913,24 +1926,19 @@ mod tests {
     #[test]
     fn test_skills_install_args_parse_source_formats() {
         // skill-name format (new format)
-        let install =
-            SkillsInstall::try_parse_from(vec!["install", "frontend-design"]).unwrap();
+        let install = SkillsInstall::try_parse_from(vec!["install", "frontend-design"]).unwrap();
         assert_eq!(install.source, "frontend-design");
 
         // skill-name with hyphen format
-        let install =
-            SkillsInstall::try_parse_from(vec!["install", "security-audit"])
-                .unwrap();
+        let install = SkillsInstall::try_parse_from(vec!["install", "security-audit"]).unwrap();
         assert_eq!(install.source, "security-audit");
 
         // skill-name with underscore format
-        let install =
-            SkillsInstall::try_parse_from(vec!["install", "my_skill"]).unwrap();
+        let install = SkillsInstall::try_parse_from(vec!["install", "my_skill"]).unwrap();
         assert_eq!(install.source, "my_skill");
 
         // skill-name with numbers
-        let install =
-            SkillsInstall::try_parse_from(vec!["install", "skill123"]).unwrap();
+        let install = SkillsInstall::try_parse_from(vec!["install", "skill123"]).unwrap();
         assert_eq!(install.source, "skill123");
     }
 
@@ -1949,8 +1957,7 @@ mod tests {
         // This test verifies global flag works in different positions
         // Using skill-name format - SkillsInstall is a subcommand so we parse just the subcommand args
         let install =
-            SkillsInstall::try_parse_from(vec!["install", "frontend-design", "--global"])
-                .unwrap();
+            SkillsInstall::try_parse_from(vec!["install", "frontend-design", "--global"]).unwrap();
         assert!(install.global);
     }
 

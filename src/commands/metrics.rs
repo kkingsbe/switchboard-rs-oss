@@ -148,7 +148,10 @@ pub fn metrics(
         Ok(metrics) => metrics,
         Err(MetricsError::FileNotFound(_)) => {
             // Friendly message for missing file - exit 0
-            eprintln!("{}", color_warning("No metrics data available yet. Run agents to collect metrics."));
+            eprintln!(
+                "{}",
+                color_warning("No metrics data available yet. Run agents to collect metrics.")
+            );
             return Ok(());
         }
         Err(MetricsError::CorruptedFile(backup_path)) => {
@@ -326,7 +329,8 @@ fn display_table_metrics(all_metrics: &AllMetrics, agent_names: &[&String]) -> R
 
         // Get colored duration (yellow if > 1 hour)
         let duration_cell = if total_runs > 0 {
-            let avg_duration_seconds = agent_data.total_duration_ms as f64 / total_runs as f64 / 1000.0;
+            let avg_duration_seconds =
+                agent_data.total_duration_ms as f64 / total_runs as f64 / 1000.0;
             if avg_duration_seconds > 3600.0 {
                 // Very long duration - yellow warning
                 Cell::new(&avg_duration).fg(Color::Yellow)
@@ -442,12 +446,16 @@ fn display_detailed_metrics(
         println!("  Total Runs:      {}", total_runs);
         println!("  Successful Runs: {}", successful_runs);
         println!("  Failed Runs:     {}", failed_runs);
-        println!("  Success Rate:    {} {}", success_rate_display, status_icon_display);
+        println!(
+            "  Success Rate:    {} {}",
+            success_rate_display, status_icon_display
+        );
         println!("  Total Runtime:   {}", total_runtime);
 
         // Colorize average duration if > 1 hour
         if total_runs > 0 {
-            let avg_duration_seconds = agent_data.total_duration_ms as f64 / total_runs as f64 / 1000.0;
+            let avg_duration_seconds =
+                agent_data.total_duration_ms as f64 / total_runs as f64 / 1000.0;
             if avg_duration_seconds > 3600.0 {
                 println!("  Average Duration: {}", color_warning(&avg_duration));
             } else {

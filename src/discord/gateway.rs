@@ -113,11 +113,7 @@ pub struct DiscordGateway {
 
 impl DiscordGateway {
     /// Create a new Discord Gateway instance using twilight-gateway
-    pub fn new(
-        token: String,
-        intents: u32,
-        event_sender: mpsc::Sender<DiscordEvent>,
-    ) -> Self {
+    pub fn new(token: String, intents: u32, event_sender: mpsc::Sender<DiscordEvent>) -> Self {
         let shutdown = Arc::new(std::sync::atomic::AtomicBool::new(false));
 
         // Convert u32 intents to twilight Intents
@@ -155,8 +151,8 @@ impl DiscordGateway {
         mut shutdown_rx: tokio::sync::oneshot::Receiver<()>,
     ) -> Result<(), GatewayError> {
         // Event types to listen for
-        let event_flags = EventTypeFlags::MESSAGE_CREATE 
-            | EventTypeFlags::READY 
+        let event_flags = EventTypeFlags::MESSAGE_CREATE
+            | EventTypeFlags::READY
             | EventTypeFlags::RESUMED
             | EventTypeFlags::MESSAGE_DELETE
             | EventTypeFlags::GUILD_CREATE;
@@ -239,7 +235,7 @@ impl DiscordGateway {
                 self.bot_user_id = Some(ready.user.id.get());
                 self.state = ConnectionState::Connected;
                 info!("Discord Gateway: ready - user_id: {}", ready.user.id);
-                
+
                 Some(DiscordEvent::Ready {
                     user_id: ready.user.id.get().to_string(),
                     session_id: ready.session_id.clone(),
@@ -250,18 +246,14 @@ impl DiscordGateway {
                 info!("Discord Gateway: session resumed");
                 Some(DiscordEvent::Resumed)
             }
-            Event::MessageDelete(msg) => {
-                Some(DiscordEvent::MessageDelete {
-                    message_id: msg.id.get().to_string(),
-                    channel_id: msg.channel_id.get().to_string(),
-                    guild_id: msg.guild_id.map(|g| g.get().to_string()),
-                })
-            }
-            Event::GuildCreate(guild) => {
-                Some(DiscordEvent::GuildCreate {
-                    guild_id: guild.id().get().to_string(),
-                })
-            }
+            Event::MessageDelete(msg) => Some(DiscordEvent::MessageDelete {
+                message_id: msg.id.get().to_string(),
+                channel_id: msg.channel_id.get().to_string(),
+                guild_id: msg.guild_id.map(|g| g.get().to_string()),
+            }),
+            Event::GuildCreate(guild) => Some(DiscordEvent::GuildCreate {
+                guild_id: guild.id().get().to_string(),
+            }),
             _ => None,
         }
     }
@@ -273,14 +265,15 @@ impl DiscordGateway {
 
     /// Request gateway shutdown
     pub fn shutdown(&self) {
-        self.shutdown.store(true, std::sync::atomic::Ordering::Relaxed);
+        self.shutdown
+            .store(true, std::sync::atomic::Ordering::Relaxed);
     }
 }
 
 /// Convert switchboard's u32 intents to twilight Intents type
 fn convert_intents(intents: u32) -> Intents {
     let mut twilight_intents = Intents::empty();
-    
+
     // GUILD_MESSAGES = 512
     if intents & 512 != 0 {
         twilight_intents |= Intents::GUILD_MESSAGES;
@@ -305,12 +298,12 @@ fn convert_intents(intents: u32) -> Intents {
     if intents & 2 != 0 {
         twilight_intents |= Intents::GUILD_MEMBERS;
     }
-    
+
     // Default to GUILD_MESSAGES | MESSAGE_CONTENT if nothing set
     if twilight_intents.is_empty() {
         twilight_intents = Intents::GUILD_MESSAGES | Intents::MESSAGE_CONTENT;
     }
-    
+
     twilight_intents
 }
 
@@ -348,15 +341,15 @@ mod tests {
 
     #[test]
     fn test_gateway_creation() {
-        // Note: Creating DiscordGateway (which creates a Shard internally) 
+        // Note: Creating DiscordGateway (which creates a Shard internally)
         // requires a tokio runtime. This test verifies the types are correct
         // but actual instantiation requires #[tokio::test]
-        
+
         // Verify the types can be used together (compile-time check)
         let _channel: mpsc::Sender<DiscordEvent>;
         let _intents_value: u32 = 16896;
         let _token: String = "test".to_string();
-        
+
         // This just verifies the module compiles with expected types
         std::hint::black_box(());
     }
