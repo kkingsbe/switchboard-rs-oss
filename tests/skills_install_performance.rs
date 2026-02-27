@@ -37,18 +37,3 @@
 //! ```
 
 // Direct imports for switchboard functionality
-use std::time::Instant;
-
-use switchboard::docker::skills::generate_entrypoint_script;
-
-/// Formats a duration in a human-readable format
-fn format_duration(duration: std::time::Duration) -> String {
-    let micros = duration.as_micros();
-    if micros < 1_000 {
-        format!("{}μs", micros)
-    } else if micros < 1_000_000 {
-        format!("{:.2}ms", micros as f64 / 1_000.0)
-    } else {
-        format!("{:.4}s", duration.as_secs_f64())
-    }
-}

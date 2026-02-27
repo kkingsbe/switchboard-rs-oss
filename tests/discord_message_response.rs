@@ -86,6 +86,7 @@ mod discord_tests {
         }
 
         /// Reset the client to the beginning (for re-running tests)
+        #[allow(dead_code)]
         fn reset(&mut self) {
             self.index = 0;
         }
@@ -346,7 +347,7 @@ mod discord_tests {
         ]);
 
         // Create conversation
-        let (mut manager, mut messages) =
+        let (mut _manager, mut messages) =
             create_conversation_with_message("test_user", "What's in that test file?");
 
         messages.insert(0, system_message("You are helpful."));

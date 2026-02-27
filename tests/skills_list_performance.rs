@@ -39,8 +39,6 @@ use std::fs;
 // Include the performance_common module for this integration test
 include!("performance_common.rs");
 
-use std::time::Instant;
-
 use switchboard::skills::{scan_global_skills, scan_skill_directory, SkillMetadata};
 
 /// Setup function for performance tests
@@ -54,6 +52,7 @@ fn setup() -> TempDir {
 /// Teardown function for performance tests
 ///
 /// Cleans up the test environment.
+#[allow(dead_code)]
 fn teardown() {
     // No teardown needed - temp dirs are auto-cleaned
 }
@@ -75,7 +74,7 @@ async fn test_skills_list_empty_directory_performance() {
     fs::create_dir_all(&skills_dir).unwrap();
 
     // Measure execution time for scanning empty skills directory using high-precision Timer
-    let mut timer = Timer::new("skills_list_empty");
+    let timer = Timer::new("skills_list_empty");
     let result = scan_skill_directory(&skills_dir);
     let duration = timer.elapsed();
 
@@ -171,7 +170,7 @@ This is a mock skill for performance testing.
     }
 
     // Measure execution time for scanning skills directory with mock skills
-    let mut timer = Timer::new("skills_list_multiple_mock");
+    let timer = Timer::new("skills_list_multiple_mock");
     let result = scan_skill_directory(&skills_dir);
     let duration = timer.elapsed();
 
@@ -303,7 +302,7 @@ This is a mock skill for search performance testing.
     let search_query = "docker";
 
     // Measure execution time for scanning and filtering skills using high-precision Timer
-    let mut timer = Timer::new("skills_list_search_query");
+    let timer = Timer::new("skills_list_search_query");
 
     // Scan all skills
     let result = scan_skill_directory(&skills_dir);
@@ -399,13 +398,12 @@ async fn test_global_skills_scan_performance() {
 
     // Create empty global skills directory
     let global_skills_dir = temp_dir_path.join(".kilocode").join("skills");
-    let global_skills_dir = temp_dir.path().join(".kilocode").join("skills");
     fs::create_dir_all(&global_skills_dir).unwrap();
 
     // Measure execution time for scanning global skills directory using high-precision Timer
-    let mut timer = Timer::new("global_skills_scan");
-    let result = scan_global_skills();
-    let duration = timer.elapsed();
+    let timer = Timer::new("global_skills_scan");
+    let _result = scan_global_skills();
+    let _duration = timer.elapsed();
 
     // Teardown: Always restore HOME environment variable
     match original_home {
@@ -427,7 +425,7 @@ async fn test_npx_availability_check_performance() {
     let mut manager = SkillsManager::new(None);
 
     // Measure execution time for npx availability check using high-precision Timer
-    let mut timer = Timer::new("npx_availability_check");
+    let timer = Timer::new("npx_availability_check");
     let result = manager.check_npx_available();
     let duration = timer.elapsed();
 

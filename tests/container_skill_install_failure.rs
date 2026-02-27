@@ -243,10 +243,7 @@ fn test_empty_skills_list_no_failure_detection() {
 fn test_skill_install_failure_error_message() {
     let agent_name = "production-agent";
     let exit_code: i64 = 127; // Command not found - common skill install failure
-    let skills = vec![
-        "owner/repo1".to_string(),
-        "owner/repo2@skill-name".to_string(),
-    ];
+    let skills = ["owner/repo1", "owner/repo2@skill-name"];
 
     // Generate error message components as in run.rs
     let error_header = format!(

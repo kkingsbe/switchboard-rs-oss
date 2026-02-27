@@ -9,9 +9,7 @@
 mod discord_listener_tests {
     use std::sync::{Arc, Mutex};
     #[cfg(feature = "discord")]
-    use switchboard::discord::conversation::{
-        ConversationConfig, ConversationManager, ToolCall, ToolFunction,
-    };
+    use switchboard::discord::conversation::{ConversationConfig, ConversationManager};
     #[cfg(feature = "discord")]
     use switchboard::discord::llm::LlmResponse;
     #[cfg(feature = "discord")]

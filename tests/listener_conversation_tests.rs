@@ -42,7 +42,7 @@ fn test_process_message_creates_conversation_for_user() {
     let message = create_test_message(config.channel_id, 111111111, "Hello, bot!");
 
     // Create a conversation manager
-    let mut conversation_manager = ConversationManager::new(ConversationConfig::default());
+    let conversation_manager = ConversationManager::new(ConversationConfig::default());
 
     // Process the message - this should create a conversation for the user
     // Note: Currently process_message doesn't interact with conversation_manager
@@ -74,7 +74,7 @@ fn test_different_users_have_separate_conversations() {
     let config = create_test_config();
 
     // Create a conversation manager
-    let mut conversation_manager = ConversationManager::new(ConversationConfig::default());
+    let conversation_manager = ConversationManager::new(ConversationConfig::default());
 
     // Process message from user 1
     let message1 = create_test_message(config.channel_id, 111111111, "Hello from user 1");

@@ -6,7 +6,7 @@
 //! - Return a Message on success or ApiError on failure
 
 #[cfg(feature = "discord")]
-use switchboard::discord::api::{ApiError, DiscordApiClient, Message};
+use switchboard::discord::api::DiscordApiClient;
 
 #[cfg(feature = "discord")]
 /// Test that send_message function has the correct signature
