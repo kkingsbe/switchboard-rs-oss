@@ -7,7 +7,6 @@ use std::path::PathBuf;
 use tracing_appender::non_blocking::WorkerGuard;
 use tracing_subscriber::{fmt, EnvFilter};
 
-#[cfg(test)]
 use crate::skills::SkillsError;
 
 /// Initialize tracing subscriber with file appender
@@ -40,11 +39,14 @@ use crate::skills::SkillsError;
 /// let _guard = init_logging(log_dir);
 /// // Logging is now initialized and will write to .switchboard/logs/switchboard.log
 /// ```
-pub fn init_logging(log_dir: PathBuf) -> WorkerGuard {
+pub fn init_logging(log_dir: PathBuf) -> Result<WorkerGuard, SkillsError> {
     // Create the log directory if it doesn't exist
     let log_dir_display = log_dir.display().to_string();
-    let error_msg = format!("Failed to create log directory: {}", log_dir_display);
-    std::fs::create_dir_all(&log_dir).expect(&error_msg);
+    std::fs::create_dir_all(&log_dir).map_err(|e| SkillsError::IoError {
+        operation: "create directory".to_string(),
+        path: log_dir_display,
+        message: e.to_string(),
+    })?;
 
     // Create file appender for switchboard.log
     let file_appender = tracing_appender::rolling::never(&log_dir, "switchboard.log");
@@ -59,9 +61,13 @@ pub fn init_logging(log_dir: PathBuf) -> WorkerGuard {
         .finish();
 
     // Set the global subscriber (panics in production if already set)
-    tracing::subscriber::set_global_default(subscriber).expect("Failed to set tracing subscriber");
+    tracing::subscriber::set_global_default(subscriber).map_err(|e| SkillsError::IoError {
+        operation: "set tracing subscriber".to_string(),
+        path: "".to_string(),
+        message: e.to_string(),
+    })?;
 
-    guard
+    Ok(guard)
 }
 
 #[cfg(test)]
