@@ -185,15 +185,15 @@ An **agent** is a scheduled AI task defined in your configuration. Each agent ha
 
 ### Schedules
 
-Schedules use **6-field cron expressions**:
+Schedules use **5-field cron expressions** (Unix cron format):
 
 ```
-second minute hour day month weekday
+minute hour day month weekday
 ```
 
 Examples:
-- `"0 0 * * * *"` — Every hour on the hour
-- `"0 */15 * * * *"` — Every 15 minutes
+- `"0 * * * *"` — Every hour on the hour
+- `"*/15 * * * *"` — Every 15 minutes
 - `"0 9 * * 1-5"` — 9:00 AM on weekdays
 
 ### Docker Isolation
