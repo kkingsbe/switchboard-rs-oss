@@ -25,6 +25,9 @@ pub use run::{find_preexisting_skills, run_agent, AgentExecutionResult, Containe
 
 pub mod skills;
 
+/// Error message used when Docker client is not available
+const DOCKER_NOT_AVAILABLE: &str = "Docker client not available";
+
 /// Get the Docker socket path from the active Docker context
 ///
 /// On systems with multiple Docker installations (e.g., Podman + Docker Desktop),
@@ -573,7 +576,7 @@ impl DockerClient {
     /// Returns `DockerError::ConnectionError` if the Docker client is not available.
     fn get_docker(&self) -> Result<&Docker, DockerError> {
         self.docker.as_ref().ok_or(DockerError::ConnectionError(
-            "Docker client not available".to_string(),
+            DOCKER_NOT_AVAILABLE.to_string(),
         ))
     }
 
