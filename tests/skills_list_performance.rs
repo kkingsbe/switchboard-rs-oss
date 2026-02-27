@@ -388,7 +388,7 @@ async fn test_global_skills_scan_performance() {
     let _setup = setup();
 
     // Create a temp directory for testing
-    let temp_dir = TempDir::new().unwrap();
+    let _temp_dir = TempDir::new().unwrap();
 
     // Temporarily override HOME environment variable to point to temp dir
     // This ensures we don't actually read the user's global skills directory
