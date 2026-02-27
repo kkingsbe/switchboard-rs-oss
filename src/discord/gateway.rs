@@ -64,25 +64,6 @@ pub enum GatewayOpcode {
     HeartbeatAck = 11,
 }
 
-impl GatewayOpcode {
-    fn from_u8(val: u8) -> Option<Self> {
-        match val {
-            0 => Some(GatewayOpcode::Dispatch),
-            1 => Some(GatewayOpcode::Heartbeat),
-            2 => Some(GatewayOpcode::Identify),
-            3 => Some(GatewayOpcode::PresenceUpdate),
-            4 => Some(GatewayOpcode::VoiceStateUpdate),
-            6 => Some(GatewayOpcode::Resume),
-            7 => Some(GatewayOpcode::Reconnect),
-            8 => Some(GatewayOpcode::RequestGuildMembers),
-            9 => Some(GatewayOpcode::InvalidSession),
-            10 => Some(GatewayOpcode::Hello),
-            11 => Some(GatewayOpcode::HeartbeatAck),
-            _ => None,
-        }
-    }
-}
-
 /// Gateway commands (kept for compatibility)
 #[derive(Debug, Clone)]
 pub enum GatewayCommand {
