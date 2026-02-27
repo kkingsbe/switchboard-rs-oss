@@ -6,6 +6,7 @@
 
 use crate::config::{Config, Settings};
 use crate::docker::{check_docker_available, DockerClient};
+use crate::ui::colors::{color_error, color_info, color_success};
 use clap::Parser;
 use std::path::PathBuf;
 
@@ -76,7 +77,8 @@ impl BuildCommand {
     /// - Uses the parent directory of the config file as the build context
     /// - Handles Docker connection errors with user-friendly messages
     pub async fn run(self) -> Result<(), Box<dyn std::error::Error>> {
-        // Load the config file
+        // Step 1: Load the config file
+        println!("[1/5] {}", color_info("Loading configuration..."));
         let config = Config::from_toml(&self.config)?;
 
         // Get the image name and tag from settings (or defaults)
@@ -86,8 +88,10 @@ impl BuildCommand {
         let image_tag = &settings.image_tag;
 
         println!(
-            "Config loaded: image_name={}, image_tag={}",
-            image_name, image_tag
+            "{}: image_name={}, image_tag={}",
+            color_info("Config loaded"),
+            image_name,
+            image_tag
         );
 
         // Determine project root from config path and read Dockerfile
@@ -103,36 +107,42 @@ impl BuildCommand {
             .parent()
             .unwrap_or_else(|| std::path::Path::new("."));
 
-        // Verify .kilocode directory exists (before any Docker operations)
-        // This check happens at command entry point per PRD §9
+        // Step 2: Verify .kilocode directory exists
         let kilocode_dir = build_context.join(".kilocode");
         if !kilocode_dir.exists() || !kilocode_dir.is_dir() {
             return Err(Box::from(format!(
-                "Required .kilocode directory not found in: {}\n\n\
+                "{}: Required .kilocode directory not found in: {}\n\n\n\
                 The .kilocode directory contains API keys, model configuration, and MCP server\n\
                 definitions needed by Kilo Code CLI. Please configure .kilocode/ in the Switchboard\n\
                 repo with your API keys before building the agent image.",
+                color_error("Configuration error"),
                 build_context.display()
             )));
         }
 
-        // Check Docker availability before attempting any Docker operations
-        // This ensures consistent error handling across all Docker-dependent commands
+        // Step 3: Check Docker availability
+        println!("[2/5] {}", color_info("Checking Docker availability..."));
         check_docker_available()
             .await
-            .map_err(|e| format!("Docker availability check failed: {}", e))?;
+            .map_err(|e| format!("{}: Docker availability check failed: {}", color_error("Error"), e))?;
 
+        // Step 4: Read Dockerfile
+        println!("[3/5] {}", color_info("Reading Dockerfile..."));
         let dockerfile_content = std::fs::read_to_string(&dockerfile_path).map_err(|e| {
             if e.kind() == std::io::ErrorKind::NotFound {
-                format!("Dockerfile not found at: {}", dockerfile_path.display())
+                format!("{}: Dockerfile not found at: {}", color_error("Error"), dockerfile_path.display())
             } else {
-                format!("Failed to read Dockerfile: {}", e)
+                format!("{}: Failed to read Dockerfile: {}", color_error("Error"), e)
             }
         })?;
 
-        println!("Dockerfile read: {} bytes", dockerfile_content.len());
+        println!(
+            "{}: {} bytes",
+            color_info("Dockerfile read"),
+            dockerfile_content.len()
+        );
 
-        println!("DEBUG: Creating DockerClient...");
+        println!("[4/5] {}", color_info("Building Docker image..."));
 
         // Create DockerClient instance
         let docker_client = DockerClient::new(image_name.clone(), image_tag.clone()).await
@@ -140,14 +150,13 @@ impl BuildCommand {
                 if e.to_string().contains("Docker connection error") ||
                    e.to_string().contains("connection refused") ||
                    e.to_string().contains("No such file") {
-                    "Error: Docker daemon is not running or not available. Please start Docker and try again.".to_string()
+                    format!("{}: Docker daemon is not running or not available. Please start Docker and try again.", color_error("Error"))
                 } else {
-                    format!("Error: {}", e)
+                    format!("{}: {}", color_error("Error"), e)
                 }
             })?;
 
         // Build the agent image
-        eprintln!("DEBUG: About to call build_agent_image...");
         docker_client
             .build_agent_image(
                 &dockerfile_content,
@@ -157,10 +166,10 @@ impl BuildCommand {
                 self.no_cache,
             )
             .await
-            .map_err(|e| format!("Build error: {}", e))?;
+            .map_err(|e| format!("{}: {}", color_error("Build failed"), e))?;
 
-        // Print success message
-        println!("Successfully built image: {}:{}", image_name, image_tag);
+        // Step 5: Print success message
+        println!("[5/5] {}", color_success(&format!("Image built successfully: {}:{}", image_name, image_tag)));
 
         Ok(())
     }

@@ -4,6 +4,7 @@
 //! scheduled agent executions in table or detailed format.
 
 use crate::metrics::{AllMetrics, MetricsError, MetricsStore};
+use crate::ui::colors::{color_error, color_success, color_warning};
 use chrono::Local;
 use comfy_table::{Attribute, Cell, Color, Table};
 use std::collections::HashMap;
@@ -147,33 +148,37 @@ pub fn metrics(
         Ok(metrics) => metrics,
         Err(MetricsError::FileNotFound(_)) => {
             // Friendly message for missing file - exit 0
-            eprintln!("No metrics data available yet. Run agents to collect metrics.");
+            eprintln!("{}", color_warning("No metrics data available yet. Run agents to collect metrics."));
             return Ok(());
         }
         Err(MetricsError::CorruptedFile(backup_path)) => {
             // Display error with backup file location - exit 1
-            eprintln!("Error: Metrics file is corrupted.");
+            eprintln!("{}", color_error("Error: Metrics file is corrupted."));
             eprintln!("Backup saved to: {}", backup_path);
             return Err("Corrupted metrics file".to_string());
         }
         Err(MetricsError::ReadError(msg)) => {
             // Display clear read error message - exit 1
-            eprintln!("Error: Failed to read metrics file: {}", msg);
+            eprintln!("{}", color_error("Error: Failed to read metrics file:"));
+            eprintln!("  {}", msg);
             return Err("Failed to read metrics file".to_string());
         }
         Err(MetricsError::WriteError(msg)) => {
             // Display clear write error message - exit 1
-            eprintln!("Error: Failed to write metrics file: {}", msg);
+            eprintln!("{}", color_error("Error: Failed to write metrics file:"));
+            eprintln!("  {}", msg);
             return Err("Failed to write metrics file".to_string());
         }
         Err(MetricsError::SerializationError(msg)) => {
             // Display clear serialization error message - exit 1
-            eprintln!("Error: Failed to serialize metrics: {}", msg);
+            eprintln!("{}", color_error("Error: Failed to serialize metrics:"));
+            eprintln!("  {}", msg);
             return Err("Failed to serialize metrics".to_string());
         }
         Err(MetricsError::DeserializationError(msg)) => {
             // Display clear deserialization error message - exit 1
-            eprintln!("Error: Failed to parse metrics: {}", msg);
+            eprintln!("{}", color_error("Error: Failed to parse metrics:"));
+            eprintln!("  {}", msg);
             return Err("Failed to parse metrics".to_string());
         }
     };
@@ -304,15 +309,43 @@ fn display_table_metrics(all_metrics: &AllMetrics, agent_names: &[&String]) -> R
             "-".to_string()
         };
 
+        // Get the colored status cell based on success rate
+        let status_cell = if total_runs == 0 || total_runs < 3 {
+            // No data - gray/default
+            Cell::new(status_icon)
+        } else if success_rate >= 95.0 {
+            // Success - green
+            Cell::new(status_icon).fg(Color::Green)
+        } else if success_rate >= 50.0 {
+            // Warning - yellow
+            Cell::new(status_icon).fg(Color::Yellow)
+        } else {
+            // Error - red
+            Cell::new(status_icon).fg(Color::Red)
+        };
+
+        // Get colored duration (yellow if > 1 hour)
+        let duration_cell = if total_runs > 0 {
+            let avg_duration_seconds = agent_data.total_duration_ms as f64 / total_runs as f64 / 1000.0;
+            if avg_duration_seconds > 3600.0 {
+                // Very long duration - yellow warning
+                Cell::new(&avg_duration).fg(Color::Yellow)
+            } else {
+                Cell::new(avg_duration)
+            }
+        } else {
+            Cell::new(avg_duration)
+        };
+
         table.add_row(vec![
             Cell::new(agent_name),
             Cell::new(total_runs.to_string()),
             Cell::new(successful_runs.to_string()),
             Cell::new(failed_runs.to_string()),
             Cell::new(skills_str),
-            Cell::new(avg_duration),
+            duration_cell,
             Cell::new(last_run_str),
-            Cell::new(status_icon),
+            status_cell,
         ]);
     }
 
@@ -376,18 +409,53 @@ fn display_detailed_metrics(
 
         let status_icon = get_status_icon(total_runs, success_rate);
 
+        // Colorize status icon for detailed view
+        let status_icon_display = if total_runs == 0 || total_runs < 3 {
+            status_icon.to_string()
+        } else if success_rate >= 95.0 {
+            color_success(status_icon)
+        } else if success_rate >= 50.0 {
+            color_warning(status_icon)
+        } else {
+            color_error(status_icon)
+        };
+
         let success_rate_str = if total_runs > 0 {
             format!("{:.1}%", success_rate)
         } else {
             "-".to_string()
         };
 
+        // Colorize success rate percentage
+        let success_rate_display = if total_runs > 0 {
+            if success_rate >= 95.0 {
+                color_success(&success_rate_str)
+            } else if success_rate >= 50.0 {
+                color_warning(&success_rate_str)
+            } else {
+                color_error(&success_rate_str)
+            }
+        } else {
+            success_rate_str.clone()
+        };
+
         println!("  Total Runs:      {}", total_runs);
         println!("  Successful Runs: {}", successful_runs);
         println!("  Failed Runs:     {}", failed_runs);
-        println!("  Success Rate:    {} {}", success_rate_str, status_icon);
+        println!("  Success Rate:    {} {}", success_rate_display, status_icon_display);
         println!("  Total Runtime:   {}", total_runtime);
-        println!("  Average Duration: {}", avg_duration);
+
+        // Colorize average duration if > 1 hour
+        if total_runs > 0 {
+            let avg_duration_seconds = agent_data.total_duration_ms as f64 / total_runs as f64 / 1000.0;
+            if avg_duration_seconds > 3600.0 {
+                println!("  Average Duration: {}", color_warning(&avg_duration));
+            } else {
+                println!("  Average Duration: {}", avg_duration);
+            }
+        } else {
+            println!("  Average Duration: {}", avg_duration);
+        }
         println!("  Concurrent Run ID: -");
 
         // Get first and last run timestamps from runs vector
@@ -415,7 +483,12 @@ fn display_detailed_metrics(
             );
 
             let last_run_duration = format_duration(last_run.duration_ms as f64 / 1000.0);
-            println!("  Last Duration:   {}", last_run_duration);
+            // Colorize last duration if > 1 hour
+            if last_run.duration_ms as f64 / 1000.0 > 3600.0 {
+                println!("  Last Duration:   {}", color_warning(&last_run_duration));
+            } else {
+                println!("  Last Duration:   {}", last_run_duration);
+            }
         } else {
             println!("  First Run:       -");
             println!("  Last Run:        -");

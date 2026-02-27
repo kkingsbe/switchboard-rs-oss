@@ -7,6 +7,7 @@
 
 use crate::config::{validate_cron_expression, Agent, Config, ConfigError};
 use crate::skills::{read_lockfile, scan_skill_directory, sync_skills_to_lockfile, LOCKFILE_FILENAME};
+use crate::ui::colors::{color_error, color_info, color_success, color_warning};
 use clap::Parser;
 use regex::Regex;
 use std::collections::HashSet;
@@ -561,23 +562,26 @@ impl ValidateCommand {
     /// - If any validation fails, the function returns an error
     /// - The error message is descriptive to help identify the issue
     pub async fn run(&self, config_path: PathBuf) -> Result<(), Box<dyn std::error::Error>> {
-        println!("Validating: {}...", config_path.display());
+        println!("{}", color_info(&format!("Validating: {}...", config_path.display())));
 
         // Load the config file
         let config = match Config::from_toml(&config_path) {
             Ok(cfg) => {
                 println!(
-                    "Config file loaded successfully: {} agent(s) defined",
-                    cfg.agents.len()
+                    "{}",
+                    color_info(&format!(
+                        "Config file loaded successfully: {} agent(s) defined",
+                        cfg.agents.len()
+                    ))
                 );
                 cfg
             }
             Err(e @ ConfigError::ParseError { .. }) => {
-                eprintln!("✗ Configuration parsing failed: {}", e);
+                eprintln!("{}", color_error(&format!("✗ Configuration parsing failed: {}", e)));
                 return Err(format!("Configuration parsing failed: {}", e).into());
             }
             Err(ConfigError::ValidationError { .. }) => {
-                eprintln!("✗ Configuration validation failed");
+                eprintln!("{}", color_error("✗ Configuration validation failed"));
                 return Err("Configuration validation failed".into());
             }
             Err(ConfigError::PromptFileNotFound {
@@ -588,7 +592,7 @@ impl ValidateCommand {
                     agent_name,
                     prompt_file,
                 };
-                eprintln!("✗ Configuration validation failed");
+                eprintln!("{}", color_error("✗ Configuration validation failed"));
                 return Err("Configuration validation failed".into());
             }
         };
@@ -602,12 +606,15 @@ impl ValidateCommand {
         for agent in &config.agents {
             match validate_cron_expression(&agent.schedule) {
                 Ok(_) => {
-                    println!("  ✓ Agent '{}': cron schedule valid", agent.name);
+                    println!("  {}", color_success(&format!("✓ Agent '{}': cron schedule valid", agent.name)));
                 }
                 Err(e) => {
                     println!(
-                        "  ✗ Agent '{}': invalid cron schedule '{}' - {}",
-                        agent.name, agent.schedule, e
+                        "  {}",
+                        color_error(&format!(
+                            "✗ Agent '{}': invalid cron schedule '{}' - {}",
+                            agent.name, agent.schedule, e
+                        ))
                     );
                     has_errors = true;
                 }
@@ -618,12 +625,12 @@ impl ValidateCommand {
 
             // Print warnings (non-blocking)
             for warning in skills_result.warnings {
-                println!("  {}", warning);
+                println!("  {}", color_warning(&warning));
             }
 
             // Print errors (blocking)
             for error in skills_result.errors {
-                println!("  {}", error);
+                println!("  {}", color_error(&error));
                 has_errors = true;
             }
 
@@ -633,7 +640,7 @@ impl ValidateCommand {
 
             // Print skill existence warnings
             for warning in skill_existence_warnings {
-                println!("  {}", warning);
+                println!("  {}", color_warning(&warning));
             }
         }
 
@@ -642,21 +649,21 @@ impl ValidateCommand {
 
         // Print lockfile warnings
         for warning in lockfile_warnings {
-            println!("  {}", warning);
+            println!("  {}", color_warning(&warning));
         }
 
         // Synchronize skills lockfile if --sync flag is provided
         if self.sync {
-            println!("Synchronizing skills lockfile...");
+            println!("{}", color_info("Synchronizing skills lockfile..."));
             match sync_skills_to_lockfile(&skills_dir) {
                 Ok(sync_warnings) => {
                     for warning in sync_warnings {
-                        println!("  {}", warning);
+                        println!("  {}", color_warning(&warning));
                     }
-                    println!("✓ Skills lockfile synchronized");
+                    println!("{}", color_success("✓ Skills lockfile synchronized"));
                 }
                 Err(e) => {
-                    eprintln!("✗ Failed to synchronize skills lockfile: {}", e);
+                    eprintln!("{}", color_error(&format!("✗ Failed to synchronize skills lockfile: {}", e)));
                     has_errors = true;
                 }
             }
@@ -664,7 +671,7 @@ impl ValidateCommand {
 
         // Return result based on validation
         if has_errors {
-            println!("✗ Configuration has errors");
+            println!("{}", color_error("✗ Configuration has errors"));
             return Err(std::io::Error::new(
                 std::io::ErrorKind::InvalidData,
                 "Invalid cron expressions",
@@ -672,7 +679,7 @@ impl ValidateCommand {
             .into());
         }
 
-        println!("✓ Configuration valid");
+        println!("{}", color_success("✓ Configuration valid"));
         Ok(())
     }
 }

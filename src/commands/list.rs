@@ -4,10 +4,53 @@
 //! and display their key properties in a formatted table.
 
 use crate::config::Config;
+use crate::ui::colors::{color_error, color_success, color_warning};
 use chrono::Utc;
 use chrono_tz::Tz;
 use comfy_table::{Attribute, Cell, Color, Table};
 use cron::Schedule;
+
+/// Determine if a cron schedule is valid
+fn is_valid_schedule(schedule: &str) -> bool {
+    schedule.parse::<Schedule>().is_ok()
+}
+
+/// Get status text based on schedule validity
+fn get_status(schedule: &str) -> String {
+    if is_valid_schedule(schedule) {
+        "Active".to_string()
+    } else if schedule.is_empty() {
+        "Never".to_string()
+    } else {
+        "Invalid".to_string()
+    }
+}
+
+/// Parse timeout string to seconds
+///
+/// Supports:
+/// - "30s" -> 30 seconds
+/// - "5m" -> 5 minutes
+/// - "1h" -> 1 hour
+///
+/// Returns None if parsing fails.
+fn parse_timeout_secs(timeout: &str) -> Option<u64> {
+    if timeout.is_empty() {
+        return None;
+    }
+
+    let timeout = timeout.trim();
+    let last_char = timeout.chars().last()?;
+    let value_str = &timeout[..timeout.len() - 1];
+    let value: u64 = value_str.parse().ok()?;
+
+    match last_char {
+        's' => Some(value),
+        'm' => Some(value * 60),
+        'h' => Some(value * 3600),
+        _ => None,
+    }
+}
 
 /// Truncate a string to a maximum length with "..." suffix
 ///
@@ -118,6 +161,9 @@ pub fn list_agents(config: &Config) -> Result<(), String> {
             Cell::new("Name")
                 .fg(Color::Cyan)
                 .add_attribute(Attribute::Bold),
+            Cell::new("Status")
+                .fg(Color::Cyan)
+                .add_attribute(Attribute::Bold),
             Cell::new("Schedule")
                 .fg(Color::Cyan)
                 .add_attribute(Attribute::Bold),
@@ -160,17 +206,58 @@ pub fn list_agents(config: &Config) -> Result<(), String> {
         // Get timeout
         let timeout = agent.timeout.as_deref().unwrap_or("");
 
+        // Determine timeout color - yellow for short timeouts (< 5 minutes)
+        let timeout_cell = if !timeout.is_empty() {
+            // Parse timeout and check if less than 5 minutes (300 seconds)
+            let is_short_timeout = parse_timeout_secs(timeout).map(|secs| secs < 300).unwrap_or(false);
+            if is_short_timeout {
+                // Less than 5 minutes - use warning color
+                Cell::new(color_warning(timeout))
+            } else {
+                Cell::new(timeout)
+            }
+        } else {
+            Cell::new(timeout)
+        };
+
         // Calculate next run time
         let next_run = calculate_next_run(&agent.schedule, timezone);
+
+        // Color-code next run column
+        let next_run_cell = if next_run == "Invalid cron" {
+            Cell::new(color_error(&next_run))
+        } else if next_run == "No future runs" {
+            Cell::new(color_warning(&next_run))
+        } else {
+            Cell::new(&next_run)
+        };
+
+        // Determine status based on schedule validity
+        let status = get_status(&agent.schedule);
+        let status_cell = if is_valid_schedule(&agent.schedule) {
+            Cell::new(color_success(&status))
+        } else if agent.schedule.is_empty() {
+            Cell::new(color_warning(&status))
+        } else {
+            Cell::new(color_error(&status))
+        };
+
+        // Color-code schedule column
+        let schedule_cell = if is_valid_schedule(&agent.schedule) {
+            Cell::new(&agent.schedule)
+        } else {
+            Cell::new(color_error(&agent.schedule))
+        };
 
         // Add row to table
         table.add_row(vec![
             Cell::new(&agent.name),
-            Cell::new(&agent.schedule),
+            status_cell,
+            schedule_cell,
             Cell::new(&prompt_text),
             Cell::new(&readonly),
-            Cell::new(timeout),
-            Cell::new(&next_run),
+            timeout_cell,
+            next_run_cell,
         ]);
     }
 

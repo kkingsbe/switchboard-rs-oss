@@ -37,12 +37,10 @@ pub mod skills;
 async fn get_docker_socket_path(
     executor: Option<Arc<dyn ProcessExecutorTrait>>,
 ) -> Result<Option<String>, ProcessError> {
-    eprintln!("DEBUG: get_docker_socket_path() called");
     let executor = executor.unwrap_or_else(|| Arc::new(RealProcessExecutor::new()));
 
     // Use tokio::process::Command for async execution with timeout
     // This avoids the issues with spawn_blocking on Windows
-    eprintln!("DEBUG: About to run docker context show with timeout...");
     
     // Try to get Docker context with timeout
     let output = tokio::time::timeout(
@@ -72,11 +70,7 @@ async fn get_docker_socket_path(
         }
     })??;
 
-    eprintln!("DEBUG: docker context show completed successfully");
-
     let context_name = String::from_utf8_lossy(&output.stdout).trim().to_string();
-
-    eprintln!("DEBUG: About to run docker context inspect with timeout for context: {}", context_name);
 
     // Use docker context inspect to get the endpoint for the active context (with timeout)
     let output = tokio::time::timeout(
@@ -106,8 +100,6 @@ async fn get_docker_socket_path(
         }
     })??;
 
-    eprintln!("DEBUG: docker context inspect completed successfully");
-
     let json_output = String::from_utf8_lossy(&output.stdout);
 
     // Parse the JSON to extract the Docker endpoint
@@ -131,33 +123,26 @@ async fn get_docker_socket_path(
 pub async fn connect_to_docker(
     executor: Option<Arc<dyn ProcessExecutorTrait>>,
 ) -> Result<Docker, anyhow::Error> {
-    eprintln!("DEBUG: connect_to_docker() called");
     let executor = executor.unwrap_or_else(|| Arc::new(RealProcessExecutor::new()));
 
     // Try to get socket path from Docker context first
     if let Ok(Some(socket_path)) = get_docker_socket_path(Some(executor.clone())).await {
-        eprintln!("DEBUG: Got socket path: {}", socket_path);
         // Handle unix:// socket paths
         if socket_path.starts_with("unix://") {
             let path = socket_path.strip_prefix("unix://").unwrap();
             // Try connecting to the context's socket
-            eprintln!("DEBUG: Attempting to connect to socket: {}", path);
             if let Ok(docker) = Docker::connect_with_socket(path, 5, bollard::API_DEFAULT_VERSION) {
-                eprintln!("DEBUG: Connected to socket successfully");
                 return Ok(docker);
             }
         } else if socket_path.starts_with("npipe://") {
             // Windows named pipe
             let path = socket_path.strip_prefix("npipe://").unwrap();
-            eprintln!("DEBUG: Attempting to connect to named pipe: {}", path);
             if let Ok(docker) = Docker::connect_with_named_pipe_defaults() {
-                eprintln!("DEBUG: Connected to named pipe successfully");
                 return Ok(docker);
             }
         }
     }
 
-    eprintln!("DEBUG: Falling back to connect_with_local_defaults()");
     Docker::connect_with_local_defaults().map_err(|e| anyhow::anyhow!("{}", e))
 }
 
@@ -590,7 +575,6 @@ impl DockerClient {
     /// Returns `DockerError::ConnectionError` if the connection to Docker daemon fails.
     /// Returns `DockerError::DockerUnavailable` if Docker is not available (ping fails).
     pub async fn new(image_name: String, image_tag: String) -> Result<Self, DockerError> {
-        eprintln!("DEBUG: DockerClient::new() called");
         Self::new_with_executor(image_name, image_tag, None).await
     }
 
@@ -654,14 +638,11 @@ impl DockerClient {
         })?;
 
         // Verify Docker is available by pinging the daemon (with timeout)
-        eprintln!("DEBUG: About to ping Docker daemon with 10s timeout...");
         let ping_result = tokio::time::timeout(
             Duration::from_secs(10),
             docker.ping(),
         )
         .await;
-
-        eprintln!("DEBUG: Ping result: {:?}", ping_result);
 
         ping_result
             .map_err(|_| {
