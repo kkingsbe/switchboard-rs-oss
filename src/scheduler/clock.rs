@@ -18,9 +18,11 @@ pub trait Clock: Send + Sync {
     fn now(&self) -> Instant;
 }
 
-/// System clock implementation using std::time::Instant
+/// System clock implementation for scheduling agent runs.
 ///
-/// This is the default clock implementation used in production.
+/// Provides time-based scheduling capabilities using the system's local time.
+/// Used by the scheduler to determine when agents should run based on
+/// cron expressions and other time-based triggers.
 pub struct SystemClock;
 
 /// Implementation of the [`Clock`] trait using the system's real-time clock.

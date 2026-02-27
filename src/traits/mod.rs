@@ -785,10 +785,11 @@ pub trait ProcessExecutorTrait: Send + Sync + Debug {
     ) -> Result<ProcessOutput, ProcessError>;
 }
 
-/// Real Process Executor implementation using std::process::Command
+/// Process executor implementation that actually executes shell commands.
 ///
-/// This struct wraps std::process::Command and implements ProcessExecutorTrait
-/// for production use.
+/// This executor provides the concrete implementation for running processes
+/// in the host system. It is used by the skill system to execute skill
+/// installation and run commands.
 #[derive(Debug, Clone, Default)]
 pub struct RealProcessExecutor;
 

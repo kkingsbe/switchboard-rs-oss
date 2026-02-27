@@ -521,6 +521,13 @@ fn add_directory_to_tar<W: Write>(
 /// - `_image_name` - The Docker image name (currently unused, reserved for future use)
 /// - `_image_tag` - The Docker image tag (currently unused, reserved for future use)
 ///
+/// Docker client for managing containers and images.
+///
+/// Provides high-level interface for Docker operations including:
+/// - Container creation, start, stop, and removal
+/// - Image building and pulling
+/// - Container logging and metrics
+///
 /// # Example
 ///
 /// ```no_run
