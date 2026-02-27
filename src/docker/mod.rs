@@ -566,6 +566,17 @@ impl Clone for DockerClient {
 }
 
 impl DockerClient {
+    /// Get the Docker client, returning an error if not available
+    ///
+    /// # Errors
+    ///
+    /// Returns `DockerError::ConnectionError` if the Docker client is not available.
+    fn get_docker(&self) -> Result<&Docker, DockerError> {
+        self.docker.as_ref().ok_or(DockerError::ConnectionError(
+            "Docker client not available".to_string(),
+        ))
+    }
+
     /// Create a new DockerClient instance and verify Docker is available
     ///
     /// # Arguments
@@ -897,7 +908,7 @@ impl AsRef<Arc<dyn DockerClientTrait>> for &DockerClient {
 // This allows DockerClient to be used where DockerClientTrait is expected
 impl crate::traits::DockerClientTrait for DockerClient {
     fn ping(&self) -> Result<(), DockerError> {
-        let docker = self.docker.as_ref().expect("Docker client not available");
+        let docker = self.get_docker()?;
         // Use block_in_place to properly handle being called from within an async context
         tokio::task::block_in_place(|| {
             let handle = tokio::runtime::Handle::current();
@@ -911,7 +922,7 @@ impl crate::traits::DockerClientTrait for DockerClient {
         use bollard::image::ListImagesOptions;
 
         let image_name = format!("{}:{}", name, tag);
-        let docker = self.docker.as_ref().expect("Docker client not available");
+        let docker = self.get_docker()?;
 
         // Use block_in_place to properly handle being called from within an async context
         tokio::task::block_in_place(|| {
@@ -945,11 +956,7 @@ impl crate::traits::DockerClientTrait for DockerClient {
         context: std::path::PathBuf,
     ) -> Result<String, DockerError> {
         // Clone the internal docker client (it's Arc-based)
-        let docker = self
-            .docker
-            .as_ref()
-            .expect("Docker client not available")
-            .clone();
+        let docker = self.get_docker()?.clone();
 
         // Clone values needed for block_in_place
         let dockerfile = options
@@ -1015,11 +1022,7 @@ impl crate::traits::DockerClientTrait for DockerClient {
         use bollard::container::StopContainerOptions;
 
         let options = StopContainerOptions { t: timeout as i64 };
-        let docker = self
-            .docker
-            .as_ref()
-            .expect("Docker client not available")
-            .clone();
+        let docker = self.get_docker()?.clone();
         let container_id = container_id.to_string();
 
         // Use block_in_place to handle both sync and async contexts properly
@@ -1051,11 +1054,7 @@ impl crate::traits::DockerClientTrait for DockerClient {
             ..Default::default()
         };
 
-        let docker = self
-            .docker
-            .as_ref()
-            .expect("Docker client not available")
-            .clone();
+        let docker = self.get_docker()?.clone();
         let container_id = container_id.to_string();
 
         // Use block_in_place to handle both sync and async contexts properly
@@ -1093,11 +1092,7 @@ impl crate::traits::DockerClientTrait for DockerClient {
         use futures::StreamExt;
 
         let options = WaitContainerOptions { condition: "exit" };
-        let docker = self
-            .docker
-            .as_ref()
-            .expect("Docker client not available")
-            .clone();
+        let docker = self.get_docker()?.clone();
         let container_id = container_id.to_string();
 
         // Use block_in_place to handle both sync and async contexts properly
@@ -1126,11 +1121,7 @@ impl crate::traits::DockerClientTrait for DockerClient {
         options: Option<bollard::container::CreateContainerOptions<String>>,
         config: bollard::container::Config<String>,
     ) -> Result<String, DockerError> {
-        let docker = self
-            .docker
-            .as_ref()
-            .expect("Docker client not available")
-            .clone();
+        let docker = self.get_docker()?.clone();
 
         // Use block_in_place to handle both sync and async contexts properly
         // This avoids the "Cannot start a runtime from within a runtime" error
@@ -1148,11 +1139,7 @@ impl crate::traits::DockerClientTrait for DockerClient {
         container_id: &str,
         options: Option<bollard::container::StartContainerOptions<String>>,
     ) -> Result<(), DockerError> {
-        let docker = self
-            .docker
-            .as_ref()
-            .expect("Docker client not available")
-            .clone();
+        let docker = self.get_docker()?.clone();
         let container_id = container_id.to_string();
 
         // Use block_in_place to handle both sync and async contexts properly
@@ -1170,11 +1157,7 @@ impl crate::traits::DockerClientTrait for DockerClient {
         container_id: &str,
         options: Option<bollard::container::InspectContainerOptions>,
     ) -> Result<bollard::service::ContainerInspectResponse, DockerError> {
-        let docker = self
-            .docker
-            .as_ref()
-            .expect("Docker client not available")
-            .clone();
+        let docker = self.get_docker()?.clone();
         let container_id = container_id.to_string();
 
         // Use block_in_place to handle both sync and async contexts properly
@@ -1190,11 +1173,7 @@ impl crate::traits::DockerClientTrait for DockerClient {
         container_id: &str,
         options: Option<bollard::container::KillContainerOptions<String>>,
     ) -> Result<(), DockerError> {
-        let docker = self
-            .docker
-            .as_ref()
-            .expect("Docker client not available")
-            .clone();
+        let docker = self.get_docker()?.clone();
         let container_id = container_id.to_string();
 
         // Use block_in_place to handle both sync and async contexts properly
