@@ -1,6 +1,6 @@
 {
   "pid": 47708,
-  "last_heartbeat": "2026-02-28T16:31:04.074073800+00:00",
+  "last_heartbeat": "2026-02-28T17:01:04.323311700+00:00",
   "state": "running",
   "agents": [
     {
@@ -11,22 +11,22 @@
     {
       "name": "sb-improvement-planner",
       "schedule": "30 */2 * * *",
-      "current_run": "starting"
+      "current_run": null
     },
     {
       "name": "sb-refactor-1",
       "schedule": "*/30 * * * *",
-      "current_run": "starting"
+      "current_run": null
     },
     {
       "name": "sb-refactor-2",
       "schedule": "10,40 * * * *",
-      "current_run": null
+      "current_run": "starting"
     },
     {
       "name": "gt-summarizer",
       "schedule": "0 0 * * * *",
-      "current_run": null
+      "current_run": "starting"
     }
   ]
 }
