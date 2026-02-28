@@ -282,6 +282,32 @@ impl MetricsStore {
         Ok(())
     }
 
+    /// Validates the internal consistency of agent metrics counters.
+    pub fn validate_agent_counters(
+        agent_name: &str,
+        total_runs: u64,
+        successful_runs: u64,
+        failed_runs: u64,
+        runs_len: usize,
+    ) -> Result<(), MetricsError> {
+        let actual_total = successful_runs + failed_runs;
+        if total_runs != actual_total {
+            return Err(MetricsError::CorruptedFile(format!(
+                "Inconsistent counter data for agent '{}': total_runs={} != successful_runs + failed_runs = {} + {}",
+                agent_name, total_runs, successful_runs, failed_runs
+            )));
+        }
+
+        if runs_len as u64 != total_runs {
+            return Err(MetricsError::CorruptedFile(format!(
+                "Inconsistent runs vector length for agent '{}': {} != {}",
+                agent_name, runs_len, total_runs
+            )));
+        }
+
+        Ok(())
+    }
+
     /// Check the integrity of the metrics data.
     ///
     /// This method verifies that:
@@ -308,35 +334,13 @@ impl MetricsStore {
             Ok(metrics) => {
                 // Validate internal consistency
                 for (agent_name, agent_data) in &metrics.agents {
-                    // Check that counters are consistent
-                    let actual_total = agent_data.successful_runs + agent_data.failed_runs;
-                    if agent_data.total_runs != actual_total {
-                        tracing::error!(
-                            "Metrics integrity check failed for agent '{}': total_runs ({}) != successful_runs ({}) + failed_runs ({})",
-                            agent_name,
-                            agent_data.total_runs,
-                            agent_data.successful_runs,
-                            agent_data.failed_runs
-                        );
-                        return Err(MetricsError::CorruptedFile(format!(
-                            "Inconsistent counter data for agent '{}'",
-                            agent_name
-                        )));
-                    }
-
-                    // Check that runs vector length matches total_runs
-                    if agent_data.runs.len() as u64 != agent_data.total_runs {
-                        tracing::error!(
-                            "Metrics integrity check failed for agent '{}': runs vector length ({}) != total_runs ({})",
-                            agent_name,
-                            agent_data.runs.len(),
-                            agent_data.total_runs
-                        );
-                        return Err(MetricsError::CorruptedFile(format!(
-                            "Inconsistent runs vector length for agent '{}'",
-                            agent_name
-                        )));
-                    }
+                    Self::validate_agent_counters(
+                        agent_name,
+                        agent_data.total_runs,
+                        agent_data.successful_runs,
+                        agent_data.failed_runs,
+                        agent_data.runs.len(),
+                    )?;
                 }
 
                 tracing::debug!("Metrics integrity check passed");

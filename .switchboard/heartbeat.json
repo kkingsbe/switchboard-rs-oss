@@ -1,6 +1,6 @@
 {
   "pid": 47708,
-  "last_heartbeat": "2026-02-28T11:50:01.242500100+00:00",
+  "last_heartbeat": "2026-02-28T14:45:02.991494900+00:00",
   "state": "running",
   "agents": [
     {
@@ -21,7 +21,7 @@
     {
       "name": "sb-refactor-2",
       "schedule": "10,40 * * * *",
-      "current_run": null
+      "current_run": "starting"
     },
     {
       "name": "gt-summarizer",

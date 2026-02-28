@@ -533,6 +533,8 @@ mod tests {
     use super::*;
     use serial_test::serial;
 
+    // === Default Values Tests ===
+
     #[test]
     fn test_discord_config_defaults() {
         let config = DiscordConfig::default();
@@ -540,6 +542,8 @@ mod tests {
         assert_eq!(config.token_env, "DISCORD_TOKEN");
         assert!(config.channel_id.is_empty());
     }
+
+    // === Environment Variable Tests ===
 
     #[test]
     #[serial]
@@ -694,6 +698,8 @@ mod tests {
         assert_eq!(config.max_history, 20);
         assert_eq!(config.ttl_minutes, 60);
     }
+
+    // === TOML Parsing Tests ===
 
     #[test]
     fn test_discord_config_toml_parsing() {
@@ -874,7 +880,7 @@ mod tests {
         assert!(config.discord.conversation.is_none());
     }
 
-    // Tests for load_discord_section_from_toml
+    // === File Loading Tests ===
 
     #[test]
     fn test_load_discord_section_from_toml_file_not_found() {

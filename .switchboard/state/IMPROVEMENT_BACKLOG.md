@@ -1,11 +1,11 @@
 # Codebase Scan Report
 
 **Project**: switchboard  
-**Scanned**: 2026-02-28T12:00:04Z  
-**Commit Audited**: 4273ae6
+**Scanned**: 2026-02-28T14:02:01Z  
+**Commit Audited**: c042a27 (HEAD)
 **Scope**: Full codebase (src/)
 **Files Analyzed**: ~80 Rust source files  
-**Audit Type**: Incremental audit (2 commits since last audit)
+**Audit Type**: Incremental audit (2 commits since last audit 4273ae6)
 
 ---
 
@@ -17,14 +17,14 @@
 | 🟠 High | 0 | - |
 | 🟡 Medium | 4 | - |
 | 🔵 Low | 2 | - |
-| ⚪ Convention | 4 | -1 |
+| ⚪ Convention | 3 | -1 |
 
 **Overall Health Score**: 5/10 (stable)
 
 **Top 3 Priorities**:
 1. Fix 24 failing tests (CRITICAL - ongoing)
-2. Fix formatting issue in scheduler/mod.rs (NEW)
-3. Resolve remaining unwrap/expect in production code
+2. Resolve inconsistent error handling patterns (CONV-001)
+3. Continue splitting god modules (MED-001 to MED-004)
 
 ---
 
@@ -46,7 +46,14 @@
 | `cargo build --release` | ✅ PASS | No warnings |
 | `cargo test` | ❌ FAIL | 24 tests failed (same as last audit) |
 | `cargo clippy` | ✅ PASS | Minor warnings only |
-| `cargo fmt --check` | ❌ FAIL | **NEW** - Formatting issue in scheduler/mod.rs |
+| `cargo fmt --check` | ✅ PASS | Formatting issue from last audit FIXED |
+
+---
+
+## Changes Since Last Audit (4273ae6)
+
+- **c042a27**: Formatting fix in scheduler/mod.rs (the CONV-005 finding from last audit is now RESOLVED)
+- **cc61dd2**: Previous audit commit
 
 ---
 
@@ -61,7 +68,7 @@
 - **Effort:** L
 - **Risk:** Medium
 - **Priority Score:** 16/22
-- **Files:** Multiple test files in src/docker/run/run.rs, src/discord/config.rs, src/commands/validate.rs
+- **Files:** Multiple test files in src/docker/run/run.rs, src/discord/config.rs, src/commands/validate.rs, src/skills/mod.rs
 - **Description:** Test suite has 24 failing tests, indicating regression or broken functionality. This issue has persisted across multiple audits.
 - **Evidence:**
 ```
@@ -75,7 +82,7 @@ Failures include:
 - commands::validate::tests::test_validate_lockfile_consistency_warns_orphaned_skills
 ... (24 total)
 ```
-- **Suggested Fix:** Investigate root cause of test failures - likely related to skill script generation logic changes
+- **Suggested Fix:** Investigate root cause of test failures - likely related to skill script generation logic changes and environment variable handling in tests
 - **Status:** 🔄 RECURRING
 
 ---
@@ -148,31 +155,32 @@ $ wc -l src/config/mod.rs
 
 ### 🔵 Low Priority
 
-#### [LOW-001] 🔄 RECURRING - scheduler/mod.rs - 1292 Lines
+#### [LOW-001] 🔄 RECURRING - scheduler/mod.rs - 1293 Lines
 
 - **Category:** Structure
 - **Severity:** Low
 - **Effort:** M
 - **Risk:** Low
 - **Priority Score:** 7/22
-- **Files:** `src/scheduler/mod.rs` (1292 lines)
+- **Files:** `src/scheduler/mod.rs` (1293 lines)
 - **Status:** 🔄 RECURRING
 
-#### [LOW-002] 🔄 RECURRING - metrics/store.rs - 1107 Lines
+#### [LOW-002] ✅ SCHEDULED - metrics/store.rs - 1111 Lines
 
 - **Category:** Structure
 - **Severity:** Low
 - **Effort:** M
 - **Risk:** Low
 - **Priority Score:** 7/22
-- **Files:** `src/metrics/store.rs` (1107 lines)
-- **Status:** 🔄 RECURRING
+- **Files:** `src/metrics/store.rs` (1111 lines)
+- **Status:** ✅ SCHEDULED
+- **Scheduled:** Improvement Sprint 2, assigned to .switchboard/state/REFACTOR_TODO2.md
 
 ---
 
 ### ⚪ Convention Issues
 
-#### [CONV-001] 🔄 RECURRING - Inconsistent Error Handling
+#### [CONV-001] ✅ SCHEDULED - Inconsistent Error Handling
 
 - **Category:** Convention
 - **Severity:** Low
@@ -195,17 +203,20 @@ pub fn list_agents(config: &Config) -> Result<(), String>
 // Pattern 3: Custom error types
 pub fn load(&self) -> Result<AllMetrics, MetricsError>
 ```
-- **Status:** 🔄 RECURRING
+- **Status:** ✅ SCHEDULED
+- **Scheduled:** Improvement Sprint 2, assigned to .switchboard/state/REFACTOR_TODO2.md
 
 ---
 
-#### [CONV-002] 🔄 RECURRING - Module Organization - Discord
+#### [CONV-002] 🔄 RECURRING - Module Organization
 
 - **Category:** Convention
 - **Severity:** Low
 - **Effort:** M
 - **Risk:** Low
 - **Priority Score:** 7/22
+- **Files:** src/docker/, src/discord/
+- **Description:** Some modules have inconsistent organization patterns. docker/run/ has split submodules while docker/build.rs is still monolithic.
 - **Status:** 🔄 RECURRING
 
 ---
@@ -215,105 +226,62 @@ pub fn load(&self) -> Result<AllMetrics, MetricsError>
 - **Category:** Convention
 - **Severity:** Low
 - **Effort:** S
-- **Risk:** Safe
-- **Priority Score:** 8/22
+- **Risk:** Low
+- **Priority Score:** 7/22
+- **Files:** Throughout codebase
+- **Description:** Tests are mixed between inline (#[cfg(test)] modules) and external files in tests/ directory. No consistent pattern.
 - **Status:** 🔄 RECURRING
 
 ---
 
-#### [CONV-004] ✅ RESOLVED - Missing Documentation
+## Recently Resolved
 
-- **Previous Status**: Missing doc comments on public functions
-- **Current Status**: **RESOLVED** - Most public functions now have doc comments
-- **Effort**: N/A
-- **Status:** ✅ RESOLVED
+### [CONV-005] ✅ RESOLVED - Formatting Issue in scheduler/mod.rs
 
----
-
-#### [CONV-005] 🆕 NEW - Formatting Issue in scheduler/mod.rs
-
-- **Category:** Convention
-- **Severity:** Low
-- **Effort:** S
-- **Risk:** Safe
-- **Priority Score:** 8/22
-- **Files:** `src/scheduler/mod.rs` (lines 1067-1073)
-- **Description:** Recent commit 4273ae6 introduced a formatting issue. The code fails cargo fmt check.
-- **Evidence:**
-```diff
--            let schedule =
--                cron::Schedule::from_str(&cron_helper::convert_to_6_field_cron(&agent.config.schedule))
--                    .map_err(|e| SchedulerError::InvalidCronSchedule {
--                        schedule: agent.config.schedule.clone(),
--                        error: e.to_string(),
--                    })?;
-+            let schedule = cron::Schedule::from_str(&cron_helper::convert_to_6_field_cron(
-+                &agent.config.schedule,
-+            ))
-+            .map_err(|e| SchedulerError::InvalidCronSchedule {
-+                schedule: agent.config.schedule.clone(),
-+                error: e.to_string(),
-+            })?;
-```
-- **Suggested Fix:** Run `cargo fmt` to fix the formatting
-- **Status:** 🆕 NEW
+- **Resolved:** 2026-02-28
+- **Resolution:** Fixed in commit c042a27 - formatting corrected in scheduler/mod.rs
 
 ---
 
 ## Recommendations Roadmap
 
 ### Immediate (This Sprint)
-- [ ] Fix 24 failing tests - 8h (CRITICAL)
-- [ ] Run `cargo fmt` to fix formatting issue - 5min (NEW)
-- [ ] Review recent commits that may have caused test failures
+- [ ] Investigate and fix 24 failing tests (CRIT-001) - 4+ hours
+- [ ] Continue god module refactoring (MED-001 to MED-004) - ongoing
 
 ### Short-term (Next 2-4 weeks)
-- [ ] Fix remaining unwrap/expect in production code - 1h
-- [ ] Resolve error handling inconsistencies - 4h
+- [ ] Standardize error handling approach (CONV-001) - 2-4 hours
+- [ ] Address test organization inconsistencies (CONV-003) - 1-2 hours
 
 ### Long-term (Backlog)
-- [ ] Split docker/run/run.rs (5115 lines) - 4h
-- [ ] Split config/mod.rs (3512 lines) - 4h
-- [ ] Split cli/mod.rs (2146 lines) - 3h
-- [ ] Split commands/skills.rs (2074 lines) - 3h
+- [ ] Split docker/run/run.rs into smaller modules (MED-001) - 8+ hours
+- [ ] Split config/mod.rs into smaller modules (MED-002) - 8+ hours
 
 ---
 
 ## Appendix
 
-### Files Scanned (Top 20 by Line Count)
-| File | Lines |
-|------|-------|
-| src/docker/run/run.rs | 5115 |
-| src/config/mod.rs | 3512 |
-| src/cli/mod.rs | 2146 |
-| src/commands/skills.rs | 2074 |
-| src/commands/validate.rs | 1445 |
-| src/scheduler/mod.rs | 1292 |
-| src/docker/skills.rs | 1282 |
-| src/metrics/store.rs | 1107 |
-| src/discord/config.rs | 1095 |
-| src/skills/mod.rs | 1036 |
+### Files Scanned
+- src/lib.rs, src/main.rs, src/logging.rs
+- src/cli/mod.rs (2146 lines)
+- src/commands/*.rs (build.rs, list.rs, logs.rs, metrics.rs, skills.rs, validate.rs)
+- src/config/*.rs (mod.rs, env.rs, env_ext.rs)
+- src/discord/*.rs (api.rs, config.rs, conversation.rs, gateway.rs, listener.rs, mod.rs, out.rs, security.rs)
+- src/docker/*.rs (build.rs, client.rs, mod.rs, run.rs, skills.rs)
+- src/docker/run/*.rs (run.rs, streams.rs, types.rs, wait.rs)
+- src/logger/*.rs (file.rs, mod.rs, terminal.rs)
+- src/metrics/*.rs (collector.rs, mod.rs, store.rs)
+- src/scheduler/mod.rs (1293 lines)
+- src/skills/*.rs (error.rs, lockfile.rs, metadata.rs, mod.rs)
 
-### Skills Compliance Notes
-The codebase has two active skills:
-1. **rust-best-practices** - Key violations:
-   - unwrap()/expect() in production code - Mostly resolved, remaining in scheduler/mod.rs, docker/client.rs, commands/skills.rs, commands/logs.rs
-    
-2. **rust-engineer** - Key violations:
-   - Error handling patterns inconsistent (CONV-001)
+### Skipped Files
+- None - full scan completed
 
-### Health Trend
-**Health Score**: 5/10 (stable)
-
-**Changes since last audit**:
-- 2 commits audited:
-  - e72e700 - Previous audit completion
-  - 4273ae6 - refactor: extract convert_to_6_field_cron to cron_helper module (introduced formatting issue)
-- 1 NEW issue: Formatting issue in scheduler/mod.rs
-- Test failures remain unchanged at 24
-
-### Commits Audited
-- 46c085c (last audit)
-- e72e700 (audit complete)
-- 4273ae6 (current HEAD - formatting issue introduced)
+### Health History Trend
+```
+Date            | Total | Crit | High | Med | Low | Conv
+----------------|-------|------|------|-----|-----|-----
+2026-02-28T12:00| 11    | 1    | 0    | 4   | 2   | 4
+2026-02-28T14:02| 10    | 1    | 0    | 4   | 2   | 3  ← Current
+```
+Health score stable at 5/10. One convention issue (CONV-005) resolved.

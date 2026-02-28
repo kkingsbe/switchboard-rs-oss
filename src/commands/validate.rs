@@ -711,6 +711,8 @@ mod tests {
     use std::fs;
     use tempfile::TempDir;
 
+    // === Cron Validation Tests ===
+
     /// Test that validates a 5-field Unix cron expression.
     ///
     /// This test demonstrates BUG-001: The validate command should properly validate
@@ -783,6 +785,8 @@ mod tests {
             }
         }
     }
+
+    // === Skills Validation Tests ===
 
     /// Test that validates an agent with empty skills list returns a warning message.
     ///
@@ -1230,6 +1234,8 @@ mod tests {
     // Tests for skill directory validation functions
     // =============================================================================
 
+    // === Directory Validation Tests ===
+
     /// Test that get_skills_dir returns the correct path relative to config file location.
     #[test]
     fn test_get_skills_dir_from_nested_path() {
@@ -1386,6 +1392,8 @@ mod tests {
             result
         );
     }
+
+    // === Lockfile Tests ===
 
     /// Test validate_lockfile_consistency returns warnings for skills in lockfile not in config.
     #[test]
