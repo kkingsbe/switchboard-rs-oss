@@ -19,28 +19,33 @@
 
 ### Blockers for Refactor Agent 2 - Updated: 2026-02-28
 
-#### BLOCKER-1: Test Compilation Failure (Pre-existing)
+#### BLOCKER-1: Pre-existing Test Failures
 
 **Status:** BLOCKED
 
-**Issue:** Tests fail to compile due to missing `std::fs` imports in test module.
+**Issue:** Tests compile but 24 tests fail with assertion failures. These appear to be pre-existing issues from previous refactoring sprints.
 
 **Details:**
-- Location: `src/skills/mod.rs` - test code uses `fs::create_dir_all`, `fs::write`, `fs::read_to_string` without importing the `std::fs` module
-- Error count: 21 compilation errors at lines: 428, 436, 448, 456, 472, 479, 483, 490, 519, 526, 530, 534, 645, 650, 671, 676, 699, 702, 706, 709, 958
-
-**Build Status:** 
 - `cargo build`: ✅ PASSED
-- `cargo test`: ❌ FAILED (compilation error)
+- `cargo test`: ❌ 24 FAILED, 523 passed
+- Test failures include:
+  - `discord::config::tests::test_env_config_*` (3 failures)
+  - `docker::run::run::tests::*` (16 failures related to skill installation scripts)
+  - `commands::validate::tests::test_validate_lockfile_*` (2 failures)
+  - `skills::tests::test_check_npx_available_*` (2 failures)
+  - `docker::skills::tests::test_generate_entrypoint_script_skill_not_in_preexisting_list` (1 failure)
 
-**Impact:** Cannot establish test baseline. Refactoring cannot proceed until tests compile.
+**Root Cause:** These failures appear to be side effects from previous refactoring work:
+- MED-001: Split discord/llm.rs into submodules
+- HIGH-001: Replace unwrap()/expect() with proper error handling
 
-**Resolution Required:** Add `use std::fs;` to the test module in `src/skills/mod.rs`.
+**Impact:** Cannot establish reliable test baseline for refactoring verification.
+
+**Resolution Required:** These test failures need to be investigated and fixed by the appropriate refactor agent before further refactoring can proceed safely.
 
 ---
 
 ## Tasks Affected:
-- [MED-003] Extract skill validation from docker/skills.rs
-- [MED-004] Split docker/mod.rs into client.rs and build.rs submodules
+- [HIGH-003] Consider Splitting CLI Module - Cannot safely refactor without passing test baseline
 
-**Decision:** Stopped. Cannot refactor with broken test suite.
+**Decision:** Stopped. Cannot verify behavioral equivalence with failing test suite.

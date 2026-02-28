@@ -156,11 +156,14 @@ mod tests {
                 return Err(err);
             }
 
-            Ok(GLOBAL_LOG_DIR.as_ref().ok_or_else(|| SkillsError::IoError {
-                operation: "get log directory".to_string(),
-                path: "".to_string(),
-                message: "Log directory not initialized".to_string()
-            })?.as_path())
+            Ok(GLOBAL_LOG_DIR
+                .as_ref()
+                .ok_or_else(|| SkillsError::IoError {
+                    operation: "get log directory".to_string(),
+                    path: "".to_string(),
+                    message: "Log directory not initialized".to_string(),
+                })?
+                .as_path())
         }
     }
 

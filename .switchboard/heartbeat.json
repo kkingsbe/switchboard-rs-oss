@@ -1,6 +1,6 @@
 {
   "pid": 47708,
-  "last_heartbeat": "2026-02-28T04:32:57.089239+00:00",
+  "last_heartbeat": "2026-02-28T05:44:57.754155100+00:00",
   "state": "running",
   "agents": [
     {
@@ -11,7 +11,7 @@
     {
       "name": "sb-improvement-planner",
       "schedule": "30 */2 * * *",
-      "current_run": "starting"
+      "current_run": null
     },
     {
       "name": "sb-refactor-1",
