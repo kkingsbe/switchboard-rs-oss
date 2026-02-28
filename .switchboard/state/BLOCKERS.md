@@ -22,6 +22,24 @@
 **Impact:** Cannot verify that refactoring changes maintain behavioral equivalence.
 **Resolution:** Fix BLOCKER-1 (test compilation errors in src/skills/mod.rs) to enable test baseline establishment.
 
+#### BLOCKER-3: Pre-existing Test Failures (Baseline Established)
+**Status:** PROCEEDING WITH CAUTION
+**Issue:** 24 tests failing before any refactoring - these are pre-existing failures unrelated to planned refactoring work.
+**Date:** 2026-02-28
+**Agent:** Refactor Agent 1
+
+**Details:**
+- Build: ✅ PASSES
+- Tests: 523 passed, 24 failed
+- Failing modules:
+  - `commands::validate` (2 failures)
+  - `discord::config` (3 failures)
+  - `docker::run::run` (16 failures)
+  - `docker::skills` (1 failure)
+  - `skills` (2 failures)
+
+**Resolution:** These failures are pre-existing and unrelated to the planned refactoring work in scheduler/metrics modules. Proceeding with caution - will monitor for any new test failures introduced by refactoring.
+
 ---
 
 ### Blockers for Refactor Agent 2 - Updated: 2026-02-28

@@ -13,6 +13,7 @@
 //! **Current Status:** Fully implemented with tokio-cron-scheduler integration
 
 mod clock;
+pub mod cron_helper;
 
 pub use clock::{Clock, SystemClock};
 
@@ -892,22 +893,6 @@ impl Scheduler {
         })
     }
 
-    /// Convert 5-field Unix cron format to 6-field format for tokio-cron-scheduler
-    ///
-    /// tokio-cron-scheduler expects: seconds minute hour day month weekday
-    /// Unix cron format: minute hour day month weekday
-    ///
-    /// This function prepends "0 " (run at second 0) to 5-field expressions.
-    /// 6-field expressions are passed through unchanged.
-    fn convert_to_6_field_cron(schedule: &str) -> String {
-        let fields: Vec<&str> = schedule.split_whitespace().collect();
-        if fields.len() == 5 {
-            format!("0 {}", schedule.trim())
-        } else {
-            schedule.to_string()
-        }
-    }
-
     /// Register an agent with its cron schedule
     ///
     /// # Arguments
@@ -940,7 +925,7 @@ impl Scheduler {
         let agent_name = agent.name.clone();
         let agent_name_for_error = agent_name.clone(); // Clone for error reporting
                                                        // Convert 5-field Unix cron to 6-field format for tokio-cron-scheduler
-        let schedule = Self::convert_to_6_field_cron(&agent.schedule);
+        let schedule = cron_helper::convert_to_6_field_cron(&agent.schedule);
         let agent_config = agent.clone();
         let clock = self.clock.clone();
         let agents = self.agents.clone();
@@ -1083,7 +1068,7 @@ impl Scheduler {
         for agent in agents.iter_mut() {
             // Parse the cron schedule using the cron crate
             let schedule =
-                cron::Schedule::from_str(&Self::convert_to_6_field_cron(&agent.config.schedule))
+                cron::Schedule::from_str(&cron_helper::convert_to_6_field_cron(&agent.config.schedule))
                     .map_err(|e| SchedulerError::InvalidCronSchedule {
                         schedule: agent.config.schedule.clone(),
                         error: e.to_string(),
