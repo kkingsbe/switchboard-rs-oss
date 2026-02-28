@@ -123,11 +123,16 @@ impl MetricsStore {
         Self { log_dir }
     }
 
+    /// Returns the path to the metrics.json file.
+    fn metrics_path(&self) -> PathBuf {
+        self.log_dir.join("metrics.json")
+    }
+
     /// Load metrics from the metrics.json file in the log directory.
     /// Returns an error if the file doesn't exist.
     /// Corrupted files are backed up to `metrics.json.backup.<timestamp>`.
     pub fn load(&self) -> Result<AllMetrics, MetricsError> {
-        let metrics_path = self.log_dir.join("metrics.json");
+        let metrics_path = self.metrics_path();
 
         if !metrics_path.exists() {
             // File doesn't exist - return FileNotFound error
@@ -252,7 +257,7 @@ impl MetricsStore {
     /// Internal implementation of the save operation.
     /// Uses a temp file + rename pattern to ensure atomic writes.
     fn save_internal(&self, metrics: &AllMetrics) -> Result<(), MetricsError> {
-        let metrics_path = self.log_dir.join("metrics.json");
+        let metrics_path = self.metrics_path();
         let temp_path = metrics_path.with_extension("tmp");
 
         // Ensure log directory exists
@@ -321,7 +326,7 @@ impl MetricsStore {
     /// * `Ok(false)` - Metrics file doesn't exist yet (first run)
     /// * `Err(MetricsError)` - Metrics data is corrupted or inconsistent
     pub fn check_integrity(&self) -> Result<bool, MetricsError> {
-        let metrics_path = self.log_dir.join("metrics.json");
+        let metrics_path = self.metrics_path();
 
         if !metrics_path.exists() {
             // File doesn't exist - this is fine for first run
