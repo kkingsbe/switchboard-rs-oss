@@ -11,7 +11,7 @@ use crate::skills::{
 };
 use std::path::PathBuf;
 
-use crate::commands::ExitCode;
+use super::{ExitCode, SkillsInstalled};
 
 /// Run the `switchboard skills installed` command
 ///
@@ -46,7 +46,7 @@ use crate::commands::ExitCode;
 /// ```text
 /// switchboard skills installed --global
 /// ```
-pub async fn run_skills_installed(args: crate::commands::SkillsInstalled, config: &Config) -> ExitCode {
+pub async fn run_skills_installed(args: SkillsInstalled, config: &Config) -> ExitCode {
     // Scan for skills based on the --global flag
     let mut project_skills = Vec::new();
     let mut warnings = Vec::new();
