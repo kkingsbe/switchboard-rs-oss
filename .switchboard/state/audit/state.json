@@ -1,18 +1,19 @@
 {
-  "last_audit": "2026-02-28T10:15:00Z",
-  "last_commit_audited": "46c085c",
+  "last_audit": "2026-02-28T12:00:04Z",
+  "last_commit_audited": "4273ae6",
   "findings_hash": {
     "CRIT-001": "sha256_of_24_test_failures_20260228",
     "MED-001": "sha256_of_god_module_docker_run_5115",
     "MED-002": "sha256_of_god_module_config_3512",
     "MED-003": "sha256_of_large_cli_mod_2146",
     "MED-004": "sha256_of_large_commands_skills_2074",
-    "LOW-001": "sha256_of_large_scheduler_mod_1307",
+    "LOW-001": "sha256_of_large_scheduler_mod_1292",
     "LOW-002": "sha256_of_large_metrics_store_1107",
     "CONV-001": "sha256_of_inconsistent_error_handling",
     "CONV-002": "sha256_of_module_organization",
     "CONV-003": "sha256_of_test_organization",
-    "CONV-004": "RESOLVED_missing_docs"
+    "CONV-004": "RESOLVED_missing_docs",
+    "CONV-005": "sha256_of_formatting_issue_scheduler_20260228"
   },
   "health_history": [
     { "date": "2025-02-25", "total_findings": 12, "critical": 2, "high": 4, "medium": 6, "low": 0 },
@@ -27,6 +28,7 @@
     { "date": "2026-02-28T04:10", "total_findings": 14, "critical": 2, "high": 2, "medium": 3, "low": 3, "convention": 4 },
     { "date": "2026-02-28T06:00", "total_findings": 10, "critical": 1, "high": 1, "medium": 2, "low": 2, "convention": 4 },
     { "date": "2026-02-28T08:16", "total_findings": 11, "critical": 1, "high": 0, "medium": 4, "low": 2, "convention": 4 },
-    { "date": "2026-02-28T10:15", "total_findings": 11, "critical": 1, "high": 0, "medium": 4, "low": 2, "convention": 4 }
+    { "date": "2026-02-28T10:15", "total_findings": 11, "critical": 1, "high": 0, "medium": 4, "low": 2, "convention": 4 },
+    { "date": "2026-02-28T12:00", "total_findings": 11, "critical": 1, "high": 0, "medium": 4, "low": 2, "convention": 4 }
   ]
 }

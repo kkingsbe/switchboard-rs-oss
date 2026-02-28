@@ -1,11 +1,11 @@
 # Codebase Scan Report
 
 **Project**: switchboard  
-**Scanned**: 2026-02-28T10:15:00Z  
-**Commit Audited**: 46c085c
+**Scanned**: 2026-02-28T12:00:04Z  
+**Commit Audited**: 4273ae6
 **Scope**: Full codebase (src/)
 **Files Analyzed**: ~80 Rust source files  
-**Audit Type**: Incremental audit (1 commit since last audit)
+**Audit Type**: Incremental audit (2 commits since last audit)
 
 ---
 
@@ -17,14 +17,14 @@
 | 🟠 High | 0 | - |
 | 🟡 Medium | 4 | - |
 | 🔵 Low | 2 | - |
-| ⚪ Convention | 4 | - |
+| ⚪ Convention | 4 | -1 |
 
 **Overall Health Score**: 5/10 (stable)
 
 **Top 3 Priorities**:
 1. Fix 24 failing tests (CRITICAL - ongoing)
-2. Resolve remaining unwrap/expect in production code
-3. Split god modules (docker/run/run.rs - 5115 lines)
+2. Fix formatting issue in scheduler/mod.rs (NEW)
+3. Resolve remaining unwrap/expect in production code
 
 ---
 
@@ -46,7 +46,7 @@
 | `cargo build --release` | ✅ PASS | No warnings |
 | `cargo test` | ❌ FAIL | 24 tests failed (same as last audit) |
 | `cargo clippy` | ✅ PASS | Minor warnings only |
-| `cargo fmt --check` | ✅ PASS | All files formatted correctly |
+| `cargo fmt --check` | ❌ FAIL | **NEW** - Formatting issue in scheduler/mod.rs |
 
 ---
 
@@ -54,7 +54,7 @@
 
 ### 🔴 Critical Issues
 
-#### [CRIT-001] 🔄 RECURRING (×2) - 24 Test Failures
+#### [CRIT-001] 🔄 RECURRING (×3) - 24 Test Failures
 
 - **Category:** Test Suite
 - **Severity:** Critical
@@ -148,19 +148,17 @@ $ wc -l src/config/mod.rs
 
 ### 🔵 Low Priority
 
-#### [LOW-001] 🔄 RECURRING - scheduler/mod.rs - 1307 Lines
+#### [LOW-001] 🔄 RECURRING - scheduler/mod.rs - 1292 Lines
 
 - **Category:** Structure
 - **Severity:** Low
 - **Effort:** M
 - **Risk:** Low
 - **Priority Score:** 7/22
-- **Files:** `src/scheduler/mod.rs` (1307 lines)
+- **Files:** `src/scheduler/mod.rs` (1292 lines)
 - **Status:** 🔄 RECURRING
 
-#### [LOW-002] 🔄 RECURRING - metrics/store.rs RECURRING
-
-- 1107 Lines
+#### [LOW-002] 🔄 RECURRING - metrics/store.rs - 1107 Lines
 
 - **Category:** Structure
 - **Severity:** Low
@@ -232,10 +230,41 @@ pub fn load(&self) -> Result<AllMetrics, MetricsError>
 
 ---
 
+#### [CONV-005] 🆕 NEW - Formatting Issue in scheduler/mod.rs
+
+- **Category:** Convention
+- **Severity:** Low
+- **Effort:** S
+- **Risk:** Safe
+- **Priority Score:** 8/22
+- **Files:** `src/scheduler/mod.rs` (lines 1067-1073)
+- **Description:** Recent commit 4273ae6 introduced a formatting issue. The code fails cargo fmt check.
+- **Evidence:**
+```diff
+-            let schedule =
+-                cron::Schedule::from_str(&cron_helper::convert_to_6_field_cron(&agent.config.schedule))
+-                    .map_err(|e| SchedulerError::InvalidCronSchedule {
+-                        schedule: agent.config.schedule.clone(),
+-                        error: e.to_string(),
+-                    })?;
++            let schedule = cron::Schedule::from_str(&cron_helper::convert_to_6_field_cron(
++                &agent.config.schedule,
++            ))
++            .map_err(|e| SchedulerError::InvalidCronSchedule {
++                schedule: agent.config.schedule.clone(),
++                error: e.to_string(),
++            })?;
+```
+- **Suggested Fix:** Run `cargo fmt` to fix the formatting
+- **Status:** 🆕 NEW
+
+---
+
 ## Recommendations Roadmap
 
 ### Immediate (This Sprint)
 - [ ] Fix 24 failing tests - 8h (CRITICAL)
+- [ ] Run `cargo fmt` to fix formatting issue - 5min (NEW)
 - [ ] Review recent commits that may have caused test failures
 
 ### Short-term (Next 2-4 weeks)
@@ -260,7 +289,7 @@ pub fn load(&self) -> Result<AllMetrics, MetricsError>
 | src/cli/mod.rs | 2146 |
 | src/commands/skills.rs | 2074 |
 | src/commands/validate.rs | 1445 |
-| src/scheduler/mod.rs | 1307 |
+| src/scheduler/mod.rs | 1292 |
 | src/docker/skills.rs | 1282 |
 | src/metrics/store.rs | 1107 |
 | src/discord/config.rs | 1095 |
@@ -270,7 +299,7 @@ pub fn load(&self) -> Result<AllMetrics, MetricsError>
 The codebase has two active skills:
 1. **rust-best-practices** - Key violations:
    - unwrap()/expect() in production code - Mostly resolved, remaining in scheduler/mod.rs, docker/client.rs, commands/skills.rs, commands/logs.rs
-   
+    
 2. **rust-engineer** - Key violations:
    - Error handling patterns inconsistent (CONV-001)
 
@@ -278,6 +307,13 @@ The codebase has two active skills:
 **Health Score**: 5/10 (stable)
 
 **Changes since last audit**:
-- 1 commit audited: refactor(refactor1) - extract acquire_lock helper in scheduler module
-- No new issues introduced
+- 2 commits audited:
+  - e72e700 - Previous audit completion
+  - 4273ae6 - refactor: extract convert_to_6_field_cron to cron_helper module (introduced formatting issue)
+- 1 NEW issue: Formatting issue in scheduler/mod.rs
 - Test failures remain unchanged at 24
+
+### Commits Audited
+- 46c085c (last audit)
+- e72e700 (audit complete)
+- 4273ae6 (current HEAD - formatting issue introduced)
