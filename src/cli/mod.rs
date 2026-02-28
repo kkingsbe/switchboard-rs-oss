@@ -345,7 +345,7 @@ async fn check_image_exists(
     image_name: &str,
     image_tag: &str,
 ) -> Result<bool, Box<dyn std::error::Error>> {
-    let docker = client.docker().expect("Docker client should be available");
+    let docker = client.docker().ok_or_else(|| "Docker client unavailable".to_string())?;
 
     // List all local images
     let images = docker

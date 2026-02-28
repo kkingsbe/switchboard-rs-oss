@@ -10,9 +10,7 @@ use std::time::Duration;
 use thiserror::Error;
 use tracing::warn;
 
-use super::response::{
-    ChatCompletionResponse, LlmResponse, ToolCallResult,
-};
+use super::response::{ChatCompletionResponse, LlmResponse, ToolCallResult};
 
 /// OpenRouter API endpoint
 const OPENROUTER_API_URL: &str = "https://openrouter.ai/api/v1/chat/completions";

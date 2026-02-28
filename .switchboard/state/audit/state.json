@@ -1,19 +1,15 @@
 {
-  "last_audit": "2026-02-28T02:25:00Z",
-  "last_commit_audited": "39b6682",
+  "last_audit": "2026-02-28T04:10:00Z",
+  "last_commit_audited": "8a2ee19",
   "findings_hash": {
-    "CRIT-001": "sha256_of_test_compilation_errors_fs_import",
+    "CRIT-001": "RESOLVED_test_compilation",
     "CRIT-002": "sha256_of_god_module_docker_run_5115",
-    "CRIT-003": "sha256_of_god_module_config_3512",
-    "HIGH-001": "sha256_of_unwrap_in_production",
-    "HIGH-002": "sha256_of_formatting_inconsistencies",
-    "HIGH-003": "sha256_of_god_module_cli_2144",
-    "HIGH-004": "sha256_of_god_module_commands_skills_2074",
-    "MED-001": "sha256_of_large_discord_llm_1539",
-    "MED-002": "sha256_of_docker_skills_1282",
-    "MED-003": "sha256_of_docker_mod_1394",
-    "MED-004": "sha256_of_unused_imports_clippy",
-    "LOW-001": "sha256_of_large_scheduler_mod_1259",
+    "HIGH-001": "sha256_of_god_module_config_3512",
+    "HIGH-002": "sha256_of_unwrap_in_production",
+    "MED-001": "sha256_of_large_cli_mod_2144",
+    "MED-002": "sha256_of_large_commands_skills_2074",
+    "MED-003": "sha256_of_private_interface_warning",
+    "LOW-001": "sha256_of_large_scheduler_mod_1268",
     "LOW-002": "sha256_of_large_metrics_store_1091",
     "LOW-003": "sha256_of_large_discord_config_1095",
     "CONV-001": "sha256_of_inconsistent_error_handling",
@@ -30,6 +26,7 @@
     { "date": "2026-02-27T20:09", "total_findings": 23, "critical": 3, "high": 4, "medium": 7, "low": 4, "convention": 5 },
     { "date": "2026-02-27T22:14", "total_findings": 20, "critical": 3, "high": 4, "medium": 6, "low": 3, "convention": 4 },
     { "date": "2026-02-28T00:12", "total_findings": 18, "critical": 3, "high": 4, "medium": 4, "low": 3, "convention": 4 },
-    { "date": "2026-02-28T02:25", "total_findings": 18, "critical": 3, "high": 4, "medium": 4, "low": 3, "convention": 4 }
+    { "date": "2026-02-28T02:25", "total_findings": 18, "critical": 3, "high": 4, "medium": 4, "low": 3, "convention": 4 },
+    { "date": "2026-02-28T04:10", "total_findings": 14, "critical": 2, "high": 2, "medium": 3, "low": 3, "convention": 4 }
   ]
 }
