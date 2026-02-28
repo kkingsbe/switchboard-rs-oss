@@ -1,11 +1,11 @@
 # Codebase Scan Report
 
 **Project**: switchboard  
-**Scanned**: 2026-02-28T08:16:00Z  
-**Commit Audited**: eea9632
+**Scanned**: 2026-02-28T10:15:00Z  
+**Commit Audited**: 46c085c
 **Scope**: Full codebase (src/)
 **Files Analyzed**: ~80 Rust source files  
-**Audit Type**: Full audit
+**Audit Type**: Incremental audit (1 commit since last audit)
 
 ---
 
@@ -13,16 +13,16 @@
 
 | Severity | Count | Change vs Last Audit |
 |----------|-------|----------------------|
-| 🔴 Critical | 1 | +1 (NEW) |
-| 🟠 High | 0 | -1 |
+| 🔴 Critical | 1 | - |
+| 🟠 High | 0 | - |
 | 🟡 Medium | 4 | - |
 | 🔵 Low | 2 | - |
 | ⚪ Convention | 4 | - |
 
-**Overall Health Score**: 5/10 (declined from 7/10)
+**Overall Health Score**: 5/10 (stable)
 
 **Top 3 Priorities**:
-1. Fix 24 failing tests (was CRITICAL - NEW)
+1. Fix 24 failing tests (CRITICAL - ongoing)
 2. Resolve remaining unwrap/expect in production code
 3. Split god modules (docker/run/run.rs - 5115 lines)
 
@@ -44,8 +44,8 @@
 | Check | Status | Notes |
 |-------|--------|-------|
 | `cargo build --release` | ✅ PASS | No warnings |
-| `cargo test` | ❌ FAIL | 24 tests failed |
-| `cargo clippy` | ✅ PASS | No warnings |
+| `cargo test` | ❌ FAIL | 24 tests failed (same as last audit) |
+| `cargo clippy` | ✅ PASS | Minor warnings only |
 | `cargo fmt --check` | ✅ PASS | All files formatted correctly |
 
 ---
@@ -54,7 +54,7 @@
 
 ### 🔴 Critical Issues
 
-#### [CRIT-001] 🆕 NEW - 24 Test Failures
+#### [CRIT-001] 🔄 RECURRING (×2) - 24 Test Failures
 
 - **Category:** Test Suite
 - **Severity:** Critical
@@ -62,7 +62,7 @@
 - **Risk:** Medium
 - **Priority Score:** 16/22
 - **Files:** Multiple test files in src/docker/run/run.rs, src/discord/config.rs, src/commands/validate.rs
-- **Description:** Test suite has 24 failing tests, indicating regression or broken functionality.
+- **Description:** Test suite has 24 failing tests, indicating regression or broken functionality. This issue has persisted across multiple audits.
 - **Evidence:**
 ```
 test result: FAILED. 523 passed; 24 failed; 0 ignored
@@ -75,8 +75,8 @@ Failures include:
 - commands::validate::tests::test_validate_lockfile_consistency_warns_orphaned_skills
 ... (24 total)
 ```
-- **Suggested Fix:** Investigate root cause of test failures - likely related to recent changes in skill script generation or environment configuration
-- **Status:** 🆕 NEW
+- **Suggested Fix:** Investigate root cause of test failures - likely related to skill script generation logic changes
+- **Status:** 🔄 RECURRING
 
 ---
 
@@ -156,11 +156,11 @@ $ wc -l src/config/mod.rs
 - **Risk:** Low
 - **Priority Score:** 7/22
 - **Files:** `src/scheduler/mod.rs` (1307 lines)
-- **Status:** 🔄---
+- **Status:** 🔄 RECURRING
 
 #### [LOW-002] 🔄 RECURRING - metrics/store.rs RECURRING
 
- - 1107 Lines
+- 1107 Lines
 
 - **Category:** Structure
 - **Severity:** Low
@@ -186,6 +186,17 @@ $ wc -l src/config/mod.rs
   - `thiserror::Error` in skills/error.rs, config/error.rs, metrics/error.rs
   - `Box<dyn std::error::Error>` in CLI entry points
   - Custom Result types with String errors scattered throughout
+- **Evidence:**
+```rust
+// Pattern 1: Box<dyn Error> in CLI
+pub fn run_list(_config: Option<String>) -> Result<(), Box<dyn std::error::Error>>
+
+// Pattern 2: String errors
+pub fn list_agents(config: &Config) -> Result<(), String>
+
+// Pattern 3: Custom error types
+pub fn load(&self) -> Result<AllMetrics, MetricsError>
+```
 - **Status:** 🔄 RECURRING
 
 ---
@@ -258,14 +269,15 @@ $ wc -l src/config/mod.rs
 ### Skills Compliance Notes
 The codebase has two active skills:
 1. **rust-best-practices** - Key violations:
-   - unwrap()/expect() in production code - Mostly resolved, remaining in scheduler/mod.rs
+   - unwrap()/expect() in production code - Mostly resolved, remaining in scheduler/mod.rs, docker/client.rs, commands/skills.rs, commands/logs.rs
    
 2. **rust-engineer** - Key violations:
    - Error handling patterns inconsistent (CONV-001)
 
 ### Health Trend
-**Health Score**: 5/10 (declined from 7/10)
+**Health Score**: 5/10 (stable)
 
-**Reason for decline**:
-- NEW: 24 test failures (CRITICAL)
-- Previous improvements maintained but test failures are blocking
+**Changes since last audit**:
+- 1 commit audited: refactor(refactor1) - extract acquire_lock helper in scheduler module
+- No new issues introduced
+- Test failures remain unchanged at 24
