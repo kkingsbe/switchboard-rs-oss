@@ -1,11 +1,11 @@
 # Codebase Scan Report
 
 **Project**: switchboard  
-**Scanned**: 2026-02-28T16:01:06Z  
-**Commit Audited**: d197bee (HEAD)
+**Scanned**: 2026-02-28T18:00:04Z  
+**Commit Audited**: 1faeff7 (HEAD)
 **Scope**: Full codebase (src/)
 **Files Analyzed**: ~80 Rust source files  
-**Audit Type**: Incremental audit (4 commits since last audit cc61dd2)
+**Audit Type**: Incremental audit (2 commits since last audit d197bee)
 
 ---
 
@@ -16,13 +16,13 @@
 | 🔴 Critical | 1 | - |
 | 🟠 High | 0 | - |
 | 🟡 Medium | 4 | - |
-| 🔵 Low | 2 | - |
+| 🔵 Low | 1 | -1 |
 | ⚪ Convention | 3 | - |
 
 **Overall Health Score**: 5/10 (stable)
 
 **Top 3 Priorities**:
-1. Fix 25 failing tests (CRITICAL - ongoing)
+1. Fix 24 failing tests (CRITICAL - down from 25)
 2. Resolve inconsistent error handling patterns (CONV-001)
 3. Continue splitting god modules (MED-001 to MED-004)
 
@@ -44,18 +44,16 @@
 | Check | Status | Notes |
 |-------|--------|-------|
 | `cargo build --release` | ✅ PASS | No warnings |
-| `cargo test` | ❌ FAIL | 25 tests failed (+1 from last audit's 24) |
+| `cargo test` | ❌ FAIL | 24 tests failed (-1 from last audit's 25) |
 | `cargo clippy` | ✅ PASS | Minor warnings only |
 | `cargo fmt --check` | ✅ PASS | Formatting correct |
 
 ---
 
-## Changes Since Last Audit (cc61dd2)
+## Changes Since Last Audit (d197bee)
 
-- **d197bee**: refactor(refactor2): [FIND-LOW-002] extract metrics_path helper in metrics/store.rs
-- **846206f**: refactor(refactor1): [FIND-CONV-003] analyze test organization - tests already well-organized
-- **15e53b4**: refactor(refactor1): [FIND-CONV-005] fix formatting in scheduler/mod.rs
-- **c042a27**: refactor(refactor1): [FIND-CONV-005] fix formatting in scheduler/mod.rs
+- **1faeff7**: refactor(refactor2): [FIND-LOW-002] extract helper functions in metrics/store.rs
+- **49da791**: Improvements
 
 ---
 
@@ -63,7 +61,7 @@
 
 ### 🔴 Critical Issues
 
-#### [CRIT-001] 🔄 RECURRING (×4) - 25 Test Failures
+#### [CRIT-001] 🔄 RECURRING (×5) - 24 Test Failures
 
 - **Category:** Test Suite
 - **Severity:** Critical
@@ -71,10 +69,10 @@
 - **Risk:** Medium
 - **Priority Score:** 16/22
 - **Files:** Multiple test files in src/docker/run/run.rs, src/discord/config.rs, src/commands/validate.rs, src/skills/mod.rs
-- **Description:** Test suite has 25 failing tests, indicating regression or broken functionality. This issue has persisted across multiple audits and increased by 1 since last audit.
+- **Description:** Test suite has 24 failing tests, indicating regression or broken functionality. This issue has persisted across multiple audits and decreased by 1 since last audit.
 - **Evidence:**
 ```
-test result: FAILED. 522 passed; 25 failed; 0 ignored
+test result: FAILED. 523 passed; 24 failed; 0 ignored
 Failures include:
 - docker::run::run::tests::test_entrypoint_script_generation_all_scenarios
 - docker::run::run::tests::test_integration_complete_flow_single_skill
@@ -85,7 +83,7 @@ Failures include:
 - docker::skills::tests::test_generate_entrypoint_script_skill_not_in_preexisting_list
 - skills::tests::test_check_npx_available_with_mock_error
 - skills::tests::test_check_npx_available_with_mock_failure_exit_code
-... (25 total)
+... (24 total)
 ```
 - **Suggested Fix:** Investigate root cause of test failures - likely related to skill script generation logic changes and environment variable handling in tests
 - **Status:** 🔄 RECURRING
@@ -170,17 +168,6 @@ $ wc -l src/config/mod.rs
 - **Files:** `src/scheduler/mod.rs` (1293 lines)
 - **Status:** 🔄 RECURRING
 
-#### [LOW-002] ✅ RESOLVED - metrics/store.rs - 1111 Lines → Extract metrics_path helper
-
-- **Category:** Structure
-- **Severity:** Low
-- **Effort:** S
-- **Risk:** Low
-- **Priority Score:** 7/22
-- **Files:** `src/metrics/store.rs` (1111 lines)
-- **Status:** ✅ RESOLVED
-- **Resolution:** Refactored in commit d197bee - extracted metrics_path helper
-
 ---
 
 ### ⚪ Convention Issues
@@ -243,7 +230,7 @@ pub fn load(&self) -> Result<AllMetrics, MetricsError>
 ## Recommendations Roadmap
 
 ### Immediate (This Sprint)
-- [ ] Investigate and fix 25 failing tests (CRIT-001) - 4+ hours
+- [ ] Investigate and fix 24 failing tests (CRIT-001) - 4+ hours
 - [ ] Continue god module refactoring (MED-001 to MED-004) - ongoing
 
 ### Short-term (Next 2-4 weeks)
@@ -278,8 +265,8 @@ pub fn load(&self) -> Result<AllMetrics, MetricsError>
 ```
 Date            | Total | Crit | High | Med | Low | Conv
 ----------------|-------|------|------|-----|-----|-----
-2026-02-28T12:00| 11    | 1    | 0    | 4   | 2   | 4
 2026-02-28T14:02| 10    | 1    | 0    | 4   | 2   | 3
-2026-02-28T16:01| 10    | 1    | 0    | 4   | 1   | 3  ← Current
+2026-02-28T16:01| 10    | 1    | 0    | 4   | 1   | 3
+2026-02-28T18:00| 9     | 1    | 0    | 4   | 1   | 3  ← Current
 ```
-Health score stable at 5/10. One low priority (LOW-002) resolved. One convention issue (CONV-003) analyzed and found acceptable.
+Health score stable at 5/10. Test failures decreased from 25 to 24.
