@@ -139,7 +139,9 @@ $ wc -l src/config/mod.rs
 - **Priority Score:** 10/22
 - **Files:** `src/cli/mod.rs` (2146 lines)
 - **Description:** Contains all CLI commands and handlers in single file.
-- **Status:** 🔄 RECURRING
+- **Status:** ✅ SCHEDULED
+- **Scheduled:** Improvement Sprint 3, assigned to .switchboard/state/REFACTOR_TODO1.md
+- **Note:** This is a multi-sprint effort - focus on first extraction this sprint
 
 ---
 
@@ -152,7 +154,9 @@ $ wc -l src/config/mod.rs
 - **Priority Score:** 10/22
 - **Files:** `src/commands/skills.rs` (2074 lines)
 - **Description:** Single file for all skills subcommands.
-- **Status:** 🔄 RECURRING
+- **Status:** ✅ SCHEDULED
+- **Scheduled:** Improvement Sprint 3, assigned to .switchboard/state/REFACTOR_TODO2.md
+- **Note:** This is a multi-sprint effort - focus on first extraction this sprint
 
 ---
 
@@ -166,7 +170,9 @@ $ wc -l src/config/mod.rs
 - **Risk:** Low
 - **Priority Score:** 7/22
 - **Files:** `src/scheduler/mod.rs` (1293 lines)
-- **Status:** 🔄 RECURRING
+- **Status:** ✅ SCHEDULED
+- **Scheduled:** Improvement Sprint 3, assigned to .switchboard/state/REFACTOR_TODO2.md
+- **Note:** This is a multi-sprint effort - focus on analysis and first extraction this sprint
 
 ---
 
