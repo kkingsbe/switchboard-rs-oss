@@ -1161,7 +1161,7 @@ impl Scheduler {
     ///
     /// The total wait time in seconds across all processed queued runs
     pub fn get_total_queue_wait_time(&self) -> u64 {
-        *self.queue_wait_time_seconds.lock().unwrap()
+        *self.queue_wait_time_seconds.lock().unwrap_or_else(|poisoned| poisoned.into_inner())
     }
 
     /// Get the individual queue wait times in seconds
@@ -1170,7 +1170,7 @@ impl Scheduler {
     ///
     /// A vector of wait times in seconds for each processed queued run
     pub fn get_queue_wait_times(&self) -> Vec<u64> {
-        self.queue_wait_times.lock().unwrap().clone()
+        self.queue_wait_times.lock().unwrap_or_else(|poisoned| poisoned.into_inner()).clone()
     }
 
     /// Get the number of processed queued runs
@@ -1179,7 +1179,7 @@ impl Scheduler {
     ///
     /// The count of processed queued runs
     pub fn get_processed_queue_count(&self) -> usize {
-        self.queue_wait_times.lock().unwrap().len()
+        self.queue_wait_times.lock().unwrap_or_else(|poisoned| poisoned.into_inner()).len()
     }
 }
 
