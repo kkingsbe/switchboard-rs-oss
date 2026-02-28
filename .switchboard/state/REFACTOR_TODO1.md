@@ -1,110 +1,89 @@
 # REFACTOR_TODO1 - Refactor Agent 1
 
-> Sprint: Improvement Sprint 2
-> Focus Area: Discord modules, config, and test cleanup
-> Last Updated: 2026-02-27
+> Sprint: Improvement Sprint 3
+> Focus Area: Test compilation and code quality fixes
+> Last Updated: 2026-02-28
 > Source: .switchboard/state/IMPROVEMENT_BACKLOG.md findings
 
 ## Orientation
 
 Before starting any tasks, read these files to understand the current state:
 - Cargo.toml
-- src/discord/mod.rs
-- src/discord/tools.rs
-- src/discord/llm.rs
+- src/skills/mod.rs
+- Run `cargo test --no-run` to see compilation errors
 
-## Tasks
+## Tasks (Ordered Safe → Riskier)
 
-- [ ] [HIGH-002] Remove Clippy dead code warnings
+- [ ] [CRIT-001] Fix Test Compilation - Add missing `use std::fs;` import
   - 📚 SKILLS: `./skills/rust-best-practices/SKILL.md`
-  - 🎯 Goal: Remove or allow all unused code warnings in tests/performance_common.rs
-  - 📂 Files: `tests/performance_common.rs`
-  - 🧭 Context: Clippy reports 4 unused items:
+  - 🎯 Goal: Add `use std::fs;` to the test module in src/skills/mod.rs so tests compile
+  - 📂 Files: `src/skills/mod.rs` (lines 428, 436, 448, 456, 472, 479, 483, 490, 519, 526, 530, 534, 645, 650, 671, 676, 699, 702, 706, 709, 958)
+  - 🧭 Context: Tests don't compile because `fs` module is used but not imported. Evidence:
     ```
-    warning: enum `RegressionStatus` is never used
-    warning: struct `BaselineTracker` is never constructed
-    warning: function `detect_regression` is never used
-    warning: function `log_regression_warning` is never used
+    error[E0433]: failed to resolve: use of unresolved module or unlinked crate `fs`
+       --> src/skills/mod.rs:428:9
+        |
+    428 |         fs::create_dir_all(&skill_dir).unwrap();
+        |         ^^ use of unresolved module or unlinked crate `fs`
     ```
-    Suggested fix: Remove unused test code or mark as `#[allow(unused)]`
-  - ⚡ Pre-check: Run `cargo clippy --tests` and verify it passes
+  - ⚡ Pre-check: Run `cargo test --no-run` - should fail with fs errors before fix
   - ✅ Acceptance:
     - [ ] Change is complete
     - [ ] Build passes (`cargo build`)
-    - [ ] All tests pass (`cargo test`)
+    - [ ] Tests compile (`cargo test --no-run` succeeds)
+    - [ ] No behavioral change (same test logic, just imports added)
+  - 🔒 Risk: Safe
+  - ↩️ Revert: `git revert` safe (single file, well-isolated change)
+
+- [ ] [HIGH-002] Fix Formatting Inconsistencies
+  - 📚 SKILLS: `./skills/rust-best-practices/SKILL.md`
+  - 🎯 Goal: Run `cargo fmt` to fix import ordering and re-export formatting across 8+ files
+  - 📂 Files: 
+    - `src/commands/validate.rs`
+    - `src/discord/llm/mod.rs`
+    - `src/discord/tools/mod.rs`
+    - `src/docker/mod.rs`
+    - `src/skills/manager.rs`
+    - `src/skills/mod.rs`
+  - 🧭 Context: Multiple files fail `cargo fmt --check`. Example diff:
+    ```
+    Diff in /workspace/src/discord/tools/mod.rs:13:
+    -pub use definitions::{Tool, ToolError, MAX_FILE_SIZE, tools_schema};
+    +pub use definitions::{tools_schema, Tool, ToolError, MAX_FILE_SIZE};
+    ```
+  - ⚡ Pre-check: Run `cargo fmt --check` - should show formatting issues
+  - ✅ Acceptance:
+    - [ ] Change is complete
+    - [ ] Build passes (`cargo build`)
+    - [ ] Formatting check passes (`cargo fmt --check`)
     - [ ] No behavioral change
   - 🔒 Risk: Safe
-  - ↩️ Revert: `git revert` safe (independent)
+  - ↩️ Revert: `git revert` safe (auto-formatting, deterministic)
 
-- [ ] [MED-001] Split discord/tools.rs into submodules
+- [ ] [MED-004] Remove Unused Imports (Clippy Warnings)
   - 📚 SKILLS: `./skills/rust-best-practices/SKILL.md`
-  - 🎯 Goal: Extract tool definitions and execution logic into separate modules
-  - 📂 Files: `src/discord/tools.rs` → split into `src/discord/tools/definitions.rs`, `src/discord/tools/execution.rs`
-  - 🧭 Context: File has 1663 lines - a "god module" that should be split. Current structure should be reorganized into focused submodules by responsibility.
-  - ⚡ Pre-check: Run `cargo build` and verify it passes
+  - 🎯 Goal: Remove or allow unused imports identified by clippy
+  - 📂 Files: 
+    - `src/discord/llm/client.rs:14` - unused `ResponseMessage`, `ResponseToolCall`
+    - `src/discord/llm/response.rs:6` - unused `ToolFunction`
+    - `src/discord/tools/execution.rs:10` - unused `serde_json::Value`
+    - `src/skills/manager.rs:5` - unused `Path`
+    - `src/skills/lockfile.rs:369` - unused `SkillMetadata`
+  - 🧭 Context: Clippy reports 5 unused imports. Evidence:
+    ```
+    warning: unused import: `serde_json::Value`
+      --> src/discord/tools/execution.rs:10:5
+       |
+    10 | use serde_json::Value;
+       |     ^^^^^^^^^^^^^^^^^^
+    ```
+  - ⚡ Pre-check: Run `cargo clippy` - should show unused import warnings
   - ✅ Acceptance:
     - [ ] Change is complete
     - [ ] Build passes (`cargo build`)
-    - [ ] All tests pass (`cargo test`)
-    - [ ] No behavioral change (same API externally)
-  - 🔒 Risk: Low
-  - ↩️ Revert: `git revert` safe (independent)
-
-- [ ] [MED-002] Split discord/llm.rs into submodules
-  - 📚 SKILLS: `./skills/rust-best-practices/SKILL.md`
-  - 🎯 Goal: Extract client and response handling into separate modules
-  - 📂 Files: `src/discord/llm.rs` → split into `src/discord/llm/client.rs`, `src/discord/llm/response.rs`
-  - 🧭 Context: File has 1539 lines - a "god module" that should be split by responsibility (client logic vs response handling)
-  - ⚡ Pre-check: Run `cargo build` and verify it passes
-  - ✅ Acceptance:
-    - [ ] Change is complete
-    - [ ] Build passes (`cargo build`)
-    - [ ] All tests pass (`cargo test`)
-    - [ ] No behavioral change (same API externally)
-  - 🔒 Risk: Low
-  - ↩️ Revert: `git revert` safe (independent)
-
-- [ ] [MED-006] Fix unused config key warning
-  - 📚 SKILLS: `./skills/rust-best-practices/SKILL.md`
-  - 🎯 Goal: Remove or fix the unused config key in .cargo/config.toml
-  - 📂 Files: `.cargo/config.toml`
-  - 🧭 Context: Warning: `unused config key 'profile.test.features'` - remove this key or fix it
-  - ⚡ Pre-check: Run `cargo build` and verify no warnings
-  - ✅ Acceptance:
-    - [ ] Change is complete
-    - [ ] Build passes (`cargo build`)
-    - [ ] No config warnings
-  - 🔒 Risk: Safe
-  - ↩️ Revert: `git revert` safe (independent)
-
-> ⚠️ Rebalanced from REFACTOR_TODO2.md by Planner on 2026-02-28
-
-- [ ] [MED-005] Split skills/mod.rs into submodules
-  - 📚 SKILLS: `./skills/rust-best-practices/SKILL.md`
-  - 🎯 Goal: Split into manager, lockfile, and metadata modules
-  - 📂 Files: `src/skills/mod.rs` → split into `src/skills/manager.rs`, `src/skills/lockfile.rs`, `src/skills/metadata.rs`
-  - 🧭 Context: File has 2709 lines - largest god module. Split by functional responsibility: skills management, lockfile handling, metadata
-  - ⚡ Pre-check: Run `cargo build` and verify it passes
-  - ✅ Acceptance:
-    - [ ] Change is complete
-    - [ ] Build passes (`cargo build`)
-    - [ ] All tests pass (`cargo test`)
-    - [ ] No behavioral change (same API externally)
-  - 🔒 Risk: Low
-  - ↩️ Revert: `git revert` safe (independent)
-
-- [ ] [LOW-001] Consider splitting scheduler/mod.rs
-  - 📚 SKILLS: `./skills/rust-best-practices/SKILL.md`
-  - 🎯 Goal: Split into clock and queue modules if beneficial
-  - 📂 Files: `src/scheduler/mod.rs` → split into `src/scheduler/clock.rs`, `src/scheduler/queue.rs`
-  - 🧭 Context: File has 1259 lines - borderline acceptable size. Consider splitting if it improves maintainability.
-  - ⚡ Pre-check: Run `cargo build` and verify it passes
-  - ✅ Acceptance:
-    - [ ] Change is complete
-    - [ ] Build passes (`cargo build`)
-    - [ ] All tests pass (`cargo test`)
+    - [ ] Clippy passes (`cargo clippy` with no warnings for these items)
     - [ ] No behavioral change
-  - 🔒 Risk: Low
-  - ↩️ Revert: `git revert` safe (independent)
+  - 🔒 Risk: Safe
+  - ↩️ Revert: `git revert` safe (simple import removal)
 
-- [ ] AGENT QA: Run full build and test suite. Verify ALL changes maintain behavioral equivalence. If green, create '.switchboard/state/.refactor_done_1' with the current date. If ALL '.switchboard/state/.refactor_done_*' files exist, also create '.switchboard/state/.refactor_sprint_complete'.
+> AGENT QA: Run full build and test suite. Verify ALL changes maintain behavioral equivalence. If green, create '.switchboard/state/.refactor_done_1' with the current date. If ALL '.switchboard/state/.refactor_done_*' files exist, also create '.switchboard/state/.refactor_sprint_complete'.
