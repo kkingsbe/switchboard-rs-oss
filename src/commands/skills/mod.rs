@@ -1,6 +1,7 @@
 pub mod types;
 pub mod list;
 pub mod remove;
+pub mod installed;
 
 pub use types::*;
 
@@ -62,7 +63,7 @@ pub async fn run_skills(args: SkillsCommand, config: &Config) -> ExitCode {
         SkillsSubcommand::List(list_args) => list::run_skills_list(list_args, config).await,
         SkillsSubcommand::Install(install_args) => run_skills_install(install_args, config).await,
         SkillsSubcommand::Installed(installed_args) => {
-            run_skills_installed(installed_args, config).await
+            installed::run_skills_installed(installed_args, config).await
         }
         SkillsSubcommand::Update(update_args) => handle_skills_update(update_args, config).await,
         SkillsSubcommand::Remove(remove_args) => remove::run_skills_remove(remove_args, config).await,
