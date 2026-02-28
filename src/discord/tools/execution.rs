@@ -7,7 +7,6 @@ use std::fs;
 use std::path::Path;
 
 use chrono::Local;
-use serde_json::Value;
 use tracing::debug;
 
 use crate::discord::tools::definitions::{Tool, ToolError, MAX_FILE_SIZE};

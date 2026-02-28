@@ -1,14 +1,14 @@
 //! SkillsManager - manages skill operations by delegating to npx skills CLI
 
-use crate::traits::{ProcessExecutorTrait, RealProcessExecutor};
 use crate::skills::SkillsError;
-use std::path::{Path, PathBuf};
-use std::process::{Command, Output};
-use std::sync::Arc;
+use crate::traits::{ProcessExecutorTrait, RealProcessExecutor};
 #[cfg(unix)]
 use std::os::unix::process::ExitStatusExt;
 #[cfg(windows)]
 use std::os::windows::process::ExitStatusExt;
+use std::path::PathBuf;
+use std::process::{Command, Output};
+use std::sync::Arc;
 
 /// SkillsManager manages skill operations by delegating to npx skills CLI
 pub struct SkillsManager {

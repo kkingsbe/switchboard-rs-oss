@@ -5,32 +5,29 @@
 //! Switchboard does not implement HTTP/GitHub API code directly.
 
 mod error;
-pub mod validate;
-pub mod manager;
 pub mod lockfile;
+pub mod manager;
 pub mod metadata;
+pub mod validate;
 
 pub use error::SkillsError;
 pub use validate::{extract_skill_name, validate_skill_format};
 
 // Re-export from manager module
-pub use manager::{
-    create_npx_command, run_npx_command, run_npx_skills_update, SkillsManager,
-};
+pub use manager::{create_npx_command, run_npx_command, run_npx_skills_update, SkillsManager};
 
 // Re-export from lockfile module
 pub use lockfile::{
-    add_skill_to_lockfile, default_lockfile, read_lockfile, remove_skill_from_lockfile,
-    save_lockfile, write_lockfile, LockfileSkill, LockfileStruct, LOCKFILE_FILENAME,
-    SkillLockEntry, SkillsLockfile, sync_skills_to_lockfile, load_lockfile,
+    add_skill_to_lockfile, default_lockfile, load_lockfile, read_lockfile,
+    remove_skill_from_lockfile, save_lockfile, sync_skills_to_lockfile, write_lockfile,
+    LockfileSkill, LockfileStruct, SkillLockEntry, SkillsLockfile, LOCKFILE_FILENAME,
 };
 
 // Re-export from metadata module
 pub use metadata::{
     find_skill_directory, get_agents_using_skill, load_skill_metadata, parse_skill_frontmatter,
     read_skill_file, remove_skill_directory, scan_global_skills, scan_project_skills,
-    scan_skill_directory, skills_sh_search, SkillMetadata, SkillSearchResult,
-    SkillsSearchResponse,
+    scan_skill_directory, skills_sh_search, SkillMetadata, SkillSearchResult, SkillsSearchResponse,
 };
 
 /// Error message for when npx is not available

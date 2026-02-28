@@ -32,11 +32,10 @@ pub mod response;
 
 // Re-export all public types from submodules for backward compatibility
 pub use client::{
-    tools_schema_to_definitions, LlmError, LlmResult, OpenRouterClient,
-    ToolDefinition, ToolExecutor, process_with_tools,
+    process_with_tools, tools_schema_to_definitions, LlmError, LlmResult, OpenRouterClient,
+    ToolDefinition, ToolExecutor,
 };
 pub use response::{
     get_user_error_message, ChatCompletionResponse, CompletionChoice, LlmResponse,
     ResponseFunction, ResponseMessage, ResponseToolCall, ToolCallResult, Usage,
 };
-

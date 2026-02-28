@@ -19,10 +19,10 @@ pub use run::{find_preexisting_skills, run_agent, AgentExecutionResult, Containe
 
 pub mod skills;
 
-/// Connection and client management module
-pub mod client;
 /// Image build context utilities module
 pub mod build;
+/// Connection and client management module
+pub mod client;
 
 // Re-export all public items from client module for backward compatibility
 pub use client::{

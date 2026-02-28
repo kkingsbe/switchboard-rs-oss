@@ -11,7 +11,7 @@ use thiserror::Error;
 use tracing::warn;
 
 use super::response::{
-    ChatCompletionResponse, LlmResponse, ResponseMessage, ResponseToolCall, ToolCallResult,
+    ChatCompletionResponse, LlmResponse, ToolCallResult,
 };
 
 /// OpenRouter API endpoint

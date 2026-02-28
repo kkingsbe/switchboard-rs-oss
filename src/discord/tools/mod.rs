@@ -13,7 +13,7 @@ pub mod definitions;
 pub mod execution;
 
 // Re-export types and functions from submodules for convenient access
-pub use definitions::{Tool, ToolError, MAX_FILE_SIZE, tools_schema};
+pub use definitions::{tools_schema, Tool, ToolError, MAX_FILE_SIZE};
 pub use execution::{
     execute_add_to_backlog, execute_file_bug, execute_file_task, execute_list_directory,
     execute_list_inbox, execute_read_backlog, execute_read_file, execute_read_outbox,

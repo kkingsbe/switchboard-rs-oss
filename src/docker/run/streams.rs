@@ -38,7 +38,12 @@ pub async fn attach_and_stream_logs(
     logger: Option<Arc<Mutex<Logger>>>,
     follow: bool,
 ) -> Result<(), DockerError> {
-    let docker = client.docker().expect("Docker client should be available");
+    let docker = client
+        .docker()
+        .ok_or_else(|| DockerError::DockerUnavailable {
+            reason: "Docker client not initialized".to_string(),
+            suggestion: "Ensure Docker is running and properly initialized".to_string(),
+        })?;
 
     // Configure logs options
     let options = LogsOptions {

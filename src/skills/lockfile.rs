@@ -366,7 +366,7 @@ pub fn write_lockfile(lockfile: &LockfileStruct, directory: &Path) -> Result<(),
 /// ```
 #[allow(dead_code)]
 pub fn sync_skills_to_lockfile(directory: &Path) -> Result<Vec<String>, SkillsError> {
-    use crate::skills::metadata::{scan_skill_directory, SkillMetadata};
+    use crate::skills::metadata::scan_skill_directory;
     use chrono::Utc;
 
     let mut warnings = Vec::new();

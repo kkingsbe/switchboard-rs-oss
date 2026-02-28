@@ -3,7 +3,7 @@
 //! This module contains all response types from the OpenRouter API,
 //! as well as helper functions for processing and formatting responses.
 
-use crate::discord::conversation::{ToolCall, ToolFunction};
+use crate::discord::conversation::ToolCall;
 use serde::{Deserialize, Serialize};
 
 use super::client::LlmError;
