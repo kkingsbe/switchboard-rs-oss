@@ -1,87 +1,110 @@
 # REFACTOR_TODO1 - Refactor Agent 1
 
 > Sprint: Improvement Sprint 2
-> Focus Area: Discord Module & Safe Cleanup Tasks
+> Focus Area: Discord modules, config, and test cleanup
 > Last Updated: 2026-02-27
 > Source: .switchboard/state/IMPROVEMENT_BACKLOG.md findings
 
 ## Orientation
 
 Before starting any tasks, read these files to understand the current state:
-- Cargo.toml (project structure)
-- src/docker/mod.rs (Docker client - primary focus)
-- src/config/mod.rs (config module)
-- tests/performance_common.rs (test file to clean)
+- Cargo.toml
+- src/discord/mod.rs
+- src/discord/tools.rs
+- src/discord/llm.rs
 
 ## Tasks
 
-### Task 1: [CONV-005] Remove backup file
-- [ ] [FIND-CONV-005] Delete backup file src/config/mod.rs.bak
-  - 📚 SKILLS: None required
-  - 🎯 Goal: Remove src/config/mod.rs.bak from the repository
-  - 📂 Files: src/config/mod.rs.bak
-  - 🧭 Context: A backup file exists in the source tree. Evidence: File src/config/mod.rs.bak contains old config module code. This pollutes the source tree.
-  - ⚡ Pre-check: Build passes
+- [ ] [HIGH-002] Remove Clippy dead code warnings
+  - 📚 SKILLS: `./skills/rust-best-practices/SKILL.md`
+  - 🎯 Goal: Remove or allow all unused code warnings in tests/performance_common.rs
+  - 📂 Files: `tests/performance_common.rs`
+  - 🧭 Context: Clippy reports 4 unused items:
+    ```
+    warning: enum `RegressionStatus` is never used
+    warning: struct `BaselineTracker` is never constructed
+    warning: function `detect_regression` is never used
+    warning: function `log_regression_warning` is never used
+    ```
+    Suggested fix: Remove unused test code or mark as `#[allow(unused)]`
+  - ⚡ Pre-check: Run `cargo clippy --tests` and verify it passes
   - ✅ Acceptance:
-    - [ ] File deleted
-    - [ ] Build passes
+    - [ ] Change is complete
+    - [ ] Build passes (`cargo build`)
+    - [ ] All tests pass (`cargo test`)
+    - [ ] No behavioral change
   - 🔒 Risk: Safe
-  - ↩️ Revert: git checkout safe
+  - ↩️ Revert: `git revert` safe (independent)
 
-### Task 2: [LOW-002] Remove unused Timer struct
-- [ ] [FIND-LOW-002] Remove unused Timer struct from tests
-  - 📚 SKILLS: None required
-  - 🎯 Goal: Remove unused Timer struct from tests/performance_common.rs
-  - 📂 Files: tests/performance_common.rs (lines 397-415)
-  - 🧭 Context: Dead code identified by Clippy. Evidence: 
-    ```
-    warning: struct 'Timer' is never constructed
-    #[derive(Clone)]
-    pub struct Timer {
-        name: String,
-        start: std::time::Instant,
-        laps: Vec<(String, std::time::Duration)>,
-    }
-    ```
-  - ⚡ Pre-check: Build passes
+- [ ] [MED-001] Split discord/tools.rs into submodules
+  - 📚 SKILLS: `./skills/rust-best-practices/SKILL.md`
+  - 🎯 Goal: Extract tool definitions and execution logic into separate modules
+  - 📂 Files: `src/discord/tools.rs` → split into `src/discord/tools/definitions.rs`, `src/discord/tools/execution.rs`
+  - 🧭 Context: File has 1663 lines - a "god module" that should be split. Current structure should be reorganized into focused submodules by responsibility.
+  - ⚡ Pre-check: Run `cargo build` and verify it passes
   - ✅ Acceptance:
-    - [ ] Timer struct removed
-    - [ ] Build passes
-  - 🔒 Risk: Safe
-  - ↩️ Revert: git checkout safe
+    - [ ] Change is complete
+    - [ ] Build passes (`cargo build`)
+    - [ ] All tests pass (`cargo test`)
+    - [ ] No behavioral change (same API externally)
+  - 🔒 Risk: Low
+  - ↩️ Revert: `git revert` safe (independent)
 
-### Task 3: [LOW-003] Remove unused format_duration function  
-- [ ] [FIND-LOW-003] Remove unused format_duration function
-  - 📚 SKILLS: None required
-  - 🎯 Goal: Remove unused format_duration function from tests
-  - 📂 Files: tests/skills_install_performance.rs (lines 45-54)
-  - 🧭 Context: Dead code identified by Clippy. Evidence:
-    ```
-    warning: function 'format_duration' is never used
-    fn format_duration(duration: std::time::Duration) -> String { ... }
-    ```
-  - ⚡ Pre-check: Build passes
+- [ ] [MED-002] Split discord/llm.rs into submodules
+  - 📚 SKILLS: `./skills/rust-best-practices/SKILL.md`
+  - 🎯 Goal: Extract client and response handling into separate modules
+  - 📂 Files: `src/discord/llm.rs` → split into `src/discord/llm/client.rs`, `src/discord/llm/response.rs`
+  - 🧭 Context: File has 1539 lines - a "god module" that should be split by responsibility (client logic vs response handling)
+  - ⚡ Pre-check: Run `cargo build` and verify it passes
   - ✅ Acceptance:
-    - [ ] format_duration function removed
-    - [ ] Build passes
-  - 🔒 Risk: Safe
-  - ↩️ Revert: git checkout safe
+    - [ ] Change is complete
+    - [ ] Build passes (`cargo build`)
+    - [ ] All tests pass (`cargo test`)
+    - [ ] No behavioral change (same API externally)
+  - 🔒 Risk: Low
+  - ↩️ Revert: `git revert` safe (independent)
 
-### Task 4: [LOW-001] Fix Clippy warnings in test files
-- [ ] [FIND-LOW-001] Fix Clippy warnings in test files
-  - 📚 SKILLS: None required
-  - 🎯 Goal: Fix all Clippy warnings in tests/ directory
-  - 📂 Files: tests/*.rs (multiple files)
-  - 🧭 Context: 24 Clippy warnings in test files. Evidence includes:
-    - unused imports (ApiError, Message, ToolCall, ToolFunction, std::sync::Arc, std::time::Instant)
-    - unused variables (manager, global_skills_dir, result, duration)
-    - mutable variables that don't need to be mutable
-    - useless vec! macros
-  - ⚡ Pre-check: cargo clippy --tests passes
+- [ ] [MED-006] Fix unused config key warning
+  - 📚 SKILLS: `./skills/rust-best-practices/SKILL.md`
+  - 🎯 Goal: Remove or fix the unused config key in .cargo/config.toml
+  - 📂 Files: `.cargo/config.toml`
+  - 🧭 Context: Warning: `unused config key 'profile.test.features'` - remove this key or fix it
+  - ⚡ Pre-check: Run `cargo build` and verify no warnings
   - ✅ Acceptance:
-    - [ ] All test file warnings fixed
-    - [ ] cargo clippy --tests passes
+    - [ ] Change is complete
+    - [ ] Build passes (`cargo build`)
+    - [ ] No config warnings
   - 🔒 Risk: Safe
-  - ↩️ Revert: git checkout safe
+  - ↩️ Revert: `git revert` safe (independent)
+
+> ⚠️ Rebalanced from REFACTOR_TODO2.md by Planner on 2026-02-28
+
+- [ ] [MED-005] Split skills/mod.rs into submodules
+  - 📚 SKILLS: `./skills/rust-best-practices/SKILL.md`
+  - 🎯 Goal: Split into manager, lockfile, and metadata modules
+  - 📂 Files: `src/skills/mod.rs` → split into `src/skills/manager.rs`, `src/skills/lockfile.rs`, `src/skills/metadata.rs`
+  - 🧭 Context: File has 2709 lines - largest god module. Split by functional responsibility: skills management, lockfile handling, metadata
+  - ⚡ Pre-check: Run `cargo build` and verify it passes
+  - ✅ Acceptance:
+    - [ ] Change is complete
+    - [ ] Build passes (`cargo build`)
+    - [ ] All tests pass (`cargo test`)
+    - [ ] No behavioral change (same API externally)
+  - 🔒 Risk: Low
+  - ↩️ Revert: `git revert` safe (independent)
+
+- [ ] [LOW-001] Consider splitting scheduler/mod.rs
+  - 📚 SKILLS: `./skills/rust-best-practices/SKILL.md`
+  - 🎯 Goal: Split into clock and queue modules if beneficial
+  - 📂 Files: `src/scheduler/mod.rs` → split into `src/scheduler/clock.rs`, `src/scheduler/queue.rs`
+  - 🧭 Context: File has 1259 lines - borderline acceptable size. Consider splitting if it improves maintainability.
+  - ⚡ Pre-check: Run `cargo build` and verify it passes
+  - ✅ Acceptance:
+    - [ ] Change is complete
+    - [ ] Build passes (`cargo build`)
+    - [ ] All tests pass (`cargo test`)
+    - [ ] No behavioral change
+  - 🔒 Risk: Low
+  - ↩️ Revert: `git revert` safe (independent)
 
 - [ ] AGENT QA: Run full build and test suite. Verify ALL changes maintain behavioral equivalence. If green, create '.switchboard/state/.refactor_done_1' with the current date. If ALL '.switchboard/state/.refactor_done_*' files exist, also create '.switchboard/state/.refactor_sprint_complete'.
