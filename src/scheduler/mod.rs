@@ -1067,12 +1067,13 @@ impl Scheduler {
             .map_err(|_| SchedulerError::MutexPoisoned)?;
         for agent in agents.iter_mut() {
             // Parse the cron schedule using the cron crate
-            let schedule =
-                cron::Schedule::from_str(&cron_helper::convert_to_6_field_cron(&agent.config.schedule))
-                    .map_err(|e| SchedulerError::InvalidCronSchedule {
-                        schedule: agent.config.schedule.clone(),
-                        error: e.to_string(),
-                    })?;
+            let schedule = cron::Schedule::from_str(&cron_helper::convert_to_6_field_cron(
+                &agent.config.schedule,
+            ))
+            .map_err(|e| SchedulerError::InvalidCronSchedule {
+                schedule: agent.config.schedule.clone(),
+                error: e.to_string(),
+            })?;
 
             // Get the current time in UTC
             let now_utc: DateTime<Utc> = Utc::now();
