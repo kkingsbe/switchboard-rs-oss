@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs;
 use std::io::Write;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::time::SystemTime;
 
 /// Top-level JSON structure for all metrics
@@ -254,6 +254,26 @@ impl MetricsStore {
         ))
     }
 
+    /// Ensures the parent directory of the given path exists
+    fn ensure_parent_dir_exists(path: &Path) -> Result<(), MetricsError> {
+        // First check if the path itself exists (for directories like log_dir)
+        if !path.exists() {
+            // If it's a file path, ensure parent exists; otherwise create the directory
+            if let Some(parent) = path.parent() {
+                if !parent.exists() {
+                    fs::create_dir_all(parent).map_err(|e| {
+                        MetricsError::WriteError(format!("Failed to create directory: {}", e))
+                    })?;
+                }
+            }
+            // For directory paths, also create the directory itself
+            fs::create_dir_all(path).map_err(|e| {
+                MetricsError::WriteError(format!("Failed to create directory: {}", e))
+            })?;
+        }
+        Ok(())
+    }
+
     /// Internal implementation of the save operation.
     /// Uses a temp file + rename pattern to ensure atomic writes.
     fn save_internal(&self, metrics: &AllMetrics) -> Result<(), MetricsError> {
@@ -261,11 +281,7 @@ impl MetricsStore {
         let temp_path = metrics_path.with_extension("tmp");
 
         // Ensure log directory exists
-        if !self.log_dir.exists() {
-            std::fs::create_dir_all(&self.log_dir).map_err(|e| {
-                MetricsError::WriteError(format!("Failed to create log directory: {}", e))
-            })?;
-        }
+        Self::ensure_parent_dir_exists(&self.log_dir)?;
 
         // Write to temp file first
         let content = serde_json::to_string_pretty(metrics).map_err(|e| {

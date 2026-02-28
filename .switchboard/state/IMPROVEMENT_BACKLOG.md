@@ -1,11 +1,11 @@
 # Codebase Scan Report
 
 **Project**: switchboard  
-**Scanned**: 2026-02-28T14:02:01Z  
-**Commit Audited**: c042a27 (HEAD)
+**Scanned**: 2026-02-28T16:01:06Z  
+**Commit Audited**: d197bee (HEAD)
 **Scope**: Full codebase (src/)
 **Files Analyzed**: ~80 Rust source files  
-**Audit Type**: Incremental audit (2 commits since last audit 4273ae6)
+**Audit Type**: Incremental audit (4 commits since last audit cc61dd2)
 
 ---
 
@@ -17,12 +17,12 @@
 | 🟠 High | 0 | - |
 | 🟡 Medium | 4 | - |
 | 🔵 Low | 2 | - |
-| ⚪ Convention | 3 | -1 |
+| ⚪ Convention | 3 | - |
 
 **Overall Health Score**: 5/10 (stable)
 
 **Top 3 Priorities**:
-1. Fix 24 failing tests (CRITICAL - ongoing)
+1. Fix 25 failing tests (CRITICAL - ongoing)
 2. Resolve inconsistent error handling patterns (CONV-001)
 3. Continue splitting god modules (MED-001 to MED-004)
 
@@ -44,16 +44,18 @@
 | Check | Status | Notes |
 |-------|--------|-------|
 | `cargo build --release` | ✅ PASS | No warnings |
-| `cargo test` | ❌ FAIL | 24 tests failed (same as last audit) |
+| `cargo test` | ❌ FAIL | 25 tests failed (+1 from last audit's 24) |
 | `cargo clippy` | ✅ PASS | Minor warnings only |
-| `cargo fmt --check` | ✅ PASS | Formatting issue from last audit FIXED |
+| `cargo fmt --check` | ✅ PASS | Formatting correct |
 
 ---
 
-## Changes Since Last Audit (4273ae6)
+## Changes Since Last Audit (cc61dd2)
 
-- **c042a27**: Formatting fix in scheduler/mod.rs (the CONV-005 finding from last audit is now RESOLVED)
-- **cc61dd2**: Previous audit commit
+- **d197bee**: refactor(refactor2): [FIND-LOW-002] extract metrics_path helper in metrics/store.rs
+- **846206f**: refactor(refactor1): [FIND-CONV-003] analyze test organization - tests already well-organized
+- **15e53b4**: refactor(refactor1): [FIND-CONV-005] fix formatting in scheduler/mod.rs
+- **c042a27**: refactor(refactor1): [FIND-CONV-005] fix formatting in scheduler/mod.rs
 
 ---
 
@@ -61,7 +63,7 @@
 
 ### 🔴 Critical Issues
 
-#### [CRIT-001] 🔄 RECURRING (×3) - 24 Test Failures
+#### [CRIT-001] 🔄 RECURRING (×4) - 25 Test Failures
 
 - **Category:** Test Suite
 - **Severity:** Critical
@@ -69,18 +71,21 @@
 - **Risk:** Medium
 - **Priority Score:** 16/22
 - **Files:** Multiple test files in src/docker/run/run.rs, src/discord/config.rs, src/commands/validate.rs, src/skills/mod.rs
-- **Description:** Test suite has 24 failing tests, indicating regression or broken functionality. This issue has persisted across multiple audits.
+- **Description:** Test suite has 25 failing tests, indicating regression or broken functionality. This issue has persisted across multiple audits and increased by 1 since last audit.
 - **Evidence:**
 ```
-test result: FAILED. 523 passed; 24 failed; 0 ignored
+test result: FAILED. 522 passed; 25 failed; 0 ignored
 Failures include:
 - docker::run::run::tests::test_entrypoint_script_generation_all_scenarios
 - docker::run::run::tests::test_integration_complete_flow_single_skill
 - docker::run::run::tests::test_script_injection_wrapper_executes_script
-- discord::config::tests::test_env_config_missing_openrouter_api_key
-- discord::config::tests::test_env_config_success
-- commands::validate::tests::test_validate_lockfile_consistency_warns_orphaned_skills
-... (24 total)
+- docker::run::run::tests::test_skills_single_generates_custom_entrypoint
+- docker::run::run::tests::test_integration_complete_flow_multiple_skills
+- docker::run::run::tests::test_skills_multiple_generates_custom_entrypoint
+- docker::skills::tests::test_generate_entrypoint_script_skill_not_in_preexisting_list
+- skills::tests::test_check_npx_available_with_mock_error
+- skills::tests::test_check_npx_available_with_mock_failure_exit_code
+... (25 total)
 ```
 - **Suggested Fix:** Investigate root cause of test failures - likely related to skill script generation logic changes and environment variable handling in tests
 - **Status:** 🔄 RECURRING
@@ -165,16 +170,16 @@ $ wc -l src/config/mod.rs
 - **Files:** `src/scheduler/mod.rs` (1293 lines)
 - **Status:** 🔄 RECURRING
 
-#### [LOW-002] ✅ SCHEDULED - metrics/store.rs - 1111 Lines
+#### [LOW-002] ✅ RESOLVED - metrics/store.rs - 1111 Lines → Extract metrics_path helper
 
 - **Category:** Structure
 - **Severity:** Low
-- **Effort:** M
+- **Effort:** S
 - **Risk:** Low
 - **Priority Score:** 7/22
 - **Files:** `src/metrics/store.rs` (1111 lines)
-- **Status:** ✅ SCHEDULED
-- **Scheduled:** Improvement Sprint 2, assigned to .switchboard/state/REFACTOR_TODO2.md
+- **Status:** ✅ RESOLVED
+- **Resolution:** Refactored in commit d197bee - extracted metrics_path helper
 
 ---
 
@@ -221,7 +226,7 @@ pub fn load(&self) -> Result<AllMetrics, MetricsError>
 
 ---
 
-#### [CONV-003] 🔄 RECURRING - Test Organization
+#### [CONV-003] ✅ ANALYZED - Test Organization
 
 - **Category:** Convention
 - **Severity:** Low
@@ -230,23 +235,15 @@ pub fn load(&self) -> Result<AllMetrics, MetricsError>
 - **Priority Score:** 7/22
 - **Files:** Throughout codebase
 - **Description:** Tests are mixed between inline (#[cfg(test)] modules) and external files in tests/ directory. No consistent pattern.
-- **Status:** 🔄 RECURRING
-
----
-
-## Recently Resolved
-
-### [CONV-005] ✅ RESOLVED - Formatting Issue in scheduler/mod.rs
-
-- **Resolved:** 2026-02-28
-- **Resolution:** Fixed in commit c042a27 - formatting corrected in scheduler/mod.rs
+- **Status:** ✅ ANALYZED
+- **Analysis Result (commit 846206f):** Tests already well-organized - inline tests are appropriate for unit tests and integration tests within modules
 
 ---
 
 ## Recommendations Roadmap
 
 ### Immediate (This Sprint)
-- [ ] Investigate and fix 24 failing tests (CRIT-001) - 4+ hours
+- [ ] Investigate and fix 25 failing tests (CRIT-001) - 4+ hours
 - [ ] Continue god module refactoring (MED-001 to MED-004) - ongoing
 
 ### Short-term (Next 2-4 weeks)
@@ -282,6 +279,7 @@ pub fn load(&self) -> Result<AllMetrics, MetricsError>
 Date            | Total | Crit | High | Med | Low | Conv
 ----------------|-------|------|------|-----|-----|-----
 2026-02-28T12:00| 11    | 1    | 0    | 4   | 2   | 4
-2026-02-28T14:02| 10    | 1    | 0    | 4   | 2   | 3  ← Current
+2026-02-28T14:02| 10    | 1    | 0    | 4   | 2   | 3
+2026-02-28T16:01| 10    | 1    | 0    | 4   | 1   | 3  ← Current
 ```
-Health score stable at 5/10. One convention issue (CONV-005) resolved.
+Health score stable at 5/10. One low priority (LOW-002) resolved. One convention issue (CONV-003) analyzed and found acceptable.

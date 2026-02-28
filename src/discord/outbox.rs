@@ -241,24 +241,15 @@ impl OutboxPoller {
 }
 
 /// Errors that can occur during outbox processing
-#[derive(Debug)]
+#[derive(Debug, thiserror::Error)]
 pub enum OutboxError {
     /// I/O error (file read/write, directory operations)
+    #[error("I/O error: {0}")]
     IoError(String),
     /// Discord API error
+    #[error("Discord API error: {0}")]
     DiscordApi(String),
     /// Invalid filename
+    #[error("Invalid filename: {0}")]
     InvalidFilename(String),
 }
-
-impl std::fmt::Display for OutboxError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            OutboxError::IoError(msg) => write!(f, "I/O error: {}", msg),
-            OutboxError::DiscordApi(msg) => write!(f, "Discord API error: {}", msg),
-            OutboxError::InvalidFilename(msg) => write!(f, "Invalid filename: {}", msg),
-        }
-    }
-}
-
-impl std::error::Error for OutboxError {}
