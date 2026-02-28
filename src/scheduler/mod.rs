@@ -22,7 +22,7 @@ use std::path::PathBuf;
 use std::str::FromStr;
 use std::sync::atomic::AtomicBool;
 use std::sync::atomic::Ordering;
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, Mutex, MutexGuard};
 use std::time::{Duration as StdDuration, Instant, SystemTime};
 use tokio_cron_scheduler::{Job, JobScheduler};
 use uuid::Uuid;
@@ -246,6 +246,24 @@ pub enum SchedulerError {
     MutexPoisoned,
 }
 
+/// Acquires a lock on a mutex, converting poisoning errors to SchedulerError.
+///
+/// This helper function simplifies the common pattern of:
+/// ```rust
+/// let mut guard = mutex.lock().map_err(|_| SchedulerError::MutexPoisoned)?;
+/// ```
+///
+/// # Arguments
+///
+/// * `mutex` - The mutex to acquire a lock on
+///
+/// # Returns
+///
+/// Returns a MutexGuard on success, or SchedulerError::MutexPoisoned if the mutex was poisoned.
+fn acquire_lock<T>(mutex: &Mutex<T>) -> Result<MutexGuard<'_, T>, SchedulerError> {
+    mutex.lock().map_err(|_| SchedulerError::MutexPoisoned)
+}
+
 /// Status of a scheduled agent run
 ///
 /// This enum represents the current state of a scheduled agent execution:
@@ -305,9 +323,7 @@ fn process_queued_run(
 
     // Update cumulative wait time
     {
-        let mut total_wait = queue_wait_time_seconds
-            .lock()
-            .map_err(|_| SchedulerError::MutexPoisoned)?;
+        let mut total_wait = acquire_lock(&queue_wait_time_seconds)?;
         *total_wait += wait_duration_seconds;
     }
 
