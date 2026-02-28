@@ -39,6 +39,10 @@ pub mod config;
 #[cfg(feature = "discord")]
 pub mod discord;
 
+/// Re-export of the Discord listener startup function.
+///
+/// This function starts the Discord bot and begins listening for messages.
+/// Requires the "discord" feature to be enabled.
 #[cfg(feature = "discord")]
 pub use discord::start_discord_listener;
 pub mod docker;
