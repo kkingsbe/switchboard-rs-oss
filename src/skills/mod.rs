@@ -41,6 +41,7 @@ pub const NPX_NOT_FOUND_ERROR: &str =
 mod tests {
     use super::*;
     use crate::skills::SkillsError;
+    use std::fs;
 
     /// Test that verifies check_npx_available returns NpxNotFound error with installation instructions
     /// when npx is not available in PATH.
