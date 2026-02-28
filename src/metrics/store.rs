@@ -7,18 +7,25 @@ use std::path::PathBuf;
 use std::time::SystemTime;
 
 /// Top-level JSON structure for all metrics
+/// Top-level JSON structure for all metrics
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
 pub struct AllMetrics {
+    /// Map of agent names to their metrics data
     pub agents: HashMap<String, AgentMetricsData>,
 }
 
 /// Serialized representation of AgentMetrics for JSON
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct AgentMetricsData {
+    /// Total number of runs for this agent
     pub total_runs: u64,
+    /// Number of successful runs
     pub successful_runs: u64,
+    /// Number of failed runs
     pub failed_runs: u64,
+    /// Total duration of all runs in milliseconds
     pub total_duration_ms: u64,
+    /// Individual run results
     pub runs: Vec<AgentRunResultData>,
     /// Cumulative queue wait time in seconds for averaging later
     pub queue_wait_time_seconds: Option<u64>,
@@ -44,12 +51,21 @@ pub struct AgentMetricsData {
     pub runs_with_skill_failures: u64,
 }
 
+/// Serialized representation of a single agent run result for JSON
+///
+/// This struct stores the outcome of a single agent execution, including
+/// timing information, exit status, and any error details.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct AgentRunResultData {
+    /// Unique identifier for this run (typically container ID)
     pub run_id: String,
+    /// Unix timestamp when the run started (in seconds since epoch)
     pub timestamp: u64,
+    /// Duration of the run in milliseconds
     pub duration_ms: u64,
-    pub status: String, // "success" or "failure"
+    /// Status of the run: "success" or "failure"
+    pub status: String,
+    /// Error message if the run failed
     pub error_message: Option<String>,
     /// Number of skills successfully installed during this run
     #[serde(default)]

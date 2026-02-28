@@ -247,16 +247,32 @@ pub enum SchedulerError {
 }
 
 /// Status of a scheduled agent run
+///
+/// This enum represents the current state of a scheduled agent execution:
+/// running, skipped (due to overlap), or scheduled for future execution.
 pub enum RunStatus {
     /// A run is currently executing
-    Running { container_id: String },
+    Running {
+        /// The container ID of the running execution
+        container_id: String,
+    },
     /// A run was skipped (e.g., due to overlap)
-    Skipped { reason: String },
+    Skipped {
+        /// Reason why the run was skipped
+        reason: String,
+    },
     /// A run is scheduled for future execution
-    Scheduled { next_run: DateTime<Tz> },
+    Scheduled {
+        /// The next scheduled run time
+        next_run: DateTime<Tz>,
+    },
 }
 
 /// A queued agent run for queue mode overlap handling
+///
+/// When an agent is configured with overlap_mode = "queue" and is already running,
+/// new scheduled executions are queued rather than skipped. This struct represents
+/// a queued run waiting to be executed.
 #[derive(Debug, Clone)]
 pub struct QueuedRun {
     /// The name of the agent to run
@@ -751,6 +767,9 @@ async fn execute_agent(
 }
 
 /// A scheduled agent with runtime state
+///
+/// This struct combines the agent configuration with runtime state information
+/// such as the next scheduled run time and whether the agent is currently executing.
 pub struct ScheduledAgent {
     /// The agent configuration
     pub config: Agent,
@@ -763,6 +782,10 @@ pub struct ScheduledAgent {
 }
 
 /// Scheduler for managing agent executions
+///
+/// The Scheduler is the main component for managing scheduled agent executions.
+/// It handles cron schedule parsing, agent registration, execution orchestration,
+/// and overlap mode handling (skip, queue, or allow).
 pub struct Scheduler {
     /// The scheduled agents
     pub agents: Arc<Mutex<Vec<ScheduledAgent>>>,

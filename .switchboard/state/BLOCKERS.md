@@ -15,6 +15,13 @@
 - [ ] MED-005: Split skills/mod.rs into submodules (manager.rs, lockfile.rs, metadata.rs)
 - [ ] LOW-001: Consider splitting scheduler/mod.rs
 
+#### BLOCKER-2: Verification Failure - Test Suite Not Establishable
+**Status:** BLOCKING verification
+**Issue:** Unable to establish a reliable test baseline due to test compilation failures.
+**Root Cause:** BLOCKER-1 must be resolved first before any verification can occur.
+**Impact:** Cannot verify that refactoring changes maintain behavioral equivalence.
+**Resolution:** Fix BLOCKER-1 (test compilation errors in src/skills/mod.rs) to enable test baseline establishment.
+
 ---
 
 ### Blockers for Refactor Agent 2 - Updated: 2026-02-28

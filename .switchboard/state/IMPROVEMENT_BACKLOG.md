@@ -170,7 +170,7 @@ note: but type `FunctionDefinition` is only usable at visibility `pub(self)`
     |     ^^^^^^^^^^^^^^^^^^^^^^^^^
 ```
 - **Suggested Fix:** Make `FunctionDefinition` public or adjust visibility
-- **Status:** 🆕 NEW
+- **Status:** 🔄 SCHEDULED → Improvement Sprint 5, assigned to .switchboard/state/REFACTOR_TODO1.md
 
 ---
 
@@ -184,7 +184,7 @@ note: but type `FunctionDefinition` is only usable at visibility `pub(self)`
 - **Risk:** Low
 - **Priority Score:** 7/22
 - **Files:** `src/scheduler/mod.rs` (1268 lines)
-- **Status:** 🔄 RECURRING
+- **Status:** 🔄 SCHEDULED → Improvement Sprint 5, assigned to .switchboard/state/REFACTOR_TODO2.md
 
 ---
 
@@ -243,7 +243,7 @@ note: but type `FunctionDefinition` is only usable at visibility `pub(self)`
 - **Effort:** S
 - **Risk:** Safe
 - **Priority Score:** 8/22
-- **Status:** 🔄 RECURRING
+- **Status:** 🔄 SCHEDULED → Improvement Sprint 5, assigned to .switchboard/state/REFACTOR_TODO2.md
 
 ---
 

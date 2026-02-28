@@ -22,6 +22,15 @@
 //! **Re-exports:** All CLI command structs (Cli, Commands, UpCommand, RunCommand, etc.) are public.
 //! The handler functions (run_up, run_run, etc.) are also public and can be accessed directly
 //! via the cli module (e.g., switchboard::cli::run(), switchboard::cli::run_run(), etc.).
+//!
+//! # Example
+//!
+//! ```ignore
+//! use switchboard::cli;
+//! use switchboard::config::Settings;
+//!
+//! // Load configuration and run the scheduler
+//! ```
 
 // Module declarations
 pub mod cli;

@@ -101,7 +101,7 @@ pub struct ToolDefinition {
 
 /// Function definition for tool
 #[derive(Debug, Clone, Serialize, Deserialize)]
-struct FunctionDefinition {
+pub struct FunctionDefinition {
     /// Function name
     name: String,
     /// Function description

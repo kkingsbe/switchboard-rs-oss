@@ -1,82 +1,76 @@
 # REFACTOR_TODO2 - Refactor Agent 2
 
-> Sprint: Improvement Sprint 3
-> Focus Area: Error handling improvements and code refactoring
-> Last Updated: 2026-02-28
+> Sprint: Improvement Sprint 5
+> Focus Area: Documentation and Module Structure
+> Last Updated: 2026-02-28T06:30:03Z
 > Source: .switchboard/state/IMPROVEMENT_BACKLOG.md findings
 
 ## Orientation
 
 Before starting any tasks, read these files to understand the current state:
-- Cargo.toml
-- src/cli/mod.rs
-- src/scheduler/mod.rs
-- src/logging.rs
-- src/docker/run/streams.rs
 
-## Tasks (Ordered Safe → Riskier)
+- Cargo.toml - Project dependencies and structure
+- src/scheduler/mod.rs - Scheduler module (1268 lines)
+- src/metrics/store.rs - Metrics store module (1091 lines)
+- Run `cargo doc --no-deps` to see current documentation state
+- Check existing documentation in `docs/` directory
 
-- [x] [HIGH-001] Replace unwrap()/expect() with Proper Error Handling
-  - 📚 SKILLS: `./skills/rust-best-practices/SKILL.md` §4.2, `./skills/rust-engineer/SKILL.md`
-  - 🎯 Goal: Replace unsafe unwrap()/expect() calls with proper Result handling or meaningful error messages
-  - 📂 Files: 
-    - `src/cli/mod.rs:348` - `client.docker().expect("Docker client should be available")`
-    - `src/scheduler/mod.rs:1164,1173,1182,1257` - mutex lock `.unwrap()`
-    - `src/logging.rs:102,113,137,145,150` - mutex lock `.unwrap()`
-    - `src/docker/run/streams.rs:41` - docker client expect
-  - 🧭 Context: According to rust-best-practices skill: "Never use unwrap()/expect() outside tests". Evidence:
-    ```rust
-    // src/cli/mod.rs:348
-    let docker = client.docker().expect("Docker client should be available");
+## Tasks
 
-    // src/scheduler/mod.rs:1164
-    *self.queue_wait_time_seconds.lock().unwrap()
-
-    // src/logging.rs:102
-    *INIT_ERROR.lock().unwrap() = Some(err);
-    ```
-  - ⚡ Pre-check: Run `cargo build` and verify current state compiles
+- [ ] [FIND-CONV-004] Add Missing Documentation to Public APIs
+  - 📚 SKILLS: `./skills/rust-best-practices/SKILL.md`, `./skills/rust-engineer/SKILL.md`
+  - 🎯 Goal: Add doc comments to public functions and types that are missing them. Focus on the most critical public APIs in the scheduler and metrics modules.
+  - 📂 Files: `src/scheduler/mod.rs`, `src/metrics/store.rs`, `src/lib.rs`
+  - 🧭 Context: The audit found missing documentation as a convention issue. Adding documentation improves maintainability and helps other developers understand the API.
+    
+    Evidence from finding:
+    - Finding: [CONV-004] Missing Documentation
+    - Category: Documentation
+    - Severity: Low
+    - Effort: S
+    - Risk: Safe
+    - Priority Score: 8/22
+    
+    Look for:
+    - Public functions without `///` doc comments
+    - Public structs without doc comments
+    - Important error types without documentation
+  - ⚡ Pre-check: Run `cargo doc --no-deps 2>&1 | grep -c "warning: missing"` to count current warnings
   - ✅ Acceptance:
     - [ ] Change is complete
     - [ ] Build passes (`cargo build`)
     - [ ] All tests pass (`cargo test`)
-    - [ ] No behavioral change (same error outcomes, just handled explicitly)
-  - 🔒 Risk: Medium (requires careful refactoring to maintain behavior)
-  - ↩️ Revert: `git revert` safe if tests pass after revert
+    - [ ] Documentation builds without errors (`cargo doc --no-deps`)
+    - [ ] No behavioral change (same inputs produce same outputs)
+  - 🔒 Risk: Safe
+  - ↩️ Revert: `git revert` safe (documentation only)
 
-- [x] [MED-001] Split discord/llm.rs into Submodules
+- [ ] [FIND-LOW-001] Review scheduler module for extractable functions
   - 📚 SKILLS: `./skills/rust-best-practices/SKILL.md`
-  - 🎯 Goal: Extract client and response handling into separate modules
-  - 📂 Files: `src/discord/llm.rs` → split into `src/discord/llm/client.rs`, `src/discord/llm/response.rs`
-  - 🧭 Context: File has 1539 lines - a "god module" that should be split by responsibility (client logic vs response handling)
-  - ⚡ Pre-check: Run `cargo build` and verify it passes
+  - 🎯 Goal: Identify opportunities to extract helper functions from scheduler/mod.rs to improve readability. Focus on finding repetitive code patterns that could be extracted.
+  - 📂 Files: `src/scheduler/mod.rs`
+  - 🧭 Context: The scheduler module is 1268 lines, which is large but not yet a critical "god module" issue. The goal is to improve it proactively.
+    
+    Evidence from finding:
+    - Finding: [LOW-001] scheduler/mod.rs - 1268 Lines
+    - Category: Structure
+    - Severity: Low
+    - Effort: M
+    - Risk: Low
+    - Priority Score: 7/22
+    
+    This is a RECURRING finding - previous sprints have noted this but not fully addressed it. Look for:
+    - Functions over 50 lines that could be split
+    - Repetitive error handling patterns
+    - Helper functions that could be extracted to a separate module
+  - ⚡ Pre-check: Run `wc -l src/scheduler/mod.rs` to confirm file size
   - ✅ Acceptance:
     - [ ] Change is complete
     - [ ] Build passes (`cargo build`)
     - [ ] All tests pass (`cargo test`)
-    - [ ] No behavioral change (same API externally)
-  - 🔒 Risk: Low (structural refactor, no logic changes)
-  - ↩️ Revert: `git revert` safe (file reorganization)
+    - [ ] No behavioral change (same inputs produce same outputs)
+    - [ ] Code is more readable/maintainable
+  - 🔒 Risk: Low
+  - ↩️ Revert: `git revert` safe (refactoring only, no behavior change)
 
-- [ ] [HIGH-003] Consider Splitting CLI Module
-  - 📚 SKILLS: `./skills/rust-best-practices/SKILL.md`
-  - 🎯 Goal: Extract CLI commands into separate modules if beneficial for maintainability
-  - 📂 Files: `src/cli/mod.rs` (2144 lines)
-  - 🧭 Context: Contains all CLI commands and handlers in single file. Consider extracting subcommands to src/commands/
-  - ⚡ Pre-check: Run `cargo build` and verify it passes
-  - ✅ ANALYSIS (2026-02-28):
-    - The CLI module has ALREADY been partially split!
-    - Extracted to src/commands/: build, list, logs, metrics, skills, validate (6 commands)
-    - Remaining in cli/mod.rs: up, run, down (3 commands)
-    - **Decision: DO NOT SPLIT further** - Reasons:
-      1. The remaining commands (up, run, down) share significant setup logic (Docker client initialization, scheduler setup)
-      2. Splitting would require extracting shared utilities, adding complexity
-      3. The current architecture is already reasonable - 2144 lines is not excessively large
-      4. Would require significant testing effort to verify no behavioral changes
-    - ⚠️ BLOCKED BY: Pre-existing test failures (24 tests failing)
-  - ✅ Acceptance:
-    - [x] Analysis complete - documented decision not to split
-    - [ ] Build passes (cargo build) - ✅ PASSED
-    - [ ] All tests pass (cargo test) - ❌ 24 FAILED (pre-existing)
-
-> AGENT QA: Run full build and test suite. Verify ALL changes maintain behavioral equivalence. If green, create '.switchboard/state/.refactor_done_2' with the current date. If ALL '.switchboard/state/.refactor_done_*' files exist, also create '.switchboard/state/.refactor_sprint_complete'.
+- [ ] AGENT QA: Run full build and test suite. Verify ALL changes maintain behavioral equivalence. If green, create '.switchboard/state/.refactor_done_2' with the current date. If ALL '.switchboard/state/.refactor_done_*' files exist, also create '.switchboard/state/.refactor_sprint_complete'.
