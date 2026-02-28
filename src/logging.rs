@@ -99,7 +99,7 @@ mod tests {
                             path: "".to_string(),
                             message: e.to_string(),
                         };
-                        *INIT_ERROR.lock().unwrap() = Some(err);
+                        *INIT_ERROR.lock().unwrap_or_else(|poisoned| poisoned.into_inner()) = Some(err);
                         return;
                     }
                 };
@@ -110,7 +110,7 @@ mod tests {
                         path: log_dir.display().to_string(),
                         message: e.to_string(),
                     };
-                    *INIT_ERROR.lock().unwrap() = Some(err);
+                    *INIT_ERROR.lock().unwrap_or_else(|poisoned| poisoned.into_inner()) = Some(err);
                     return;
                 }
 
@@ -134,7 +134,7 @@ mod tests {
                         path: "".to_string(),
                         message: e.to_string(),
                     };
-                    *INIT_ERROR.lock().unwrap() = Some(err);
+                    *INIT_ERROR.lock().unwrap_or_else(|poisoned| poisoned.into_inner()) = Some(err);
                     return;
                 }
 
@@ -142,7 +142,7 @@ mod tests {
             });
 
             // Check if there was an error during initialization
-            let error = INIT_ERROR.lock().unwrap().take();
+            let error = INIT_ERROR.lock().unwrap_or_else(|poisoned| poisoned.into_inner()).take();
             if let Some(err) = error {
                 return Err(err);
             }
