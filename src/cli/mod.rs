@@ -45,6 +45,8 @@ use tokio::sync::broadcast;
 #[cfg(unix)]
 use tokio::signal::unix::{signal, SignalKind};
 
+pub mod commands;
+
 /// Check if Discord configuration is present in environment variables or switchboard.toml
 ///
 /// First checks for environment variables, then falls back to switchboard.toml config.
@@ -546,7 +548,7 @@ pub async fn run() -> Result<ColorMode, Box<dyn std::error::Error>> {
         Commands::Up(args) => run_up(args, cli.config).await,
         Commands::Run(args) => run_run(args, cli.config).await,
         Commands::Build(args) => run_build(args, cli.config).await,
-        Commands::List => run_list(cli.config),
+        Commands::List => commands::list::run_list(cli.config),
         Commands::Logs(args) => run_logs(args, cli.config).await,
         Commands::Metrics(args) => run_metrics(args, cli.config),
         Commands::Down(args) => run_down(args, cli.config).await,
@@ -1637,36 +1639,6 @@ pub async fn run_build(
     _config: Option<String>,
 ) -> Result<(), Box<dyn std::error::Error>> {
     args.run().await
-}
-
-/// Handler for the 'list' command
-pub fn run_list(_config: Option<String>) -> Result<(), Box<dyn std::error::Error>> {
-    let config_path = _config.unwrap_or_else(|| "./switchboard.toml".to_string());
-    let path = Path::new(&config_path);
-
-    // Load config
-    let config = match Config::from_toml(path) {
-        Ok(config) => config,
-        Err(e @ ConfigError::ParseError { .. }) => {
-            eprintln!("✗ Configuration parsing failed: {}", e);
-            return Err(e.into());
-        }
-        Err(e @ ConfigError::ValidationError { .. }) => {
-            eprintln!("✗ Configuration validation failed");
-            eprintln!("Error: {}", e);
-            return Err(e.into());
-        }
-        Err(ConfigError::PromptFileNotFound {
-            agent_name: _,
-            prompt_file,
-        }) => {
-            eprintln!("✗ Prompt file not found: {}", prompt_file);
-            return Err(format!("Prompt file not found: {}", prompt_file).into());
-        }
-    };
-
-    // Call list_agents and handle errors
-    list_agents(&config).map_err(|e| e.into())
 }
 
 /// Handler for the 'logs' command

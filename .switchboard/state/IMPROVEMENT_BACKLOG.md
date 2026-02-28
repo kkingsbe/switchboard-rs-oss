@@ -1,11 +1,11 @@
 # Codebase Scan Report
 
 **Project**: switchboard  
-**Scanned**: 2026-02-28T18:00:04Z  
+**Scanned**: 2026-02-28T22:01:13Z  
 **Commit Audited**: 1faeff7 (HEAD)
 **Scope**: Full codebase (src/)
 **Files Analyzed**: ~80 Rust source files  
-**Audit Type**: Incremental audit (2 commits since last audit d197bee)
+**Audit Type**: Incremental audit (based on previous findings)
 
 ---
 
@@ -13,18 +13,18 @@
 
 | Severity | Count | Change vs Last Audit |
 |----------|-------|----------------------|
-| 🔴 Critical | 1 | - |
+| 🔴 Critical | 2 | +1 (new issue found) |
 | 🟠 High | 0 | - |
 | 🟡 Medium | 4 | - |
-| 🔵 Low | 1 | -1 |
+| 🔵 Low | 2 | +1 |
 | ⚪ Convention | 3 | - |
 
 **Overall Health Score**: 5/10 (stable)
 
 **Top 3 Priorities**:
 1. Fix 24 failing tests (CRITICAL - down from 25)
-2. Resolve inconsistent error handling patterns (CONV-001)
-3. Continue splitting god modules (MED-001 to MED-004)
+2. Remove hardcoded API key in test file (NEW - CRITICAL)
+3. Resolve inconsistent error handling patterns (CONV-001)
 
 ---
 
@@ -43,17 +43,11 @@
 
 | Check | Status | Notes |
 |-------|--------|-------|
-| `cargo build --release` | ✅ PASS | No warnings |
-| `cargo test` | ❌ FAIL | 24 tests failed (-1 from last audit's 25) |
-| `cargo clippy` | ✅ PASS | Minor warnings only |
-| `cargo fmt --check` | ✅ PASS | Formatting correct |
-
----
-
-## Changes Since Last Audit (d197bee)
-
-- **1faeff7**: refactor(refactor2): [FIND-LOW-002] extract helper functions in metrics/store.rs
-- **49da791**: Improvements
+| `cargo build` | ✅ PASS | 2 warnings (unused imports) |
+| `cargo test` | ❌ FAIL | 24 tests failed |
+| `cargo clippy --lib` | ✅ PASS | Minor warnings only |
+| `cargo clippy --all-targets` | ❌ FAIL | Test compilation errors |
+| `cargo fmt --check` | ❌ FAIL | 2 files need formatting |
 
 ---
 
@@ -69,7 +63,7 @@
 - **Risk:** Medium
 - **Priority Score:** 16/22
 - **Files:** Multiple test files in src/docker/run/run.rs, src/discord/config.rs, src/commands/validate.rs, src/skills/mod.rs
-- **Description:** Test suite has 24 failing tests, indicating regression or broken functionality. This issue has persisted across multiple audits and decreased by 1 since last audit.
+- **Description:** Test suite has 24 failing tests, indicating regression or broken functionality. This issue has persisted across multiple audits.
 - **Evidence:**
 ```
 test result: FAILED. 523 passed; 24 failed; 0 ignored
@@ -87,6 +81,30 @@ Failures include:
 ```
 - **Suggested Fix:** Investigate root cause of test failures - likely related to skill script generation logic changes and environment variable handling in tests
 - **Status:** 🔄 RECURRING
+- **Reference:** skills/rust-best-practices/SKILL.md (Chapter 5 - Testing)
+
+---
+
+#### [CRIT-002] 🆕 NEW - Hardcoded API Key in Test
+
+- **Category:** Security
+- **Severity:** Critical
+- **Effort:** S
+- **Risk:** High
+- **Priority Score:** 18/22
+- **File:** `src/discord/config.rs` (lines 1070-1074)
+- **Description:** A hardcoded OpenRouter API key is present in test code. While it's in a test file, this is a security best practice violation.
+- **Evidence:**
+```rust
+assert_eq!(
+    llm.api_key_env,
+    "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",
+    "Expected api_key_env from switchboard.toml"
+);
+```
+- **Suggested Fix:** Replace with a test placeholder or mock value that doesn't look like a real API key
+- **Status:** 🆕 NEW
+- **Reference:** Never commit secrets to version control
 
 ---
 
@@ -108,6 +126,7 @@ $ wc -l src/docker/run/run.rs
 ```
 - **Suggested Fix:** Split into: docker/run/container.rs, docker/run/network.rs, docker/run/volumes.rs
 - **Status:** 🔄 RECURRING
+- **Reference:** skills/rust-best-practices/SKILL.md (Chapter 1 - Code Organization)
 
 ---
 
@@ -140,23 +159,20 @@ $ wc -l src/config/mod.rs
 - **Files:** `src/cli/mod.rs` (2146 lines)
 - **Description:** Contains all CLI commands and handlers in single file.
 - **Status:** ✅ SCHEDULED
-- **Scheduled:** Improvement Sprint 3, assigned to .switchboard/state/REFACTOR_TODO1.md
-- **Note:** This is a multi-sprint effort - focus on first extraction this sprint
+- **Scheduled:** Improvement Sprint 3
 
 ---
 
-#### [MED-004] 🔄 RECURRING - Commands Module - commands/skills.rs at 2074 Lines
+#### [MED-004] 🔄 RECURRING - Commands Module - commands/skills/mod.rs at 1738 Lines
 
 - **Category:** Structure
 - **Severity:** Medium
 - **Effort:** M
 - **Risk:** Low
 - **Priority Score:** 10/22
-- **Files:** `src/commands/skills.rs` (2074 lines)
+- **Files:** `src/commands/skills/mod.rs` (1738 lines)
 - **Description:** Single file for all skills subcommands.
 - **Status:** ✅ SCHEDULED
-- **Scheduled:** Improvement Sprint 3, assigned to .switchboard/state/REFACTOR_TODO2.md
-- **Note:** This is a multi-sprint effort - focus on first extraction this sprint
 
 ---
 
@@ -171,8 +187,35 @@ $ wc -l src/config/mod.rs
 - **Priority Score:** 7/22
 - **Files:** `src/scheduler/mod.rs` (1293 lines)
 - **Status:** ✅ SCHEDULED
-- **Scheduled:** Improvement Sprint 3, assigned to .switchboard/state/REFACTOR_TODO2.md
-- **Note:** This is a multi-sprint effort - focus on analysis and first extraction this sprint
+
+---
+
+#### [LOW-002] 🆕 NEW - Clippy Warnings (Unused Imports)
+
+- **Category:** Code Quality
+- **Severity:** Low
+- **Effort:** S
+- **Risk:** Low
+- **Priority Score:** 5/22
+- **Files:** 
+  - `src/commands/skills/mod.rs:10` - unused import `skills_sh_search`
+  - `src/commands/skills/mod.rs:13` - unused imports `Attribute`, `Cell`, `Table`
+- **Description:** Two unused imports that generate clippy warnings.
+- **Evidence:**
+```rust
+warning: unused import: `skills_sh_search`
+  --> src/commands/skills/mod.rs:10:26
+   |
+10 |     scan_project_skills, skills_sh_search, write_lockfile, LockfileStruct, SkillLockEntry,
+   |                          ^^^^^^^^^^^^^^^^
+
+warning: unused imports: `Attribute`, `Cell`, and `Table`
+  --> src/commands/skills/mod.rs:13:19
+   |
+13 | use comfy_table::{Attribute, Cell, Table};
+```
+- **Suggested Fix:** Remove unused imports or use them in the code
+- **Status:** 🆕 NEW
 
 ---
 
@@ -202,7 +245,7 @@ pub fn list_agents(config: &Config) -> Result<(), String>
 pub fn load(&self) -> Result<AllMetrics, MetricsError>
 ```
 - **Status:** ✅ SCHEDULED
-- **Scheduled:** Improvement Sprint 2, assigned to .switchboard/state/REFACTOR_TODO2.md
+- **Reference:** skills/rust-best-practices/SKILL.md (Chapter 4 - Error Handling)
 
 ---
 
@@ -219,7 +262,35 @@ pub fn load(&self) -> Result<AllMetrics, MetricsError>
 
 ---
 
-#### [CONV-003] ✅ ANALYZED - Test Organization
+#### [CONV-003] 🆕 NEW - Formatting Issues
+
+- **Category:** Convention
+- **Severity:** Low
+- **Effort:** S
+- **Risk:** Low
+- **Priority Score:** 5/22
+- **Files:** 
+  - `src/commands/skills/list.rs` - import ordering
+  - `src/commands/skills/mod.rs` - module ordering
+- **Description:** Two files don't pass cargo fmt --check
+- **Evidence:**
+```
+Diff in /workspace/src/commands/skills/list.rs:4:
+- use crate::skills::{
+-     skills_sh_search, NPX_NOT_FOUND_ERROR, SkillsManager,
+- };
++ use crate::skills::{skills_sh_search, SkillsManager, NPX_NOT_FOUND_ERROR};
+
+Diff in /workspace/src/commands/skills/mod.rs:1:
+-pub mod types;
+ pub mod list;
++pub mod types;
+```
+- **Status:** 🆕 NEW
+
+---
+
+#### [CONV-004] ✅ ANALYZED - Test Organization
 
 - **Category:** Convention
 - **Severity:** Low
@@ -229,19 +300,42 @@ pub fn load(&self) -> Result<AllMetrics, MetricsError>
 - **Files:** Throughout codebase
 - **Description:** Tests are mixed between inline (#[cfg(test)] modules) and external files in tests/ directory. No consistent pattern.
 - **Status:** ✅ ANALYZED
-- **Analysis Result (commit 846206f):** Tests already well-organized - inline tests are appropriate for unit tests and integration tests within modules
+- **Analysis Result:** Tests already well-organized - inline tests are appropriate for unit tests and integration tests within modules
+
+---
+
+## Skills Compliance Audit
+
+### Rust Best Practices Compliance
+
+| Practice | Status | Notes |
+|----------|--------|-------|
+| Borrowing vs Cloning | ✅ PASS | Code uses references appropriately |
+| Error Handling with Result | ⚠️ PARTIAL | CONV-001 - inconsistent patterns |
+| Clippy Lints | ✅ PASS | Only minor unused import warnings |
+| Test Organization | ✅ PASS | Well-organized |
+| Documentation | ✅ PASS | Good doc comments |
+| Performance | ✅ PASS | No obvious performance issues |
+
+### Findings Against Skills
+
+1. **Error Handling** (skills/rust-best-practices/Chapter 4): Multiple error patterns in use - should standardize on thiserror for library code
+2. **Code Organization** (skills/rust-best-practices/Chapter 1): Large files (5000+ lines) violate single responsibility - need to split
+3. **Testing** (skills/rust-best-practices/Chapter 5): 24 failing tests need investigation
 
 ---
 
 ## Recommendations Roadmap
 
 ### Immediate (This Sprint)
-- [ ] Investigate and fix 24 failing tests (CRIT-001) - 4+ hours
-- [ ] Continue god module refactoring (MED-001 to MED-004) - ongoing
+- [ ] Fix 24 failing tests (CRIT-001) - 4+ hours
+- [ ] Remove hardcoded API key in test (CRIT-002) - 15 minutes
+- [ ] Fix clippy warnings (LOW-002) - 15 minutes
+- [ ] Fix formatting issues (CONV-003) - 15 minutes
 
 ### Short-term (Next 2-4 weeks)
 - [ ] Standardize error handling approach (CONV-001) - 2-4 hours
-- [ ] Address test organization inconsistencies (CONV-003) - 1-2 hours
+- [ ] Continue god module refactoring (MED-001 to MED-004) - ongoing
 
 ### Long-term (Backlog)
 - [ ] Split docker/run/run.rs into smaller modules (MED-001) - 8+ hours
@@ -254,15 +348,16 @@ pub fn load(&self) -> Result<AllMetrics, MetricsError>
 ### Files Scanned
 - src/lib.rs, src/main.rs, src/logging.rs
 - src/cli/mod.rs (2146 lines)
-- src/commands/*.rs (build.rs, list.rs, logs.rs, metrics.rs, skills.rs, validate.rs)
+- src/commands/*.rs (build.rs, list.rs, logs.rs, metrics.rs, skills/mod.rs, validate.rs)
 - src/config/*.rs (mod.rs, env.rs, env_ext.rs)
-- src/discord/*.rs (api.rs, config.rs, conversation.rs, gateway.rs, listener.rs, mod.rs, out.rs, security.rs)
-- src/docker/*.rs (build.rs, client.rs, mod.rs, run.rs, skills.rs)
-- src/docker/run/*.rs (run.rs, streams.rs, types.rs, wait.rs)
+- src/discord/*.rs (api.rs, config.rs, conversation.rs, gateway.rs, listener.rs, mod.rs, outbox.rs, security.rs, llm/*.rs, tools/*.rs)
+- src/docker/*.rs (build.rs, client.rs, mod.rs, run/run.rs, skills.rs)
 - src/logger/*.rs (file.rs, mod.rs, terminal.rs)
 - src/metrics/*.rs (collector.rs, mod.rs, store.rs)
 - src/scheduler/mod.rs (1293 lines)
-- src/skills/*.rs (error.rs, lockfile.rs, metadata.rs, mod.rs)
+- src/skills/*.rs (error.rs, lockfile.rs, metadata.rs, mod.rs, validate.rs)
+- src/traits/mod.rs
+- src/ui/*.rs
 
 ### Skipped Files
 - None - full scan completed
@@ -273,6 +368,7 @@ Date            | Total | Crit | High | Med | Low | Conv
 ----------------|-------|------|------|-----|-----|-----
 2026-02-28T14:02| 10    | 1    | 0    | 4   | 2   | 3
 2026-02-28T16:01| 10    | 1    | 0    | 4   | 1   | 3
-2026-02-28T18:00| 9     | 1    | 0    | 4   | 1   | 3  ← Current
+2026-02-28T18:00| 9     | 1    | 0    | 4   | 1   | 3
+2026-02-28T22:01| 11    | 2    | 0    | 4   | 2   | 3  ← Current
 ```
-Health score stable at 5/10. Test failures decreased from 25 to 24.
+Health score stable at 5/10. New issues found: hardcoded API key, clippy warnings, formatting.
