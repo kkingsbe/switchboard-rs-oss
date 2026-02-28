@@ -1,5 +1,6 @@
 pub mod types;
 pub mod list;
+pub mod remove;
 
 pub use types::*;
 
@@ -64,7 +65,7 @@ pub async fn run_skills(args: SkillsCommand, config: &Config) -> ExitCode {
             run_skills_installed(installed_args, config).await
         }
         SkillsSubcommand::Update(update_args) => handle_skills_update(update_args, config).await,
-        SkillsSubcommand::Remove(remove_args) => run_skills_remove(remove_args, config).await,
+        SkillsSubcommand::Remove(remove_args) => remove::run_skills_remove(remove_args, config).await,
     }
 }
 
@@ -813,91 +814,6 @@ fn update_skill_timestamp(
 
     // Write the updated lockfile
     write_lockfile(&lockfile, skills_dir)
-}
-
-/// Run the `switchboard skills remove` command
-///
-/// This command removes a skill from either the project or global skills directory.
-/// It shows a warning if the skill is still referenced by agents in the configuration
-/// and requires confirmation unless the --yes flag is used.
-async fn run_skills_remove(args: SkillsRemove, config: &Config) -> ExitCode {
-    // Find the skill directory
-    let skill_path = match find_skill_directory(&args.skill_name, args.global) {
-        Ok(path) => path,
-        Err(e) => {
-            eprintln!("Error: {}", e);
-            return ExitCode::Error;
-        }
-    };
-
-    // Get list of agents that reference this skill
-    let referenced_agents = get_agents_using_skill(&args.skill_name, config);
-
-    // Show warning if skill is referenced in config
-    if !referenced_agents.is_empty() {
-        let agents_str = referenced_agents.join(", ");
-        eprintln!(
-            "Warning: Skill '{}' is still referenced in switchboard.toml by: {}",
-            args.skill_name, agents_str
-        );
-    }
-
-    // Prompt for confirmation unless --yes flag is set
-    if !args.yes {
-        let prompt = format!("Remove skill '{}'? [y/N]", args.skill_name);
-        if !confirm(&prompt) {
-            println!("Operation cancelled.");
-            return ExitCode::Success;
-        }
-    }
-
-    // Remove the skill directory
-    match remove_skill_directory(&skill_path) {
-        Ok(()) => {
-            // Remove skill from lockfile
-            let skills_manager = SkillsManager::new(None);
-            let skills_dir = if args.global {
-                skills_manager.global_skills_dir.clone()
-            } else {
-                skills_manager.skills_dir.clone()
-            };
-
-            if let Err(e) = remove_skill_from_lockfile(&skills_dir, &args.skill_name) {
-                eprintln!("Warning: Failed to update lockfile: {}", e);
-            }
-
-            let scope = if args.global { "global " } else { "" };
-            println!("Removed skill '{}' ({})", args.skill_name, scope.trim());
-            ExitCode::Success
-        }
-        Err(e) => {
-            eprintln!("Error: {}", e);
-            ExitCode::Error
-        }
-    }
-}
-
-/// Prompts the user for confirmation and returns their choice.
-///
-/// # Arguments
-///
-/// * `prompt` - The confirmation prompt to display
-///
-/// # Returns
-///
-/// * `true` - If the user confirms with 'y' or 'Y'
-/// * `false` - If the user declines with 'n', 'N', or presses Enter (default)
-fn confirm(prompt: &str) -> bool {
-    print!("{} ", prompt);
-    io::stdout().flush().unwrap();
-
-    let mut input = String::new();
-    io::stdin()
-        .read_line(&mut input)
-        .expect("Failed to read input");
-
-    let input = input.trim().to_lowercase();
-    input == "y"
 }
 
 #[cfg(test)]

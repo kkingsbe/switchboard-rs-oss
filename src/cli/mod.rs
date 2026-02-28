@@ -553,7 +553,7 @@ pub async fn run() -> Result<ColorMode, Box<dyn std::error::Error>> {
         Commands::Metrics(args) => run_metrics(args, cli.config),
         Commands::Down(args) => run_down(args, cli.config).await,
         Commands::Validate(args) => run_validate(args, cli.config).await,
-        Commands::Skills(args) => run_skills(args, cli.config).await,
+        Commands::Skills(args) => commands::skills::run_skills(args, cli.config).await,
         Commands::Status => run_status(cli.config),
     };
 
@@ -1912,42 +1912,6 @@ pub async fn run_validate(
     use std::path::PathBuf;
     let config_path = _config.unwrap_or_else(|| "./switchboard.toml".to_string());
     _args.run(PathBuf::from(config_path)).await
-}
-
-/// Handler for the 'skills' command
-pub async fn run_skills(
-    args: SkillsCommand,
-    config_path: Option<String>,
-) -> Result<(), Box<dyn std::error::Error>> {
-    use std::path::Path;
-    let config_path_str = config_path.unwrap_or_else(|| "./switchboard.toml".to_string());
-    let path = Path::new(&config_path_str);
-
-    let config = match Config::from_toml(path) {
-        Ok(config) => config,
-        Err(e @ ConfigError::ParseError { .. }) => {
-            eprintln!("✗ Configuration parsing failed: {}", e);
-            return Err(e.into());
-        }
-        Err(e @ ConfigError::ValidationError { .. }) => {
-            eprintln!("✗ Configuration validation failed");
-            eprintln!("Error: {}", e);
-            return Err(e.into());
-        }
-        Err(ConfigError::PromptFileNotFound {
-            agent_name: _,
-            prompt_file,
-        }) => {
-            eprintln!("✗ Prompt file not found: {}", prompt_file);
-            return Err(format!("Prompt file not found: {}", prompt_file).into());
-        }
-    };
-
-    let exit_code = crate::commands::skills::run_skills(args, &config).await;
-    match exit_code {
-        crate::commands::skills::ExitCode::Success => Ok(()),
-        crate::commands::skills::ExitCode::Error => Err("Skills command failed".into()),
-    }
 }
 
 /// Handler for the 'status' command - Check scheduler health and status

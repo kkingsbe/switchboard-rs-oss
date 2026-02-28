@@ -4,3 +4,4 @@
 //! Each command is in its own file for better organization and maintainability.
 
 pub mod list;
+pub mod skills;
