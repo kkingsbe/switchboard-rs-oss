@@ -207,12 +207,6 @@ fn is_process_running_with_executor(pid: u32, executor: Arc<dyn ProcessExecutorT
 }
 
 /// Create a default process executor
-///
-/// This function provides a default RealProcessExecutor for use in CLI commands.
-/// It can be replaced with a mock implementation for testing.
-fn default_executor() -> Arc<dyn ProcessExecutorTrait> {
-    Arc::new(RealProcessExecutor::new())
-}
 
 /// Check for and clean up stale PID files
 ///
