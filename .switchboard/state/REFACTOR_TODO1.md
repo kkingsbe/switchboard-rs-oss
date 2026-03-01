@@ -1,60 +1,74 @@
 # REFACTOR_TODO1 - Refactor Agent 1
 
-> Sprint: Improvement Sprint 3
-> Focus Area: Code Quality (Clippy fixes)
+> Sprint: Improvement Sprint 4
+> Focus Area: Clippy Lint Fixes - CLI Module
 > Last Updated: 2026-03-01
-> Source: .switchboard/state/IMPROVEMENT_BACKLOG.md findings
+> Source: .switchboard/state/IMPROVEMENT_BACKLOG.md
 
 ## Orientation
 
 Before starting any tasks, read these files to understand the current state:
-- Cargo.toml (project manifest)
-- src/cli/mod.rs (line 16 - unused import)
-- src/commands/skills/mod.rs (line 14 - unused imports)
+- Cargo.toml
+- src/cli/mod.rs (lines 20-30 for unused imports)
+- src/cli/commands/up.rs (line 213 for unused function)
 
 ## Tasks
 
-- [ ] [FIND-002] Remove unused import `list_agents` from src/cli/mod.rs
+- [ ] [FIND-002A] Remove unused import `init_logging` from src/cli/mod.rs
   - 📚 SKILLS: `./skills/rust-best-practices/SKILL.md`
-  - 🎯 Goal: Remove the unused `list_agents` import from line 16 of src/cli/mod.rs so clippy no longer reports this error
+  - 🎯 Goal: Remove `use crate::logging::init_logging;` from line 21 in src/cli/mod.rs
   - 📂 Files: src/cli/mod.rs
-  - 🧭 Context: Clippy is failing the build with -D warnings. The import `list_agents` is imported but not used. Evidence: `error: unused import: 'list_agents' --> src/cli/mod.rs:16:23`
-  - ⚡ Pre-check: Run `cargo clippy -- -D warnings` and confirm this specific error exists
+  - 🧭 Context: This import is unused - the function is called elsewhere. Evidence: `use crate::logging::init_logging;` at line 21
+  - ⚡ Pre-check: cargo build --lib && cargo clippy --all-targets -- -D warnings
   - ✅ Acceptance:
     - [ ] Change is complete
-    - [ ] Build passes (`cargo build`)
-    - [ ] Clippy passes (`cargo clippy -- -D warnings`)
-    - [ ] No behavioral change (same inputs produce same outputs)
-  - 🔒 Risk: Medium
-  - ↩️ Revert: `git revert` safe (independent task)
-
-- [ ] [FIND-002] Remove unused imports from src/commands/skills/mod.rs
-  - 📚 SKILLS: `./skills/rust-best-practices/SKILL.md`
-  - 🎯 Goal: Remove unused imports (`LockfileStruct`, `SkillLockEntry`, `find_skill_directory`, etc.) from src/commands/skills/mod.rs line 14
-  - 📂 Files: src/commands/skills/mod.rs
-  - 🧭 Context: Clippy reports unused imports in this file. Evidence: `error: unused imports: 'LockfileStruct', 'SkillLockEntry', 'find_skill_directory', ... --> src/commands/skills/mod.rs:14:48`
-  - ⚡ Pre-check: Run `cargo clippy -- -D warnings` and confirm these specific errors exist
-  - ✅ Acceptance:
-    - [ ] Change is complete
-    - [ ] Build passes (`cargo build`)
-    - [ ] Clippy passes (`cargo clippy -- -D warnings`)
+    - [ ] Build passes (`cargo build --lib`)
+    - [ ] Clippy passes (`cargo clippy --all-targets -- -D warnings`)
     - [ ] No behavioral change
-  - 🔒 Risk: Medium
+  - 🔒 Risk: Safe
+  - ↩️ Revert: `git revert` safe (independent)
+
+- [ ] [FIND-002B] Remove unused import `Scheduler` from src/cli/mod.rs
+  - 📚 SKILLS: `./skills/rust-best-practices/SKILL.md`
+  - 🎯 Goal: Remove `use crate::scheduler::Scheduler;` from line 23 in src/cli/mod.rs
+  - 📂 Files: src/cli/mod.rs
+  - 🧭 Context: Evidence: `use crate::scheduler::Scheduler` at line 23
+  - ⚡ Pre-check: cargo build --lib && cargo clippy --all-targets -- -D warnings
+  - ✅ Acceptance:
+    - [ ] Change is complete
+    - [ ] Build passes
+    - [ ] Clippy passes
+    - [ ] No behavioral change
+  - 🔒 Risk: Safe
   - ↩️ Revert: `git revert` safe
 
-- [ ] [FIND-006] Run cargo fmt to fix formatting inconsistencies
+- [ ] [FIND-002C] Remove unused import `RealProcessExecutor` from src/cli/mod.rs
   - 📚 SKILLS: `./skills/rust-best-practices/SKILL.md`
-  - 🎯 Goal: Run `cargo fmt` to fix formatting inconsistencies in the codebase
-  - 📂 Files: src/commands/skills/installed.rs, src/cli/process.rs, and any others
-  - 🧭 Context: Format check is failing. Evidence shows inconsistencies in import ordering and line wrapping in skills/installed.rs and cli/process.rs
-  - ⚡ Pre-check: Run `cargo fmt -- --check` and confirm formatting issues exist
+  - 🎯 Goal: Remove `RealProcessExecutor` from the use statement at line 25 in src/cli/mod.rs
+  - 📂 Files: src/cli/mod.rs
+  - 🧭 Context: Evidence: `RealProcessExecutor` partial import unused at line 25
+  - ⚡ Pre-check: cargo build --lib && cargo clippy --all-targets -- -D warnings
+  - ✅ Acceptance:
+    - complete
+    - [ ] Change is [ ] Build passes
+    - [ ] Clippy passes
+    - [ ] No behavioral change
+  - 🔒 Risk: Safe
+  - ↩️ Revert: `git revert` safe
+
+- [ ] [FIND-002D] Remove unused function `default_executor` from src/cli/commands/up.rs
+  - 📚 SKILLS: `./skills/rust-best-practices/SKILL.md`
+  - 🎯 Goal: Remove the unused `default_executor` function at lines 213-215 in src/cli/commands/up.rs
+  - 📂 Files: src/cli/commands/up.rs
+  - 🧭 Context: Evidence: `fn default_executor() -> Arc<dyn ProcessExecutorTrait> { Arc::new(RealProcessExecutor::new()) }` at lines 213-215 is never used
+  - ⚡ Pre-check: cargo build --lib && cargo clippy --all-targets -- -D warnings
   - ✅ Acceptance:
     - [ ] Change is complete
-    - [ ] Build passes (`cargo build`)
-    - [ ] Format passes (`cargo fmt -- --check`)
+    - [ ] Build passes
+    - [ ] Clippy passes
     - [ ] No behavioral change
-  - 🔒 Risk: Low
-  - ↩️ Revert: `git revert` safe (formatting only)
+  - 🔒 Risk: Safe
+  - ↩️ Revert: `git revert` safe
 
 ## AGENT QA
 

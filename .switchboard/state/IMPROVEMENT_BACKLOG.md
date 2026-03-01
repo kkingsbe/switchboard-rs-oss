@@ -68,11 +68,157 @@
     --> src/cli/commands/up.rs:213:4
   ```
 - **Suggested Fix:** Remove all unused imports from cli/mod.rs, cli/commands/up.rs, commands/skills/install.rs, and commands/skills/mod.rs. Also remove the unused `default_executor` function or mark it with `#[allow(dead_code)]`.
+- **Status:** SCHEDULED
+  - **Scheduled:** Improvement Sprint 4, assigned to .switchboard/state/REFACTOR_TODO1.md (FIND-002A, 002B, 002C, 002D)
+  - **Scheduled:** Improvement Sprint 4, assigned to .switchboard/state/REFACTOR_TODO2.md (FIND-002E, 002F)
+
+---
+
+### FIND-002A — Remove unused imports from cli/mod.rs
+
+- **Category:** Code Quality / Skill Violation
+- **Severity:** Critical
+- **Effort:** S
+- **Risk:** Medium
+- **Priority Score:** 14/22
+- **Skill:** skills/rust-best-practices/references/chapter_02.md §2.2
+- **Files:** src/cli/mod.rs (lines 21-46)
+- **Description:** Remove unused imports: `crate::logging::init_logging`, `crate::scheduler::Scheduler`, `RealProcessExecutor`.
+- **Status:** SCHEDULED
+  - **Scheduled:** Improvement Sprint 4, assigned to .switchboard/state/REFACTOR_TODO1.md
+
+---
+
+### FIND-002B — Remove unused imports from cli/commands/up.rs
+
+- **Category:** Code Quality / Skill Violation
+- **Severity:** Critical
+- **Effort:** S
+- **Risk:** Medium
+- **Priority Score:** 14/22
+- **Skill:** skills/rust-best-practices/references/chapter_02.md §2.2
+- **Files:** src/cli/commands/up.rs (lines 10-24, 213)
+- **Description:** Remove unused function `default_executor` or mark with `#[allow(dead_code)]`.
+- **Status:** SCHEDULED
+  - **Scheduled:** Improvement Sprint 4, assigned to .switchboard/state/REFACTOR_TODO1.md
+
+---
+
+### FIND-002C — Remove unused imports from commands/skills/install.rs
+
+- **Category:** Code Quality / Skill Violation
+- **Severity:** Critical
+- **Effort:** S
+- **Risk:** Medium
+- **Priority Score:** 14/22
+- **Skill:** skills/rust-best-practices/references/chapter_02.md §2.2
+- **Files:** src/commands/skills/install.rs (lines 4-11)
+- **Description:** Remove unused imports: `LockfileStruct`, `SkillLockEntry`, `SkillMetadata`.
+- **Status:** SCHEDULED
+  - **Scheduled:** Improvement Sprint 4, assigned to .switchboard/state/REFACTOR_TODO1.md
+
+---
+
+### FIND-002D — Remove unused import from commands/skills/mod.rs
+
+- **Category:** Code Quality / Skill Violation
+- **Severity:** Critical
+- **Effort:** S
+- **Risk:** Medium
+- **Priority Score:** 14/22
+- **Skill:** skills/rust-best-practices/references/chapter_02.md §2.2
+- **Files:** src/commands/skills/mod.rs (line 16)
+- **Description:** Remove unused import: `crate::skills::SkillMetadata`.
+- **Status:** SCHEDULED
+  - **Scheduled:** Improvement Sprint 4, assigned to .switchboard/state/REFACTOR_TODO1.md
+
+---
+
+### FIND-002E — Verify clippy passes with -D warnings (cli module)
+
+- **Category:** Code Quality / Skill Violation
+- **Severity:** Critical
+- **Effort:** S
+- **Risk:** Medium
+- **Priority Score:** 14/22
+- **Skill:** skills/rust-best-practices/references/chapter_02.md §2.2
+- **Files:** src/cli/mod.rs, src/cli/commands/up.rs
+- **Description:** Run `cargo clippy -- -D warnings` and verify cli module passes.
+- **Status:** SCHEDULED
+  - **Scheduled:** Improvement Sprint 4, assigned to .switchboard/state/REFACTOR_TODO2.md
+
+---
+
+### FIND-002F — Verify clippy passes with -D warnings (commands module)
+
+- **Category:** Code Quality / Skill Violation
+- **Severity:** Critical
+- **Effort:** S
+- **Risk:** Medium
+- **Priority Score:** 14/22
+- **Skill:** skills/rust-best-practices/references/chapter_02.md §2.2
+- **Files:** src/commands/skills/install.rs, src/commands/skills/mod.rs
+- **Description:** Run `cargo clippy -- -D warnings` and verify commands module passes.
+- **Status:** SCHEDULED
+  - **Scheduled:** Improvement Sprint 4, assigned to .switchboard/state/REFACTOR_TODO2.md
+
+---
+
+---
+
+### FIND-003A — Extract docker/run/streams.rs (RESOLVED)
+
+- **Category:** Complexity
+- **Severity:** High
+- **Effort:** S
+- **Risk:** Medium
+- **Priority Score:** 12/22
+- **Skill:** skills/rust-best-practices/SKILL.md
+- **Files:** src/docker/run/run.rs (to be extracted to src/docker/run/streams.rs)
+- **Description:** Extract stream handling logic from the God Module docker/run/run.rs (5115 lines). Move stream handling functions to a dedicated streams.rs module.
+- **Evidence:** Parent FIND-003 identifies 5115 lines in run.rs containing container execution, stream handling, skill installation, metrics, and error handling all in one module.
+- **Suggested Fix:** Create src/docker/run/streams.rs and extract stream-related functions (stdin/stdout/stderr handling, tty mode, streaming logic).
+- **Status:** RESOLVED
+  - **Resolved:** 2026-03-01
+  - **Resolution:** Already extracted to streams.rs
+
+---
+
+### FIND-003B — Extract docker/run/wait/timeout.rs (RESOLVED)
+
+- **Category:** Complexity
+- **Severity:** High
+- **Effort:** S
+- **Risk:** Medium
+- **Priority Score:** 12/22
+- **Skill:** skills/rust-best-practices/SKILL.md
+- **Files:** src/docker/run/run.rs (to be extracted to src/docker/run/wait/timeout.rs)
+- **Description:** Extract timeout logic from the God Module docker/run/run.rs (5115 lines). Move container wait/timeout handling to a dedicated module.
+- **Evidence:** Parent FIND-003 identifies 5115 lines in run.rs containing container execution, stream handling, skill installation, metrics, and error handling all in one module.
+- **Suggested Fix:** Create src/docker/run/wait/timeout.rs and extract timeout-related functions (container wait, timeout handling, graceful shutdown).
+- **Status:** RESOLVED
+  - **Resolved:** 2026-03-01
+  - **Resolution:** Already extracted to wait/timeout.rs
+
+---
+
+### FIND-003C — Extract docker/run/types.rs
+
+- **Category:** Complexity
+- **Severity:** High
+- **Effort:** M
+- **Risk:** Medium
+- **Priority Score:** 12/22
+- **Skill:** skills/rust-best-practices/SKILL.md
+- **Files:** src/docker/run/run.rs (to be extracted to src/docker/run/types.rs)
+- **Description:** Extract type definitions from the God Module docker/run/run.rs (5115 lines). Move custom types, enums, and structs to a dedicated types module.
+- **Evidence:** Parent FIND-003 identifies 5115 lines in run.rs containing container execution, stream handling, skill installation, metrics, and error handling all in one module.
+- **Suggested Fix:** Create src/docker/run/types.rs and extract type definitions (RunContext, execution types, return types).
 - **Status:** OPEN
 
 ---
 
-### FIND-003 [🔄 RECURRING (×2)] — God Module: docker/run/run.rs
+### FIND-003 [🔄 RECURRING (×2)] — God Module: docker/run/run.rs (DECOMPOSED)
 
 - **Category:** Complexity
 - **Severity:** High
@@ -86,12 +232,61 @@
   ```
   5115 src/docker/run/run.rs
   ```
-- **Suggested Fix:** Extract into separate modules: container_execution.rs, skill_installation.rs, metrics_collection.rs, error_handling.rs. Consider creating a RunContext struct to encapsulate the execution state.
+- **Suggested Fix:** Split into: streams.rs (S), wait/timeout.rs (S), types.rs (M). See FIND-003A, FIND-003B, FIND-003C.
+- **Status:** DECOMPOSED
+  - **Decomposed into:** FIND-003A, FIND-003B, FIND-003C
+
+---
+
+### FIND-004A — Extract config/validation.rs
+
+- **Category:** Complexity
+- **Severity:** High
+- **Effort:** S
+- **Risk:** Medium
+- **Priority Score:** 12/22
+- **Skill:** skills/rust-best-practices/SKILL.md
+- **Files:** src/config/mod.rs (to be extracted to src/config/validation.rs)
+- **Description:** Extract validation logic from the God Module config/mod.rs (3512 lines). Move validation functions to a dedicated validation.rs module.
+- **Evidence:** Parent FIND-004 identifies 3512 lines in config/mod.rs containing Config, Agent, Settings structs with extensive validation logic.
+- **Suggested Fix:** Create src/config/validation.rs and extract validation functions (config validation, agent validation, settings validation).
 - **Status:** OPEN
 
 ---
 
-### FIND-004 [🔄 RECURRING (×2)] — God Module: config/mod.rs
+### FIND-004B — Extract config/parsing.rs
+
+- **Category:** Complexity
+- **Severity:** High
+- **Effort:** M
+- **Risk:** Medium
+- **Priority Score:** 12/22
+- **Skill:** skills/rust-best-practices/SKILL.md
+- **Files:** src/config/mod.rs (to be extracted to src/config/parsing.rs)
+- **Description:** Extract parsing logic from the God Module config/mod.rs (3512 lines). Move TOML parsing and deserialization to a dedicated parsing.rs module.
+- **Evidence:** Parent FIND-004 identifies 3512 lines in config/mod.rs containing Config, Agent, Settings structs with extensive validation logic.
+- **Suggested Fix:** Create src/config/parsing.rs and extract parsing functions (TOML parsing, deserialization, from_str implementations).
+- **Status:** OPEN
+
+---
+
+### FIND-004C — Extract config/structs.rs
+
+- **Category:** Complexity
+- **Severity:** High
+- **Effort:** S
+- **Risk:** Medium
+- **Priority Score:** 12/22
+- **Skill:** skills/rust-best-practices/SKILL.md
+- **Files:** src/config/mod.rs (to be extracted to src/config/structs.rs)
+- **Description:** Extract struct definitions from the God Module config/mod.rs (3512 lines). Move Config, Agent, Settings structs to a dedicated structs.rs module.
+- **Evidence:** Parent FIND-004 identifies 3512 lines in config/mod.rs containing Config, Agent, Settings structs with extensive validation logic.
+- **Suggested Fix:** Create src/config/structs.rs and extract struct definitions (Config, Agent, Settings, related enums).
+- **Status:** OPEN
+
+---
+
+### FIND-004 [🔄 RECURRING (×2)] — God Module: config/mod.rs (DECOMPOSED)
 
 - **Category:** Complexity
 - **Severity:** High
@@ -105,8 +300,9 @@
   ```
   3512 src/config/mod.rs
   ```
-- **Suggested Fix:** Split into: config/structs.rs (types), config/validation.rs (validation functions), config/parsing.rs (TOML parsing), config/mod.rs (re-exports and thin orchestration layer).
-- **Status:** OPEN
+- **Suggested Fix:** Split into: structs.rs (S), validation.rs (S), parsing.rs (M). See FIND-004A, FIND-004B, FIND-004C.
+- **Status:** DECOMPOSED
+  - **Decomposed into:** FIND-004A, FIND-004B, FIND-004C
 
 ---
 
@@ -133,7 +329,53 @@
   let sigterm = signal(SignalKind::terminate()).expect("Failed to setup SIGTERM handler");
   ```
 - **Suggested Fix:** For scheduler initialization, consider returning Result from new() or using unwrap_or_else with proper error logging. For parse operations, use proper error mapping. For signal handler, use Result propagation.
-- **Status:** OPEN
+- **Status:** SCHEDULED
+  - **Scheduled:** Improvement Sprint 4, assigned to .switchboard/state/REFACTOR_TODO2.md (FIND-005A, 005B, 005C)
+
+---
+
+### FIND-005A — Refactor scheduler initialization (src/scheduler/mod.rs)
+
+- **Category:** Error Handling / Skill Violation
+- **Severity:** High
+- **Effort:** M
+- **Risk:** Medium
+- **Priority Score:** 11/22
+- **Skill:** skills/rust-best-practices/references/chapter_04.md §4.2, skills/rust-engineer/SKILL.md
+- **Files:** src/scheduler/mod.rs (line 1291)
+- **Description:** Refactor `Self::new_sync(None, None, None).expect("Failed to create default Scheduler")` to use proper error handling.
+- **Status:** SCHEDULED
+  - **Scheduled:** Improvement Sprint 4, assigned to .switchboard/state/REFACTOR_TODO2.md
+
+---
+
+### FIND-005B — Refactor socket path parsing (src/docker/client.rs)
+
+- **Category:** Error Handling / Skill Violation
+- **Severity:** High
+- **Effort:** M
+- **Risk:** Medium
+- **Priority Score:** 11/22
+- **Skill:** skills/rust-best-practices/references/chapter_04.md §4.2, skills/rust-engineer/SKILL.md
+- **Files:** src/docker/client.rs (lines 115-127)
+- **Description:** Refactor `.strip_prefix("unix://").expect(...)` to use proper error mapping.
+- **Status:** SCHEDULED
+  - **Scheduled:** Improvement Sprint 4, assigned to .switchboard/state/REFACTOR_TODO2.md
+
+---
+
+### FIND-005C — Refactor signal handler setup (src/commands/logs.rs)
+
+- **Category:** Error Handling / Skill Violation
+- **Severity:** High
+- **Effort:** M
+- **Risk:** Medium
+- **Priority Score:** 11/22
+- **Skill:** skills/rust-best-practices/references/chapter_04.md §4.2, skills/rust-engineer/SKILL.md
+- **Files:** src/commands/logs.rs (line 306)
+- **Description:** Refactor `signal(SignalKind::terminate()).expect("Failed to setup SIGTERM handler")` to use Result propagation.
+- **Status:** SCHEDULED
+  - **Scheduled:** Improvement Sprint 4, assigned to .switchboard/state/REFACTOR_TODO2.md
 
 ---
 

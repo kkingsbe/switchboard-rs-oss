@@ -13,7 +13,6 @@ pub use types::*;
 
 use crate::commands::skills::install::run_skills_install;
 use crate::config::Config;
-use crate::skills::SkillMetadata;
 
 /// Run the skills command based on the provided subcommand.
 ///
@@ -74,6 +73,7 @@ pub async fn run_skills(args: SkillsCommand, config: &Config) -> ExitCode {
 mod tests {
     use super::*;
     use crate::config::Agent;
+    use crate::skills::SkillMetadata;
     use clap::Parser;
 
     #[test]

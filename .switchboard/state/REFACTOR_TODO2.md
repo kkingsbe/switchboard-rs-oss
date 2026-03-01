@@ -1,36 +1,90 @@
 # REFACTOR_TODO2 - Refactor Agent 2
 
-> Sprint: Improvement Sprint 3
-> Focus Area: Complexity (Large CLI Module)
+> Sprint: Improvement Sprint 4
+> Focus Area: Error Handling & Config Refactoring
 > Last Updated: 2026-03-01
-> Source: .switchboard/state/IMPROVEMENT_BACKLOG.md findings
+> Source: .switchboard/state/IMPROVEMENT_BACKLOG.md
 
 ## Orientation
 
 Before starting any tasks, read these files to understand the current state:
-- Cargo.toml (project manifest)
-- src/cli/mod.rs (2082 lines - the main CLI module)
-- src/cli/commands/ (sub-commands directory)
+- Cargo.toml
+- src/scheduler/mod.rs (line 1291)
+- src/docker/client.rs (lines 115-127)
+- src/commands/logs.rs (line 306)
+- src/config/mod.rs (lines 1235-1680 for validation functions)
 
 ## Tasks
 
-- [ ] [FIND-007] Analyze and split large CLI module
+- [ ] [FIND-002E] Remove unused imports from src/commands/skills/install.rs
   - 📚 SKILLS: `./skills/rust-best-practices/SKILL.md`
-  - 🎯 Goal: Reduce the size of src/cli/mod.rs (currently 2082 lines) by extracting logical units into separate modules. Focus on identifying cohesive groups of code that can be extracted.
-  - 📂 Files: src/cli/mod.rs, potentially new files in src/cli/
-  - 🧭 Context: The CLI module is too large (2082 lines). This makes the code harder to maintain and understand. Extract logical subunits like:
-    - Signal handling (move to cli/signals.rs if not already separate)
-    - Process management (move to cli/process.rs if not already separate)
-    - Command registration/helpers
-  - ⚡ Pre-check: Run `cargo build` and `cargo test` to establish baseline
+  - 🎯 Goal: Remove unused `LockfileStruct`, `SkillLockEntry`, `SkillMetadata` imports from line 4-5
+  - 📂 Files: src/commands/skills/install.rs
+  - 🧭 Context: Evidence: `LockfileStruct, SkillLockEntry, SkillMetadata,` at line 4-5 are unused
+  - ⚡ Pre-check: cargo build --lib && cargo clippy --all-targets -- -D warnings
   - ✅ Acceptance:
-    - [ ] Change is complete - code is reorganized but behavior unchanged
-    - [ ] Build passes (`cargo build`)
-    - [ ] All tests pass (`cargo test`)
-    - [ ] CLI still works - test a few commands like `cargo run -- --help`
+    - [ ] Change is complete
+    - [ ] Build passes
+    - [ ] Clippy passes
     - [ ] No behavioral change
-  - 🔒 Risk: Low (extraction refactor, no behavior change)
-  - ↩️ Revert: `git revert` safe (can revert entire change)
+  - 🔒 Risk: Safe
+  - ↩️ Revert: `git revert` safe
+
+- [ ] [FIND-002F] Remove unused import from src/commands/skills/mod.rs
+  - 📚 SKILLS: `./skills/rust-best-practices/SKILL.md`
+  - 🎯 Goal: Remove unused `crate::skills::SkillMetadata` import from line 16
+  - 📂 Files: src/commands/skills/mod.rs
+  - 🧭 Context: Evidence: `use crate::skills::SkillMetadata;` at line 16 is unused
+  - ⚡ Pre-check: cargo build --lib && cargo clippy --all-targets -- -D warnings
+  - ✅ Acceptance:
+    - [ ] Change is complete
+    - [ ] Build passes
+    - [ ] Clippy passes
+    - [ ] No behavioral change
+  - 🔒 Risk: Safe
+  - ↩️ Revert: `git revert` safe
+
+- [ ] [FIND-005A] Replace .expect() in src/scheduler/mod.rs:1291
+  - 📚 SKILLS: `./skills/rust-engineer/references/error-handling.md`
+  - 🎯 Goal: Replace `.expect("Failed to create default Scheduler")` with proper error handling using `?` or match
+  - 📂 Files: src/scheduler/mod.rs
+  - 🧭 Context: Evidence at line 1291: `Self::new_sync(None, None, None).expect("Failed to create default Scheduler")` - this panics on error
+  - ⚡ Pre-check: cargo build --lib && cargo test
+  - ✅ Acceptance:
+    - [ ] Change is complete
+    - [ ] Build passes
+    - [ ] Tests pass
+    - [ ] No behavioral change for valid inputs
+  - 🔒 Risk: Low
+  - ↩️ Revert: `git revert` safe
+
+- [ ] [FIND-005B] Replace .expect() in src/docker/client.rs:115-116
+  - 📚 SKILLS: `./skills/rust-engineer/references/error-handling.md`
+  - 🎯 Goal: Replace `.expect("socket_path starts with 'unix://' so strip_prefix should succeed")` with proper error handling
+  - 📂 Files: src/docker/client.rs
+  - 🧭 Context: Evidence at lines 115-116: `.strip_prefix("unix://").expect("socket_path starts with 'unix://' so strip_prefix should succeed")` - panics on malformed input
+  - ⚡ Pre-check: cargo build --lib && cargo test
+  - ✅ Acceptance:
+    - [ ] Change is complete
+    - [ ] Build passes
+    - [ ] Tests pass
+    - [ ] No behavioral change for valid inputs
+  - 🔒 Risk: Low
+  - ↩️ Revert: `git revert` safe
+
+- [ ] [FIND-005C] Replace .expect() in src/commands/logs.rs:306
+  - 📚 SKILLS: `./skills/rust-engineer/references/error-handling.md`
+  - 🎯 Goal: Replace `.expect("Failed to setup SIGTERM handler")` with proper error handling
+  - 📂 Files: src/commands/logs.rs
+  - 🧭 Context: Evidence at line 306: `signal(SignalKind::terminate()).expect("Failed to setup SIGTERM handler")` - panics if signal setup fails
+  - ⚡ Pre-check: cargo build --lib && cargo test
+  - ✅ Acceptance:
+    - [ ] Change is complete
+    - [ ] Build passes
+    - [ ] Tests pass
+    - [ ] No behavioral change for valid inputs
+  - 🔒 Risk: Low
+  - ↩️ Revert: `git revert` safe
 
 ## AGENT QA
 

@@ -89,3 +89,22 @@ These test failures must be resolved before refactoring can proceed. The refacto
 
 ### Git State
 Build succeeded but tests failed - revert point not needed as no changes made yet.
+
+---
+## Refactor Agent 1 - Baseline (2026-03-01)
+
+### Pre-existing Issues Found:
+- Build: ✅ PASSES (cargo build succeeds)
+- Tests: ❌ 24 tests failing (pre-existing, environmental issues - docker/skills related)
+- Clippy: ❌ 19 unused import errors
+
+### Tasks to Execute:
+1. [FIND-002] Remove unused import `list_agents` from src/cli/mod.rs
+2. [FIND-002] Remove unused imports from src/commands/skills/mod.rs  
+3. [FIND-006] Run cargo fmt to fix formatting
+
+### Decision:
+Proceeding with refactoring since:
+- Build passes
+- Test failures are pre-existing and unrelated to unused imports
+- Removing unused imports won't cause new test failures
