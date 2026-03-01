@@ -111,9 +111,12 @@ pub async fn connect_to_docker(
     if let Ok(Some(socket_path)) = get_docker_socket_path(Some(executor.clone())).await {
         // Handle unix:// socket paths
         if socket_path.starts_with("unix://") {
-            let path = socket_path
-                .strip_prefix("unix://")
-                .ok_or_else(|| anyhow::anyhow!("socket_path '{}' does not start with 'unix://'", socket_path))?;
+            let path = socket_path.strip_prefix("unix://").ok_or_else(|| {
+                anyhow::anyhow!(
+                    "socket_path '{}' does not start with 'unix://'",
+                    socket_path
+                )
+            })?;
             // Try connecting to the context's socket
             if let Ok(docker) = Docker::connect_with_socket(path, 5, bollard::API_DEFAULT_VERSION) {
                 return Ok(docker);
@@ -122,9 +125,12 @@ pub async fn connect_to_docker(
             // Windows named pipe - only compile on Windows
             #[cfg(target_os = "windows")]
             {
-                let path = socket_path
-                    .strip_prefix("npipe://")
-                    .ok_or_else(|| anyhow::anyhow!("socket_path '{}' does not start with 'npipe://'", socket_path))?;
+                let path = socket_path.strip_prefix("npipe://").ok_or_else(|| {
+                    anyhow::anyhow!(
+                        "socket_path '{}' does not start with 'npipe://'",
+                        socket_path
+                    )
+                })?;
                 if let Ok(docker) = Docker::connect_with_named_pipe_defaults() {
                     return Ok(docker);
                 }

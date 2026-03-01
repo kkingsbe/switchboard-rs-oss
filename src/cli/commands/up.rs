@@ -7,7 +7,11 @@ use crate::docker::{check_docker_available, DockerClient};
 use crate::logging::init_logging;
 use crate::scheduler::Scheduler;
 use crate::scheduler::SchedulerError;
-use crate::traits::{DockerClientTrait, ProcessExecutorTrait, RealProcessExecutor};
+#[allow(unused_imports)]
+use crate::traits::DockerClientTrait;
+
+#[cfg(windows)]
+use crate::traits::{ProcessExecutorTrait, RealProcessExecutor};
 
 #[cfg(feature = "discord")]
 use crate::config::env::resolve_config_value;
@@ -16,14 +20,18 @@ use crate::discord::config::LlmConfig;
 #[cfg(feature = "discord")]
 use tokio::sync::broadcast;
 
+#[allow(unused_imports)]
 use bollard::container::ListContainersOptions;
-use std::collections::HashMap;
+
 use std::fs;
 use std::path::{Path, PathBuf};
+#[allow(unused_imports)]
 use std::sync::Arc;
+#[allow(unused_imports)]
 use tokio::time::Duration;
 
 #[cfg(unix)]
+#[allow(unused_imports)]
 use tokio::signal::unix::{signal, SignalKind};
 
 /// Full Discord configuration including LLM settings
@@ -205,8 +213,6 @@ fn is_process_running_with_executor(pid: u32, executor: Arc<dyn ProcessExecutorT
         }
     }
 }
-
-/// Create a default process executor
 
 /// Check for and clean up stale PID files
 ///

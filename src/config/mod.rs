@@ -3449,64 +3449,63 @@ mod tests {
         // Nested sections should be optional (None when not provided)
         assert!(discord.llm.is_none());
         assert!(discord.conversation.is_none());
+    }
 
-        #[test]
-        #[allow(dead_code)]
-        #[allow(unnameable_test_items)]
-        fn test_switchboard_toml_skills_parsing() {
-            // Test that switchboard.toml loads with skills parsed correctly for agents that have them
-            // This verifies the agent-specific skill parsing works correctly
-            // Note: Not all agents are required to have skills defined - this is backwards compatible
-            let config = Config::from_toml(std::path::Path::new("switchboard.toml"))
-                .expect("Failed to load switchboard.toml");
+    // Moved to module level to be discoverable by cargo test
+    #[test]
+    fn test_switchboard_toml_skills_parsing() {
+        // Test that switchboard.toml loads with skills parsed correctly for agents that have them
+        // This verifies the agent-specific skill parsing works correctly
+        // Note: Not all agents are required to have skills defined - this is backwards compatible
+        let config = Config::from_toml(std::path::Path::new("switchboard.toml"))
+            .expect("Failed to load switchboard.toml");
 
-            // Verify we have 6 agents
-            assert_eq!(
-                config.agents.len(),
-                6,
-                "Expected 6 agents in switchboard.toml"
-            );
+        // Verify we have 6 agents
+        assert_eq!(
+            config.agents.len(),
+            6,
+            "Expected 6 agents in switchboard.toml"
+        );
 
-            // Verify agent gtse-dev-1 has the frontend-design skill
-            let gtse_dev_1 = config
-                .agents
-                .iter()
-                .find(|a| a.name == "gtse-dev-1")
-                .expect("Expected to find gtse-dev-1 agent");
+        // Verify agent gtse-dev-1 has the frontend-design skill
+        let gtse_dev_1 = config
+            .agents
+            .iter()
+            .find(|a| a.name == "gtse-dev-1")
+            .expect("Expected to find gtse-dev-1 agent");
 
-            let skills = &gtse_dev_1.skills;
-            assert!(
-                skills.is_some(),
-                "Agent gtse-dev-1 should have skills field populated"
-            );
+        let skills = &gtse_dev_1.skills;
+        assert!(
+            skills.is_some(),
+            "Agent gtse-dev-1 should have skills field populated"
+        );
 
-            let skills_vec = skills.as_ref().unwrap();
-            assert!(
-                !skills_vec.is_empty(),
-                "Agent gtse-dev-1 should have at least one skill"
-            );
+        let skills_vec = skills.as_ref().unwrap();
+        assert!(
+            !skills_vec.is_empty(),
+            "Agent gtse-dev-1 should have at least one skill"
+        );
 
-            assert!(
-                skills_vec.contains(&"frontend-design".to_string()),
-                "Agent gtse-dev-1 should have 'frontend-design' skill, got: {:?}",
-                skills_vec
-            );
+        assert!(
+            skills_vec.contains(&"frontend-design".to_string()),
+            "Agent gtse-dev-1 should have 'frontend-design' skill, got: {:?}",
+            skills_vec
+        );
 
-            // Verify other agents can have None (backwards compatible - not all agents need skills)
-            // These agents don't have skills defined in switchboard.toml, which is valid
-            for agent in &config.agents {
-                if agent.name != "gtse-dev-1" {
-                    // Agents without skills defined should have skills = None
-                    // This is valid and backwards compatible
-                    assert!(
-                        agent.skills.is_none(),
-                        "Agent {} should have skills = None (not required to have skills)",
-                        agent.name
-                    );
-                }
+        // Verify other agents can have None (backwards compatible - not all agents need skills)
+        // These agents don't have skills defined in switchboard.toml, which is valid
+        for agent in &config.agents {
+            if agent.name != "gtse-dev-1" {
+                // Agents without skills defined should have skills = None
+                // This is valid and backwards compatible
+                assert!(
+                    agent.skills.is_none(),
+                    "Agent {} should have skills = None (not required to have skills)",
+                    agent.name
+                );
             }
-
-            println!("Skills parsing verified: gtse-dev-1 has 'frontend-design', other agents have None (backwards compatible)");
         }
+
+        println!("Skills parsing verified: gtse-dev-1 has 'frontend-design', other agents have None (backwards compatible)");
     }
 }

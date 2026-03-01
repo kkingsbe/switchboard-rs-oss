@@ -20,27 +20,25 @@ use crate::docker::{check_docker_available, run_agent, DockerClient};
 use crate::logger::Logger;
 use crate::metrics::MetricsStore;
 use crate::scheduler::SchedulerError;
-use crate::traits::{DockerClientTrait, ProcessExecutorTrait};
+use crate::traits::DockerClientTrait;
 use crate::ui::ColorMode;
 use bollard::container::{ListContainersOptions, StopContainerOptions};
 use clap::{Parser, Subcommand};
 use std::collections::HashMap;
-use std::env;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
 use tokio::time::{sleep, Duration};
 
 #[cfg(feature = "discord")]
-use crate::config::env::resolve_config_value;
-#[cfg(feature = "discord")]
-use crate::discord::config::LlmConfig;
-#[cfg(feature = "discord")]
+#[allow(unused_imports)]
 use crate::discord::start_discord_listener_with_shutdown;
 #[cfg(feature = "discord")]
+#[allow(unused_imports)]
 use tokio::sync::broadcast;
 
 #[cfg(unix)]
+#[allow(unused_imports)]
 use tokio::signal::unix::{signal, SignalKind};
 
 pub mod commands;

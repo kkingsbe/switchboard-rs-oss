@@ -15,7 +15,7 @@ pub struct AllMetrics {
 }
 
 /// Serialized representation of AgentMetrics for JSON
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
 pub struct AgentMetricsData {
     /// Total number of runs for this agent
     pub total_runs: u64,
@@ -49,6 +49,19 @@ pub struct AgentMetricsData {
     /// Number of runs with at least one skill installation failure
     #[serde(default)]
     pub runs_with_skill_failures: u64,
+    /// ====== NEW METRICS (PRD Section 11.6) ======
+    /// Maximum duration of any single run in milliseconds.
+    /// Used for outlier detection and performance anomaly identification.
+    #[serde(default)]
+    pub max_run_duration_ms: Option<u64>,
+    /// Minimum duration of any single run in milliseconds.
+    /// Provides baseline performance metric for optimization targets.
+    #[serde(default)]
+    pub min_run_duration_ms: Option<u64>,
+    /// Unix timestamp of the most recent successful run.
+    /// Critical for reliability - enables MTTR calculations.
+    #[serde(default)]
+    pub last_success_timestamp: Option<i64>,
 }
 
 /// Serialized representation of a single agent run result for JSON
@@ -421,6 +434,10 @@ mod tests {
             total_skills_failed: 0,
             skills_install_time_seconds: None,
             runs_with_skill_failures: 0,
+            // ====== NEW METRICS (PRD Section 11.6) ======
+            max_run_duration_ms: Some(10000),
+            min_run_duration_ms: Some(10000),
+            last_success_timestamp: Some(1234567890),
         };
 
         let agent2 = AgentMetricsData {
@@ -447,6 +464,10 @@ mod tests {
             total_skills_failed: 0,
             skills_install_time_seconds: None,
             runs_with_skill_failures: 0,
+            // ====== NEW METRICS (PRD Section 11.6) ======
+            max_run_duration_ms: Some(10000),
+            min_run_duration_ms: Some(10000),
+            last_success_timestamp: Some(1234567892),
         };
 
         agents.insert("agent_1".to_string(), agent1);
@@ -594,6 +615,10 @@ mod tests {
             total_skills_failed: 0,
             skills_install_time_seconds: None,
             runs_with_skill_failures: 0,
+            // ====== NEW METRICS (PRD Section 11.6) ======
+            max_run_duration_ms: Some(1000),
+            min_run_duration_ms: Some(1000),
+            last_success_timestamp: Some(9999999999),
         };
 
         new_metrics
@@ -717,6 +742,7 @@ mod tests {
             total_skills_failed: 0,
             skills_install_time_seconds: None,
             runs_with_skill_failures: 0,
+            ..Default::default()
         };
 
         assert_eq!(agent_data.total_runs, 10);
@@ -744,6 +770,7 @@ mod tests {
             total_skills_failed: 0,
             skills_install_time_seconds: None,
             runs_with_skill_failures: 0,
+            ..Default::default()
         };
 
         // Add first run
@@ -812,6 +839,7 @@ mod tests {
             total_skills_failed: 0,
             skills_install_time_seconds: None,
             runs_with_skill_failures: 0,
+            ..Default::default()
         };
 
         let json = serde_json::to_string_pretty(&agent_data).unwrap();
@@ -1076,6 +1104,7 @@ mod tests {
             total_skills_failed: 0,
             skills_install_time_seconds: None,
             runs_with_skill_failures: 0,
+            ..Default::default()
         };
 
         new_metrics

@@ -35,6 +35,12 @@ jobs:
           path: target
           key: ${{ runner.os }}-cargo-build-target-${{ hashFiles('**/Cargo.lock') }}
 
+      - name: Check formatting
+        run: cargo fmt --all -- --check
+
+      - name: Run clippy
+        run: cargo clippy --lib --bins --all-features -- -D warnings
+
       - name: Install nextest
         uses: taiki-e/install-action@nextest
 

@@ -1,21 +1,19 @@
 # IMPROVEMENT_BACKLOG.md
 
-> Last Audit: 2026-03-01T08:10:00Z
-> Commit Audited: f155c04
-> Health Trend: Stable (7 findings - no change from last audit)
+> Last Audit: 2026-03-01T10:10:00Z
+> Commit Audited: $(git rev-parse HEAD 2>/dev/null || echo "unknown")
+> Health Trend: Degrading (critical issues persist)
 
 ## Summary
 | Severity | Count | Change |
 |----------|-------|--------|
 | Critical | 2     | 0     |
-| High     | 3     | -1 (fixed 1 issue)    |
-| Medium   | 2     | 0     |
+| High     | 3     | 0     |
+| Medium   | 3     | +1    |
 | Low      | 0     | 0     |
 
-## Recent Changes Since Last Audit (commit 547110c -> f155c04)
-- f155c04: [FIND-005B] replace .expect() with proper error handling in docker/client.rs
-- b88af29: [FIND-005A] replace .expect() with unwrap_or_else in src/scheduler/mod.rs
-- a1d0f4f: [FIND-002E] remove unused imports from src/commands/skills/install.rs
+## Recent Changes Since Last Audit
+- No commits since last audit (f155c04)
 
 ## Active Findings
 
@@ -39,10 +37,14 @@
   - docker::skills::tests::test_generate_entrypoint_script_skill_not_in_preexisting_list
   - skills::tests::test_check_npx_available_with_mock_error
   - discord::config::tests::test_env_config_missing_openrouter_api_key
-  - And 19 more...
+  - discord::config::tests::test_env_config_success
+  - discord::config::tests::test_load_switchboard_toml_discord_section
+  - docker::run::run::tests::test_entrypoint_script_generation_all_scenarios
+  - And 16 more...
   ```
 - **Suggested Fix:** Analyze each failing test to identify the root cause. Many appear related to changes in skill installation logic and environment variable handling. Run individual tests with `cargo test <test_name>` to debug.
 - **Status:** OPEN
+- **Note:** STILL PRESENT - No fix applied since last audit
 
 ---
 
@@ -70,11 +72,11 @@
     --> src/cli/commands/up.rs:209:1
   error: cannot test inner items
     --> src/config/mod.rs:3453:9
-  error: an async construct yields a type which is itself awaitable
-    --> src/commands/logs.rs:322:25
   ```
-- **Suggested Fix:** Remove all unused imports from cli/mod.rs and cli/commands/up.rs. Fix the empty line after doc comment in up.rs. Fix async_yields_async issue in logs.rs.
-- **Status:** OPEN
+- **Suggested Fix:** Remove all unused imports from cli/mod.rs and cli/commands/up.rs. Fix the empty line after doc comment in up.rs.
+- **Status:** SCHEDULED
+- **Scheduled:** Improvement Sprint 5, assigned to .switchboard/state/REFACTOR_TODO1.md
+- **Note:** Scheduled for Sprint 5
 
 ---
 
@@ -92,10 +94,11 @@
   ```
   Diff in /workspace/src/commands/skills/install.rs:1:
   Diff in /workspace/src/docker/client.rs:111:
-  Diff in /workspace/src/scheduler/mod.rs:1288:
+  Diff in /workspace/src/scheduler/mod.rs:1282:
   ```
 - **Suggested Fix:** Run `cargo fmt` to auto-fix formatting issues.
-- **Status:** OPEN
+- **Status:** SCHEDULED
+- **Scheduled:** Improvement Sprint 5, assigned to .switchboard/state/REFACTOR_TODO2.md
 
 ---
 
@@ -113,7 +116,7 @@
   ```
   5115 src/docker/run/run.rs
   3512 src/config/mod.rs
-  1293 src/scheduler/mod.rs
+  1285 src/scheduler/mod.rs
   1282 src/docker/skills.rs
   1254 src/cli/mod.rs
   ```
@@ -131,15 +134,18 @@
 - **Risk:** Medium
 - **Priority Score:** 20/22
 - **Skill:** skills/rust-best-practices/references/chapter_04.md §4.2
-- **Files:** src/scheduler/mod.rs (line 1291 - now uses unwrap_or_else with panic), src/commands/logs.rs
-- **Description:** Using unwrap()/expect() in production code violates the skill requirement to avoid panic in production. Recent commits have partially addressed this (FIND-005A, FIND-005B).
+- **Files:** src/scheduler/mod.rs, src/docker/run/streams.rs (line 91)
+- **Description:** Using unwrap()/expect() in production code violates the skill requirement to avoid panic in production. Found unwrap() usage in production code:
 - **Evidence:**
   ```rust
-  // src/scheduler/mod.rs:1291 - Now uses unwrap_or_else (improved)
-  Self::new_sync(None, None, None).unwrap_or_else(|e| panic!("Failed to create default Scheduler: {}", e))
+  // src/docker/run/streams.rs:91
+  if let Err(e) = logger.lock().unwrap().write_agent_log(agent_name, &message) {
+      eprintln!("Failed to write agent log: {}", e);
+  }
   ```
-- **Suggested Fix:** Continue refactoring to return proper Result types with appropriate error variants.
+- **Suggested Fix:** Replace with proper error handling using ? or match with appropriate error recovery.
 - **Status:** PARTIALLY FIXED
+- **Note:** New finding - unwrap() in streams.rs
 
 ---
 
@@ -179,6 +185,35 @@
   ```
 - **Suggested Fix:** Continue extracting command handlers into separate modules.
 - **Status:** IMPROVED
+- **Note:** Improved from 2082 lines in earlier audits
+
+---
+
+### FIND-008 [🟡 MEDIUM] — Test Assertion Failures in Config Tests
+
+- **Category:** Testing
+- **Severity:** Medium
+- **Effort:** M
+- **Risk:** Low
+- **Priority Score:** 14/22
+- **Skill:** N/A
+- **Files:** src/discord/config.rs, src/commands/validate.rs
+- **Description:** Multiple config-related tests failing due to assertion mismatches and environment variable handling.
+- **Evidence:**
+  ```
+  // discord/config.rs:609
+  assertion failed: err.contains(OPENROUTER_API_KEY_ENV)
+  
+  // discord/config.rs:635
+  assertion failed: result.is_ok()
+  
+  // discord/config.rs:1057
+  assertion `left == right` failed: Expected channel_id = 1472443428569874533
+    left: "${DISCORD_CHANNEL_ID}"
+   right: "1472443428569874533"
+  ```
+- **Suggested Fix:** Fix environment variable resolution in config tests.
+- **Status:** NEW
 
 ---
 
@@ -190,13 +225,13 @@
 - [ ] Analyze and fix test failures (FIND-001) - 4+ hours
 
 ### Short-term (Next 2-4 weeks)
-- [ ] Fix async_yields_async clippy error in logs.rs (FIND-002) - 30 min
+- [ ] Fix config test failures (FIND-008) - 2 hours
+- [ ] Remove unwrap() from streams.rs (FIND-005) - 30 min
 - [ ] Continue CLI module improvements (FIND-007) - 4 hours
 
 ### Long-term (Backlog)
 - [ ] Break down docker/run/run.rs (FIND-004) - 20+ hours
 - [ ] Break down config/mod.rs (FIND-006) - 16+ hours
-- [ ] Complete unwrap/expect refactoring (FIND-005) - 2-4 hours
 
 ---
 
@@ -219,3 +254,21 @@ Scoring:
 - 5-6: Fair - significant refactoring needed
 - 3-4: Poor - major issues affecting development velocity
 - 1-2: Critical - urgent intervention required
+
+---
+
+## Appendix
+
+### Automated Health Check Results (2026-03-01T10:10:00Z)
+
+| Check | Status | Details |
+|-------|--------|---------|
+| `cargo build` | ⚠️ WARNINGS | 12 unused import warnings |
+| `cargo test` | ❌ FAIL | 523 passed, 24 failed |
+| `cargo clippy -D warnings` | ❌ FAIL | 12 clippy errors |
+| `cargo fmt --check` | ❌ FAIL | 3 files need formatting |
+
+### Files Analyzed
+- Total Rust source files: ~60
+- Total lines of code: ~30,000+
+- Largest modules: docker/run/run.rs (5115), config/mod.rs (3512)

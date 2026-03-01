@@ -1,8 +1,7 @@
 use crate::commands::skills::SkillsInstall;
 use crate::config::Config;
 use crate::skills::{
-    add_skill_to_lockfile, create_npx_command,
-    SkillsError, SkillsManager, NPX_NOT_FOUND_ERROR,
+    add_skill_to_lockfile, create_npx_command, SkillsError, SkillsManager, NPX_NOT_FOUND_ERROR,
 };
 use crate::traits::ExitCode;
 use std::fs;

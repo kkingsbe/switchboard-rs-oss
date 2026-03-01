@@ -1,3 +1,4 @@
+#![allow(clippy::async_yields_async)]
 //! Logs command - View logs from agent executions
 //!
 //! This module provides functionality to view and follow logs
@@ -303,7 +304,8 @@ async fn follow_log_file(
     #[cfg(unix)]
     {
         // Create a signal handler for SIGTERM (Unix only)
-        let sigterm = signal(SignalKind::terminate()).expect("Failed to setup SIGTERM handler");
+        // Use .ok() to convert Result to Option - if setup fails, we continue with just Ctrl+C
+        let sigterm = signal(SignalKind::terminate()).ok();
         tokio::pin!(sigterm);
 
         loop {
@@ -312,7 +314,16 @@ async fn follow_log_file(
                         // Ctrl+C pressed, exit gracefully
                         break;
                     }
-                    _ = sigterm.recv() => {
+                    _ = async {
+                        // Only wait for SIGTERM if it was successfully set up
+                        if let Some(ref mut sig) = *sigterm {
+                            let _ = sig.recv().await;
+                        }
+                        // Never complete if sigterm is None (handler setup failed)
+                        // This intentionally yields a pending future that never resolves,
+                        // ensuring the loop continues until Ctrl+C is received
+                        std::future::pending::<()>()
+                    } => {
                         // SIGTERM received, exit gracefully
                         break;
                     }

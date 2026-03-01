@@ -5,82 +5,51 @@ log_dir = ".switchboard/logs"
 timezone = "system"
 
 [[agent]]
-name = "sb-auditor"
-schedule = "0 */2 * * *"              # Every 2 hours
+name = "sb-solution-architect"
+schedule = ""
 readonly = false
-timeout = "40m"
-prompt_file = ".switchboard/prompts/workflows/codebase-maintinance/AUDITOR.md"
+timeout = "25m"
+prompt_file = ".switchboard/workflows/bmad/prompts/SOLUTION_ARCHITECT.md"
 env = { AGENT_COUNT = "2" }
 
 [[agent]]
-name = "sb-improvement-planner"
-schedule = "30 */1 * * *"              # Every 1 hour at minute 30
+name = "sb-sprint-planner"
+schedule = "5,35 * * * *"                 # Every 30 min at :05 and :35
 readonly = false
-timeout = "30m"
-prompt_file = ".switchboard/prompts/workflows/codebase-maintinance/IMPROVEMENT_PLANNER.md"
+timeout = "25m"
+prompt_file = ".switchboard/workflows/bmad/prompts/SPRINT_PLANNER.md"
 env = { AGENT_COUNT = "2" }
 
 [[agent]]
-name = "sb-refactor-1"
-schedule = "*/30 * * * *"             # Every 30 min
+name = "sb-dev-1"
+schedule = "*/30 * * * *"                 # Every 30 min at :00 and :30
 readonly = false
 timeout = "30m"
-prompt_file = ".switchboard/prompts/workflows/codebase-maintinance/REFACTOR_DEV.md"
+prompt_file = ".switchboard/workflows/bmad/prompts/DEV_PARALLEL.md"
 env = { AGENT_ID = "1" }
 
 [[agent]]
-name = "sb-refactor-2"
-schedule = "10,40 * * * *"
+name = "sb-dev-2"
+schedule = "15,45 * * * *"               # Every 30 min at :15 and :45
 readonly = false
 timeout = "30m"
-prompt_file = ".switchboard/prompts/workflows/codebase-maintinance/REFACTOR_DEV.md"
+prompt_file = ".switchboard/workflows/bmad/prompts/DEV_PARALLEL.md"
 env = { AGENT_ID = "2" }
 
-# [[agent]]
-# name = "gt-dev-1"
-# schedule = "0 5,25,45 * * * *"
-# readonly = false
-# timeout = "30m"
-# prompt_file = ".switchboard/prompts/workflows/development/DEV_PARALLEL.md"
-# env = { AGENT_ID = "1" }
-
-# [[agent]]
-# name = "gt-dev-2"
-# schedule = "0 10,30,50 * * * *"
-# readonly = false
-# timeout = "30m"
-# prompt_file = ".switchboard/prompts/workflows/development/DEV_PARALLEL.md"
-# env = { AGENT_ID = "2" }
-
-# [[agent]]
-# name = "gt-dev-3"
-# schedule = "0 15,35,55 * * * *"
-# readonly = false
-# timeout = "30m"
-# prompt_file = ".switchboard/prompts/workflows/development/DEV_PARALLEL.md"
-# env = { AGENT_ID = "3" }
-
-# [[agent]]
-# name = "gt-dev-4"
-# schedule = "0 */20 * * * *"
-# readonly = false
-# timeout = "30m"
-# prompt_file = ".switchboard/prompts/workflows/development/DEV_PARALLEL.md"
-# env = { AGENT_ID = "4" }
+[[agent]]
+name = "sb-code-reviewer"
+schedule = "20,50 * * * *"               # Every 30 min at :20 and :50
+readonly = false
+timeout = "20m"
+prompt_file = ".switchboard/workflows/bmad/prompts/CODE_REVIEWER.md"
 
 [[agent]]
-name = "gt-summarizer"
-schedule = "0 0 * * * *"
+name = "sb-scrum-master"
+schedule = "0 * * * *"                    # Every hour on the hour
 readonly = false
-timeout = "30m"
-prompt_file = ".switchboard/prompts/workflows/documentation/SUMMARIZER.md"
-
-# [[agent]]
-# name = "gt-feature-architect"
-# schedule = "0 */45 * * * *"
-# readonly = false
-# timeout = "30m"
-# prompt_file = ".switchboard/prompts/workflows/development/ARCHITECT_FEATURE.md"
+timeout = "15m"
+prompt_file = ".switchboard/workflows/bmad/prompts/SCRUM_MASTER.md"
+env = { AGENT_COUNT = "4" }
 
 [discord]
 enabled = true

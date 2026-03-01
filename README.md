@@ -7,7 +7,7 @@
 
 <p align="center">
 
-[![Build](https://github.com/switchboard-ai/switchboard/actions/workflows/build.yml/badge.svg)](https://github.com/switchboard-ai/switchboard/actions/workflows/build.yml)
+[![Build](https://github.com/kkingsbe/switchboard-rs-oss/actions/workflows/build.yml/badge.svg)](https://github.com/kkingsbe/switchboard-rs-oss/actions/workflows/build.yml)
 
 [![Discord](https://img.shields.io/discord/123456789?label=Discord)](https://discord.gg/x6S59ASxGa)
 
@@ -53,6 +53,27 @@ Switchboard is a tool for **scheduling and running AI coding agents** on your ow
 ### What it does
 
 Switchboard reads a TOML configuration file, schedules AI agent runs based on cron expressions, and executes them inside Docker containers. Each agent receives a prompt and optional skills, then executes within the configured timeout and overlap constraints.
+
+## How It Works
+
+Switchboard is built specifically for **Kilo Code**, an AI coding agent platform that provides API access to powerful coding models. Kilo Code acts as the execution engine, handling the AI model interactions while Switchboard handles scheduling, orchestration, and infrastructure.
+
+### What is Kilo Code?
+
+Kilo Code is an AI coding agent platform that offers API-based access to large language models optimized for coding tasks. It provides a unified interface to various AI models, handling authentication, rate limiting, and API abstraction so you can focus on writing prompts rather than managing infrastructure.
+
+### Token-Based Access
+
+Kilo Code uses a token-based authentication system. Users must obtain a Kilo Code token to use the platform. This token is configured in `.kilocode/cli/config.json` and authenticates your requests to the Kilo Code API. The token controls access to the AI models and tracks usage for the account it's associated with.
+
+### Available Models
+
+Switchboard currently supports two models that have been tested and optimized for coding tasks:
+
+- **`z-ai/glm-4.7`** (default) — A high-performance model well-suited for code generation and analysis
+- **`minimax/minimax-m2.5`** — An alternative model with strong reasoning capabilities
+
+These specific models are supported because they have been evaluated for coding tasks and integrated with Kilo Code's infrastructure. Additional models may be added as they become available and tested.
 
 ---
 
@@ -149,7 +170,7 @@ Switchboard requires a Kilo Code token to execute AI agents. After cloning the r
 ### Install from Source
 
 ```bash
-git clone https://github.com/switchboard-ai/switchboard.git
+git clone https://github.com/kkingsbe/switchboard-rs-oss.git
 cd switchboard
 
 # Configure Kilo Code token
