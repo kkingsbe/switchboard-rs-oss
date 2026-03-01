@@ -41,7 +41,7 @@ pub async fn check_image_exists(
 /// Get the default process executor
 ///
 /// It can be replaced with a mock implementation for testing.
-fn default_executor() -> Arc<dyn ProcessExecutorTrait> {
+pub fn default_executor() -> Arc<dyn ProcessExecutorTrait> {
     Arc::new(RealProcessExecutor::new())
 }
 

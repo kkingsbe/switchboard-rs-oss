@@ -53,14 +53,6 @@ pub use discord::{
 };
 pub use process::*;
 
-/// Create a default process executor
-///
-/// This function provides a default RealProcessExecutor for use in CLI commands.
-/// It can be replaced with a mock implementation for testing.
-fn default_executor() -> Arc<dyn ProcessExecutorTrait> {
-    Arc::new(RealProcessExecutor::new())
-}
-
 /// Switchboard - AI coding agent prompt scheduler
 ///
 /// Schedule AI coding agent prompts via Docker containers
