@@ -14,7 +14,7 @@ Before starting any tasks, read these files to understand the current state:
 
 ## Tasks
 
-- [ ] [FIND-002A] Remove unused import `init_logging` from src/cli/mod.rs
+- [x] [FIND-002A] Remove unused import `init_logging` from src/cli/mod.rs
   - 📚 SKILLS: `./skills/rust-best-practices/SKILL.md`
   - 🎯 Goal: Remove `use crate::logging::init_logging;` from line 21 in src/cli/mod.rs
   - 📂 Files: src/cli/mod.rs
@@ -28,7 +28,7 @@ Before starting any tasks, read these files to understand the current state:
   - 🔒 Risk: Safe
   - ↩️ Revert: `git revert` safe (independent)
 
-- [ ] [FIND-002B] Remove unused import `Scheduler` from src/cli/mod.rs
+- [x] [FIND-002B] Remove unused import `Scheduler` from src/cli/mod.rs
   - 📚 SKILLS: `./skills/rust-best-practices/SKILL.md`
   - 🎯 Goal: Remove `use crate::scheduler::Scheduler;` from line 23 in src/cli/mod.rs
   - 📂 Files: src/cli/mod.rs
@@ -42,7 +42,7 @@ Before starting any tasks, read these files to understand the current state:
   - 🔒 Risk: Safe
   - ↩️ Revert: `git revert` safe
 
-- [ ] [FIND-002C] Remove unused import `RealProcessExecutor` from src/cli/mod.rs
+- [x] [FIND-002C] Remove unused import `RealProcessExecutor` from src/cli/mod.rs
   - 📚 SKILLS: `./skills/rust-best-practices/SKILL.md`
   - 🎯 Goal: Remove `RealProcessExecutor` from the use statement at line 25 in src/cli/mod.rs
   - 📂 Files: src/cli/mod.rs
@@ -56,7 +56,7 @@ Before starting any tasks, read these files to understand the current state:
   - 🔒 Risk: Safe
   - ↩️ Revert: `git revert` safe
 
-- [ ] [FIND-002D] Remove unused function `default_executor` from src/cli/commands/up.rs
+- [x] [FIND-002D] Remove unused function `default_executor` from src/cli/commands/up.rs
   - 📚 SKILLS: `./skills/rust-best-practices/SKILL.md`
   - 🎯 Goal: Remove the unused `default_executor` function at lines 213-215 in src/cli/commands/up.rs
   - 📂 Files: src/cli/commands/up.rs
