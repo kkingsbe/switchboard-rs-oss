@@ -64,7 +64,8 @@
     --> src/commands/skills/mod.rs:14:48
   ```
 - **Suggested Fix:** Remove unused imports from src/cli/mod.rs and src/commands/skills/mod.rs. Add #[allow(unnameable_test_items)] or move inner tests to proper test module in src/config/mod.rs.
-- **Status:** OPEN
+- **Status:** SCHEDULED
+  - Scheduled: Improvement Sprint 3, assigned to .switchboard/state/REFACTOR_TODO1.md
 
 ---
 
@@ -152,7 +153,8 @@
   +) -> Result<(), Box<dyn std::error::Error>> {
   ```
 - **Suggested Fix:** Run `cargo fmt` to auto-fix formatting issues across the codebase.
-- **Status:** OPEN
+- **Status:** SCHEDULED
+  - Scheduled: Improvement Sprint 3, assigned to .switchboard/state/REFACTOR_TODO1.md
 
 ---
 
@@ -170,7 +172,8 @@
   2082 src/cli/mod.rs
   ```
 - **Suggested Fix:** Consider extracting command handlers to separate modules (src/cli/handlers/) if the file grows further.
-- **Status:** OPEN
+- **Status:** SCHEDULED
+  - Scheduled: Improvement Sprint 3, assigned to .switchboard/state/REFACTOR_TODO2.md
 
 ---
 
