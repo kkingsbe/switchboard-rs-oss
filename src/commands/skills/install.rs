@@ -2,7 +2,7 @@ use crate::commands::skills::SkillsInstall;
 use crate::config::Config;
 use crate::skills::{
     add_skill_to_lockfile, create_npx_command, get_agents_using_skill, scan_global_skills,
-    scan_project_skills, skills_sh_search, LockfileStruct, SkillLockEntry, SkillMetadata,
+    scan_project_skills, skills_sh_search,
     SkillsError, SkillsManager, NPX_NOT_FOUND_ERROR,
 };
 use crate::traits::ExitCode;
