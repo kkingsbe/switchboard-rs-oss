@@ -1,31 +1,31 @@
 {
-  "pid": 47708,
-  "last_heartbeat": "2026-03-01T11:22:19.893014+00:00",
+  "pid": 42260,
+  "last_heartbeat": "2026-03-01T20:37:48.586388200+00:00",
   "state": "running",
   "agents": [
     {
-      "name": "sb-auditor",
-      "schedule": "0 */2 * * *",
-      "current_run": null
+      "name": "sb-sprint-planner",
+      "schedule": "5,35 * * * *",
+      "current_run": "starting"
     },
     {
-      "name": "sb-improvement-planner",
-      "schedule": "30 */2 * * *",
-      "current_run": null
-    },
-    {
-      "name": "sb-refactor-1",
+      "name": "sb-dev-1",
       "schedule": "*/30 * * * *",
+      "current_run": null
+    },
+    {
+      "name": "sb-dev-2",
+      "schedule": "15,45 * * * *",
       "current_run": "starting"
     },
     {
-      "name": "sb-refactor-2",
-      "schedule": "10,40 * * * *",
-      "current_run": "starting"
+      "name": "sb-code-reviewer",
+      "schedule": "20,50 * * * *",
+      "current_run": null
     },
     {
-      "name": "gt-summarizer",
-      "schedule": "0 0 * * * *",
+      "name": "sb-scrum-master",
+      "schedule": "0 * * * *",
       "current_run": null
     }
   ]

@@ -63,6 +63,9 @@ pub fn update_all_metrics(
             total_skills_failed: 0,
             skills_install_time_seconds: None,
             runs_with_skill_failures: 0,
+            max_run_duration_ms: None,
+            min_run_duration_ms: None,
+            last_success_timestamp: None,
         });
 
     // Determine if the run was successful
