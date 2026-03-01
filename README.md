@@ -9,7 +9,7 @@
 
 [![Build](https://github.com/switchboard-ai/switchboard/actions/workflows/build.yml/badge.svg)](https://github.com/switchboard-ai/switchboard/actions/workflows/build.yml)
 
-[![Discord](https://img.shields.io/discord/123456789?label=Discord)](https://discord.gg/switchboard)
+[![Discord](https://img.shields.io/discord/123456789?label=Discord)](https://discord.gg/x6S59ASxGa)
 
 </p>
 
