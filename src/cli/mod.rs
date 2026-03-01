@@ -48,7 +48,9 @@ use tokio::signal::unix::{signal, SignalKind};
 pub mod commands;
 pub mod discord;
 pub mod process;
-pub use discord::{is_discord_configured, DiscordFullConfig, DiscordTomlSection, load_discord_config_from_toml};
+pub use discord::{
+    is_discord_configured, load_discord_config_from_toml, DiscordFullConfig, DiscordTomlSection,
+};
 pub use process::*;
 
 /// Create a default process executor
