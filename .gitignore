@@ -30,3 +30,12 @@ discli.env
 
 switchboard.env
 .env
+
+# Agent runtime artifacts
+coverage/html/
+comms/outbox/
+logs/
+plans/
+skills-lock.json
+BLOCKERS.md
+FRONTEND_PRD.md

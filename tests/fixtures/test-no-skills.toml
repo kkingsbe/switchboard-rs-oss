@@ -1,0 +1,88 @@
+# test-no-skills.toml - Test configuration file for switchboard without skills field
+#
+# This is a test configuration file that represents a pre-skills-feature project.
+# It mirrors the structure of switchboard.sample.toml but does NOT include the skills field.
+# This file is used to test backwards compatibility with projects that were created
+# before the skills feature was added.
+#
+# Configuration structure:
+# - [settings] section: Optional global settings that apply to all agents
+# - [[agent]] sections: One or more agent configurations (at least one required)
+
+# =============================================================================
+# GLOBAL SETTINGS
+# =============================================================================
+# Optional settings that provide defaults for all agents.
+# All fields are optional with sensible defaults shown below.
+
+[settings]
+# Docker image name to use for agent containers (default: "switchboard-agent")
+image_name = "switchboard-agent"
+
+# Docker image tag (default: "latest")
+image_tag = "latest"
+
+# Directory where log files will be stored (default: ".switchboard/logs")
+log_dir = ".switchboard/logs"
+
+# Timezone for scheduling (default: "system")
+timezone = "system"
+
+# Default overlap mode for handling concurrent executions (default: "skip")
+overlap_mode = "skip"
+
+# =============================================================================
+# AGENT CONFIGURATIONS
+# =============================================================================
+# Each agent section defines a task that will run on a schedule.
+# At least one [[agent]] section is required.
+
+# -----------------------------------------------------------------------------
+# Agent 1: Simple agent with minimal configuration
+# -----------------------------------------------------------------------------
+
+[[agent]]
+# Required: Unique identifier for this agent (must be unique across all agents)
+name = "simple-agent"
+
+# Required: Cron schedule for when this agent should run
+schedule = "0 * * * *"
+
+# Required: Either inline prompt text OR a prompt_file path (not both)
+prompt = """
+Analyze the current state of the codebase and provide a brief summary.
+"""
+
+# -----------------------------------------------------------------------------
+# Agent 2: Agent with all optional fields configured (without skills)
+# -----------------------------------------------------------------------------
+
+[[agent]]
+name = "comprehensive-agent"
+
+# Required: Cron schedule
+schedule = "*/15 * * * *"
+
+# Required: Inline prompt (alternative to prompt_file)
+prompt = """
+Review the recent changes in the codebase and identify potential issues.
+Focus on code quality, performance, and security concerns.
+"""
+
+# Optional: Environment variables passed to the agent container
+env = { API_KEY = "your-api-key-here", LOG_LEVEL = "info", MAX_RETRIES = "3" }
+
+# Optional: Whether the agent runs in read-only mode (default: false)
+readonly = false
+
+# Optional: Maximum execution duration (default: "30m")
+timeout = "1h"
+
+# Optional: Overlap mode for this specific agent (overrides global setting)
+overlap_mode = "Queue"
+
+# Optional: Maximum queue size when overlap_mode is "queue" (default: 3)
+max_queue_size = 5
+
+# Note: This configuration does NOT include the 'skills' field,
+# which was added in a later version of switchboard.
