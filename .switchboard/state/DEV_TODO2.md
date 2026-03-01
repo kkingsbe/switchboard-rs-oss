@@ -1,34 +1,34 @@
-# Sprint 2 - dev-2
+# DEV_TODO2 — Development Agent 2
 
-## Assigned Stories (6 points total)
+> Sprint: 2
+> Focus Area: Rust refactoring
+> Last Updated: 2026-03-01T20:55:00Z
+> Total Points: 11 (5 existing + 5 rebalanced + 1)
 
-### Story 3.1: Decompose src/docker/run/run.rs
-- **Points:** 5
-- **Epic:** Code Quality Improvements
-- **Status:** in-progress
-- **Reference:** `.switchboard/planning/epics/epic-03-code-quality.md`
+## Stories
 
-### Story 3.4: Clean Up Empty Feature Flags
-- **Points:** 1
-- **Epic:** Code Quality Improvements
-- **Status:** in-progress
-- **Reference:** `.switchboard/planning/epics/epic-03-code-quality.md`
+- [x] **{5.1}**: Clean Up Commit History (1 pt) ✅ COMPLETED
 
-## Acceptance Criteria (Story 3.1)
-1. `src/docker/run/run.rs` (5,115 lines) decomposed into:
-   - `src/docker/run/create.rs` - Container creation logic
-   - `src/docker/run/execute.rs` - Container execution logic
-   - `src/docker/run/lifecycle.rs` - Container lifecycle management
-   - `src/docker/run/run.rs` - Main entry point that coordinates sub-modules
-2. All existing functionality preserved (all tests pass)
-3. Module exports properly organized in `src/docker/run/mod.rs`
-4. No functionality changes - pure refactoring
+- [ ] **{3.1}**: Decompose src/docker/run/run.rs (5 pts)
+  - ⚡ Pre-check: Build + tests pass
+  - ✅ Post-check: Build + tests pass
+  - 🔒 Risk: Medium
+  - 📝 Commit: `refactor(dev2): [3.1] decompose docker run module`
 
-## Acceptance Criteria (Story 3.4)
-1. Cargo.toml feature flags reviewed:
-   - `integration` - Either wire to actual conditional compilation OR remove
-   - `scheduler` - Either wire to actual conditional compilation OR remove
-   - `streams` - Either wire to actual conditional compilation OR remove
-2. Only `discord` feature remains (confirmed real)
-3. If features are kept, they must have actual conditional compilation
-4. If features are removed, Cargo.toml updated accordingly
+- [ ] **{3.2}**: Decompose src/config/mod.rs (5 pts) [REBALANCED from dev-1]
+  - ⚡ Pre-check: Build + tests pass
+  - ✅ Post-check: Build + tests pass
+  - 🔒 Risk: Medium
+  - 📝 Commit: `refactor(dev2): [3.2] decompose config module`
+
+- [ ] **{3.4}**: Clean Up Empty Feature Flags (1 pt)
+  - ⚡ Pre-check: Build + tests pass
+  - ✅ Post-check: Build + tests pass
+  - 🔒 Risk: Low
+  - 📝 Commit: `chore(dev2): [3.4] clean up empty feature flags`
+
+> ⚠️ Rebalanced by Sprint Planner on 2026-03-01
+
+- [ ] AGENT QA: Run full build and test suite. If green, create
+  `.switchboard/state/.dev_done_2`. If ALL `.dev_done_*` files exist,
+  also create `.switchboard/state/.sprint_complete`.

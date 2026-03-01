@@ -105,8 +105,9 @@ epics:
         risk: "medium"
         depends_on: []
         status: "in-progress"
-        assigned_to: "dev-1"
+        assigned_to: "dev-2"
         sprint: 2
+        notes: "Rebalanced from dev-1 to dev-2 on 2026-03-01"
       - id: "3.3"
         title: "Replace .unwrap() Calls with Proper Error Handling"
         points: 5
