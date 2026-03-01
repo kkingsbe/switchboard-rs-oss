@@ -94,7 +94,7 @@ pub async fn run_skills_remove(args: SkillsRemove, config: &Config) -> ExitCode 
 /// * `false` - If the user declines with 'n', 'N', or presses Enter (default)
 fn confirm(prompt: &str) -> bool {
     print!("{} ", prompt);
-    io::stdout().flush().unwrap();
+    io::stdout().flush().ok();
 
     let mut input = String::new();
     io::stdin()
