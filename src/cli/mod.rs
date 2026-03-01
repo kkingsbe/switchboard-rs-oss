@@ -13,7 +13,7 @@
 //! - All command handlers are fully implemented
 
 use crate::commands::logs::{run as logs_run, LogsArgs};
-use crate::commands::{list_agents, metrics, BuildCommand, SkillsCommand, ValidateCommand};
+use crate::commands::{metrics, BuildCommand, SkillsCommand, ValidateCommand};
 use crate::config::{Config, ConfigError};
 use crate::docker::run::types::ContainerConfig;
 use crate::docker::{check_docker_available, run_agent, DockerClient};
