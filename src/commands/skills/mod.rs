@@ -1,36 +1,19 @@
-pub mod types;
+pub mod install;
+pub mod installed;
 pub mod list;
 pub mod remove;
-pub mod installed;
-pub mod install;
+pub mod types;
 pub mod update;
 
-pub use update::{
-    handle_skills_update,
-    reinstall_skill_from_source,
-    update_skill_timestamp,
-};
+pub use update::{handle_skills_update, reinstall_skill_from_source, update_skill_timestamp};
 
-pub use installed::{
-    format_skills_list, format_skill_entry, get_agent_assignment_display,
-};
+pub use installed::{format_skill_entry, format_skills_list, get_agent_assignment_display};
 
 pub use types::*;
 
-use crate::commands::skills::install::{
-    cleanup_agents_directory, extract_skill_name, perform_post_install_move, run_skills_install,
-};
+use crate::commands::skills::install::run_skills_install;
 use crate::config::Config;
-use crate::skills::{
-    add_skill_to_lockfile, create_npx_command, find_skill_directory, get_agents_using_skill,
-    read_lockfile, remove_skill_directory, remove_skill_from_lockfile, scan_global_skills,
-    scan_project_skills, skills_sh_search, write_lockfile, LockfileStruct, SkillLockEntry,
-    SkillMetadata, SkillsError, SkillsManager, NPX_NOT_FOUND_ERROR,
-};
-use comfy_table::{Attribute, Cell, Table};
-use std::fs;
-use std::io::{self, Write};
-use std::path::PathBuf;
+use crate::skills::SkillMetadata;
 
 /// Run the skills command based on the provided subcommand.
 ///
@@ -81,7 +64,9 @@ pub async fn run_skills(args: SkillsCommand, config: &Config) -> ExitCode {
             installed::run_skills_installed(installed_args, config).await
         }
         SkillsSubcommand::Update(update_args) => handle_skills_update(update_args, config).await,
-        SkillsSubcommand::Remove(remove_args) => remove::run_skills_remove(remove_args, config).await,
+        SkillsSubcommand::Remove(remove_args) => {
+            remove::run_skills_remove(remove_args, config).await
+        }
     }
 }
 

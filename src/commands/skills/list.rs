@@ -4,9 +4,7 @@
 //! skills from the skills.sh registry.
 
 use crate::config::Config;
-use crate::skills::{
-    skills_sh_search, NPX_NOT_FOUND_ERROR, SkillsManager,
-};
+use crate::skills::{skills_sh_search, SkillsManager, NPX_NOT_FOUND_ERROR};
 use comfy_table::{Attribute, Cell, Table};
 
 use super::types::SkillsList;

@@ -201,10 +201,7 @@ pub fn reinstall_skill_from_source(
 /// Updates the installed_at timestamp for a specific skill in the lockfile.
 ///
 /// This is called after successfully re-installing a skill during an update.
-pub fn update_skill_timestamp(
-    skills_dir: &Path,
-    skill_name: &str,
-) -> Result<(), SkillsError> {
+pub fn update_skill_timestamp(skills_dir: &Path, skill_name: &str) -> Result<(), SkillsError> {
     use chrono::Utc;
 
     // Read the lockfile

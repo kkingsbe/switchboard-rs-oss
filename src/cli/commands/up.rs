@@ -156,7 +156,7 @@ fn is_process_running(pid: u32) -> bool {
     unsafe {
         match libc::kill(pid as libc::pid_t, 0) {
             0 | libc::EPERM => true, // Process exists (success or permission denied)
-            libc::ESRCH => false,   // Process does not exist
+            libc::ESRCH => false,    // Process does not exist
             _ => false,              // Other errors, assume not running
         }
     }
@@ -569,8 +569,11 @@ pub async fn run_up(
                         let (shutdown_tx, shutdown_rx) = broadcast::channel(1);
 
                         let discord_handle = tokio::spawn(async move {
-                            if let Err(e) =
-                                crate::discord::start_discord_listener_with_shutdown(Some(shutdown_rx), None).await
+                            if let Err(e) = crate::discord::start_discord_listener_with_shutdown(
+                                Some(shutdown_rx),
+                                None,
+                            )
+                            .await
                             {
                                 tracing::warn!("Discord listener failed to start: {}. Scheduler will continue running.", e);
                             }
@@ -705,8 +708,11 @@ pub async fn run_up(
 
                             let discord_handle = tokio::spawn(async move {
                                 if let Err(e) =
-                                    crate::discord::start_discord_listener_with_shutdown(Some(shutdown_rx), None)
-                                        .await
+                                    crate::discord::start_discord_listener_with_shutdown(
+                                        Some(shutdown_rx),
+                                        None,
+                                    )
+                                    .await
                                 {
                                     tracing::warn!("Discord listener failed to start: {}. Scheduler will continue running.", e);
                                 }

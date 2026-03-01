@@ -6,8 +6,8 @@
 
 use crate::config::Config;
 use crate::skills::{
-    get_agents_using_skill, read_lockfile, scan_global_skills, scan_project_skills,
-    LockfileStruct, SkillLockEntry, SkillMetadata, SkillsError,
+    get_agents_using_skill, read_lockfile, scan_global_skills, scan_project_skills, LockfileStruct,
+    SkillLockEntry, SkillMetadata, SkillsError,
 };
 use std::path::PathBuf;
 

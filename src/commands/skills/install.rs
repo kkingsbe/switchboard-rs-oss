@@ -1,15 +1,15 @@
 use crate::commands::skills::SkillsInstall;
 use crate::config::Config;
 use crate::skills::{
-    add_skill_to_lockfile, create_npx_command, get_agents_using_skill,
-    scan_global_skills, scan_project_skills, skills_sh_search, LockfileStruct, SkillLockEntry,
-    SkillMetadata, SkillsError, SkillsManager, NPX_NOT_FOUND_ERROR,
+    add_skill_to_lockfile, create_npx_command, get_agents_using_skill, scan_global_skills,
+    scan_project_skills, skills_sh_search, LockfileStruct, SkillLockEntry, SkillMetadata,
+    SkillsError, SkillsManager, NPX_NOT_FOUND_ERROR,
 };
+use crate::traits::ExitCode;
+use comfy_table::{Attribute, Cell, Table};
 use std::fs;
 use std::io::{self, Write};
 use std::path::PathBuf;
-use crate::traits::ExitCode;
-use comfy_table::{Attribute, Cell, Table};
 
 /// Run the `switchboard skills install` command
 ///

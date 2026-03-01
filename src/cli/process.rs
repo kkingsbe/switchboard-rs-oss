@@ -96,7 +96,9 @@ pub fn is_process_running(pid: u32) -> bool {
 }
 
 /// Check and clean stale PID file
-pub fn check_and_clean_stale_pid_file(pid_file_path: &Path) -> Result<(), Box<dyn std::error::Error>> {
+pub fn check_and_clean_stale_pid_file(
+    pid_file_path: &Path,
+) -> Result<(), Box<dyn std::error::Error>> {
     if !pid_file_path.exists() {
         return Ok(());
     }
