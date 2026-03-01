@@ -5,7 +5,7 @@
 
 project: "Switchboard"
 project_type: "brownfield"
-current_sprint: 2
+current_sprint: 3
 created: "2026-03-01T18:11:01.040Z"
 last_updated: "2026-03-01T19:17:12.315Z"
 solutioning_complete: true
@@ -114,9 +114,9 @@ epics:
         type: "refactor"
         risk: "medium"
         depends_on: []
-        status: "not-started"
-        assigned_to: null
-        sprint: null
+        status: "in-progress"
+        assigned_to: "dev-2"
+        sprint: 3
       - id: "3.4"
         title: "Clean Up Empty Feature Flags"
         points: 1
@@ -139,7 +139,7 @@ epics:
         type: "infrastructure"
         risk: "low"
         depends_on: []
-        status: "review-completed"
+        status: "in-progress"
         assigned_to: "dev-2"
         sprint: 1
         review_result: "changes-requested"
@@ -162,3 +162,20 @@ epics:
         sprint: 3
         review_result: "approved"
         review_notes: "Git history successfully cleaned up. FIND commits squashed into meaningful groupings. Build passes."
+
+  - id: "epic-06"
+    title: "Test Infrastructure"
+    priority: 0
+    depends_on: []
+    status: "not-started"
+    stories:
+      - id: "TEST-FIX-01"
+        title: "Fix Pre-existing Test Failures"
+        points: 3
+        type: "test"
+        risk: "medium"
+        depends_on: []
+        status: "in-progress"
+        assigned_to: "dev-1"
+        sprint: 2
+        notes: "25 pre-existing test failures block all refactoring work. Story file created at .switchboard/state/stories/story-test-fix-01.md"
