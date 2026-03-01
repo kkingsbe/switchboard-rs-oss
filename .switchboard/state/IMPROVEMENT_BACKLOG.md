@@ -1,7 +1,8 @@
 # IMPROVEMENT_BACKLOG.md
 
-> Last Audit: 2026-03-01T00:15:00Z
-> Commit Audited: 8d71e01
+> Last Audit: 2026-03-01T02:14:00Z
+> Commit Audited: ba2258d
+> Health Trend: Stable (8 findings, similar to previous audit)
 
 ## Summary
 | Severity | Count |
@@ -13,7 +14,7 @@
 
 ## Active Findings
 
-### FIND-001 🆕 NEW — Test Failures in Test Suite
+### FIND-001 — Test Failures in Test Suite
 - **Category:** Testing
 - **Severity:** Critical
 - **Effort:** L
@@ -31,21 +32,25 @@
   - discord::config::tests::test_env_config_missing_openrouter_api_key
   - docker::run::run::tests::test_integration_complete_flow_single_skill
   - docker::run::run::tests::test_skill_install_success_log_has_prefix
-  - And 20 more...
+  - docker::run::run::tests::test_script_injection_content_matches_expected_format
+  - docker::run::run::tests::test_skills_multiple_generates_custom_entrypoint
+  - docker::skills::tests::test_generate_entrypoint_script_skill_not_in_preexisting_list
+  - skills::tests::test_check_npx_available_with_mock_error
+  - And 16 more...
   ```
 - **Suggested Fix:** Analyze each failing test to identify the root cause. Many appear related to changes in skill installation logic and environment variable handling. Run individual tests with `cargo test <test_name>` to debug.
 - **Status:** OPEN
 
 ---
 
-### FIND-002 🆕 NEW — Clippy Lints Fail Build with -D Warnings
+### FIND-002 — Clippy Lints Fail Build with -D Warnings
 - **Category:** Code Quality
 - **Severity:** Critical
 - **Effort:** S
 - **Risk:** Medium
 - **Priority Score:** 14/22
 - **Skill:** skills/rust-best-practices/references/chapter_02.md
-- **Files:** src/cli/mod.rs (line 16), src/commands/skills/mod.rs (lines 14-21), src/config/mod.rs (line 3453)
+- **Files:** src/cli/mod.rs (line 16), src/commands/skills/mod.rs (lines 14-26), src/commands/skills/install.rs (lines 4-12)
 - **Description:** Running `cargo clippy --all-targets -- -D warnings` fails due to unused imports and cannot test inner items. This violates the skill requirement to run clippy and fix warnings.
 - **Evidence:**
   ```
@@ -63,7 +68,7 @@
 
 ---
 
-### FIND-003 🆕 NEW — God Module: docker/run/run.rs
+### FIND-003 — God Module: docker/run/run.rs
 - **Category:** Complexity
 - **Severity:** High
 - **Effort:** L
@@ -81,7 +86,7 @@
 
 ---
 
-### FIND-004 🆕 NEW — God Module: config/mod.rs
+### FIND-004 — God Module: config/mod.rs
 - **Category:** Complexity
 - **Severity:** High
 - **Effort:** L
@@ -99,7 +104,7 @@
 
 ---
 
-### FIND-005 🆕 NEW — Unwrap/Expect Usage in Production Code
+### FIND-005 — Unwrap/Expect Usage in Production Code
 - **Category:** Error Handling
 - **Severity:** High
 - **Effort:** M
@@ -125,27 +130,33 @@
 
 ---
 
-### FIND-006 🆕 NEW — Formatting Inconsistencies
+### FIND-006 — Formatting Inconsistencies
 - **Category:** Convention
 - **Severity:** Medium
 - **Effort:** S
 - **Risk:** Low
 - **Priority Score:** 8/22
 - **Skill:** skills/rust-engineer/SKILL.md
-- **Files:** src/commands/skills/installed.rs, src/commands/skills/list.rs, src/commands/skills/mod.rs
+- **Files:** src/commands/skills/installed.rs, src/commands/skills/list.rs, src/commands/skills/mod.rs, src/cli/process.rs
 - **Description:** `cargo fmt --check` shows diffs in multiple files, indicating inconsistent formatting that doesn't match project standards.
 - **Evidence:**
   ```
   Diff in /workspace/src/commands/skills/installed.rs:6:
   -    get_agents_using_skill, read_lockfile, scan_global_skills, scan_project_skills,
   +    get_agents_using_skill, read_lockfile, scan_global_skills, scan_project_skills, LockfileStruct,
+  
+  Diff in /workspace/src/cli/process.rs:96:
+  -pub fn check_and_clean_stale_pid_file(pid_file_path: &Path) -> Result<(), Box<dyn std::error::Error>> {
+  +pub fn check_and_clean_stale_pid_file(
+  +    pid_file_path: &Path,
+  +) -> Result<(), Box<dyn std::error::Error>> {
   ```
 - **Suggested Fix:** Run `cargo fmt` to auto-fix formatting issues across the codebase.
 - **Status:** OPEN
 
 ---
 
-### FIND-007 🆕 NEW — Large CLI Module
+### FIND-007 — Large CLI Module
 - **Category:** Complexity
 - **Severity:** Medium
 - **Effort:** M
@@ -163,7 +174,7 @@
 
 ---
 
-### FIND-008 🆕 NEW — Large Scheduler Module
+### FIND-008 — Large Scheduler Module
 - **Category:** Complexity
 - **Severity:** Low
 - **Effort:** M
@@ -220,7 +231,11 @@
 - None - all source files scanned
 
 ### Health Check Results
-- **Build:** PASS (with warnings)
+- **Build:** PASS (with 12 warnings - unused imports)
 - **Tests:** FAIL (24 failed, 523 passed)
 - **Clippy:** FAIL (unused imports block -D warnings build)
 - **Format:** FAIL (inconsistent formatting in skills commands)
+
+### Skill Compliance Notes
+- **rust-best-practices/SKILL.md:** Clippy not passing (Critical), unwrap/expect usage (High)
+- **rust-engineer/SKILL.md:** Formatting inconsistencies (Medium)
