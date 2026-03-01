@@ -113,7 +113,7 @@ pub async fn connect_to_docker(
         if socket_path.starts_with("unix://") {
             let path = socket_path
                 .strip_prefix("unix://")
-                .expect("socket_path starts with 'unix://' so strip_prefix should succeed");
+                .ok_or_else(|| anyhow::anyhow!("socket_path '{}' does not start with 'unix://'", socket_path))?;
             // Try connecting to the context's socket
             if let Ok(docker) = Docker::connect_with_socket(path, 5, bollard::API_DEFAULT_VERSION) {
                 return Ok(docker);
@@ -124,7 +124,7 @@ pub async fn connect_to_docker(
             {
                 let path = socket_path
                     .strip_prefix("npipe://")
-                    .expect("socket_path starts with 'npipe://' so strip_prefix should succeed");
+                    .ok_or_else(|| anyhow::anyhow!("socket_path '{}' does not start with 'npipe://'", socket_path))?;
                 if let Ok(docker) = Docker::connect_with_named_pipe_defaults() {
                     return Ok(docker);
                 }
