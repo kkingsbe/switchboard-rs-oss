@@ -1,374 +1,226 @@
-# Codebase Scan Report
+# IMPROVEMENT_BACKLOG.md
 
-**Project**: switchboard  
-**Scanned**: 2026-02-28T22:01:13Z  
-**Commit Audited**: 1faeff7 (HEAD)
-**Scope**: Full codebase (src/)
-**Files Analyzed**: ~80 Rust source files  
-**Audit Type**: Incremental audit (based on previous findings)
+> Last Audit: 2026-03-01T00:15:00Z
+> Commit Audited: 8d71e01
 
----
+## Summary
+| Severity | Count |
+|----------|-------|
+| Critical | 2 |
+| High     | 3 |
+| Medium   | 2 |
+| Low      | 1 |
 
-## Executive Summary
+## Active Findings
 
-| Severity | Count | Change vs Last Audit |
-|----------|-------|----------------------|
-| 🔴 Critical | 2 | +1 (new issue found) |
-| 🟠 High | 0 | - |
-| 🟡 Medium | 4 | - |
-| 🔵 Low | 2 | +1 |
-| ⚪ Convention | 3 | - |
-
-**Overall Health Score**: 5/10 (stable)
-
-**Top 3 Priorities**:
-1. Fix 24 failing tests (CRITICAL - down from 25)
-2. Remove hardcoded API key in test file (NEW - CRITICAL)
-3. Resolve inconsistent error handling patterns (CONV-001)
-
----
-
-## Tech Stack Summary
-
-- **Languages**: Rust (2021 edition)
-- **Frameworks**: tokio, bollard (Docker), twilight (Discord)
-- **Build Tools**: cargo
-- **Testing**: assert_cmd, tempfile, predicates, serial_test
-- **Linting**: cargo clippy
-- **Coverage**: cargo-llvm-cov
-
----
-
-## Phase 2: Automated Health Check Results
-
-| Check | Status | Notes |
-|-------|--------|-------|
-| `cargo build` | ✅ PASS | 2 warnings (unused imports) |
-| `cargo test` | ❌ FAIL | 24 tests failed |
-| `cargo clippy --lib` | ✅ PASS | Minor warnings only |
-| `cargo clippy --all-targets` | ❌ FAIL | Test compilation errors |
-| `cargo fmt --check` | ❌ FAIL | 2 files need formatting |
-
----
-
-## Findings by Category
-
-### 🔴 Critical Issues
-
-#### [CRIT-001] 🔄 RECURRING (×5) - 24 Test Failures
-
-- **Category:** Test Suite
+### FIND-001 🆕 NEW — Test Failures in Test Suite
+- **Category:** Testing
 - **Severity:** Critical
 - **Effort:** L
-- **Risk:** Medium
-- **Priority Score:** 16/22
-- **Files:** Multiple test files in src/docker/run/run.rs, src/discord/config.rs, src/commands/validate.rs, src/skills/mod.rs
-- **Description:** Test suite has 24 failing tests, indicating regression or broken functionality. This issue has persisted across multiple audits.
-- **Evidence:**
-```
-test result: FAILED. 523 passed; 24 failed; 0 ignored
-Failures include:
-- docker::run::run::tests::test_entrypoint_script_generation_all_scenarios
-- docker::run::run::tests::test_integration_complete_flow_single_skill
-- docker::run::run::tests::test_script_injection_wrapper_executes_script
-- docker::run::run::tests::test_skills_single_generates_custom_entrypoint
-- docker::run::run::tests::test_integration_complete_flow_multiple_skills
-- docker::run::run::tests::test_skills_multiple_generates_custom_entrypoint
-- docker::skills::tests::test_generate_entrypoint_script_skill_not_in_preexisting_list
-- skills::tests::test_check_npx_available_with_mock_error
-- skills::tests::test_check_npx_available_with_mock_failure_exit_code
-... (24 total)
-```
-- **Suggested Fix:** Investigate root cause of test failures - likely related to skill script generation logic changes and environment variable handling in tests
-- **Status:** 🔄 RECURRING
-- **Reference:** skills/rust-best-practices/SKILL.md (Chapter 5 - Testing)
-
----
-
-#### [CRIT-002] 🆕 NEW - Hardcoded API Key in Test
-
-- **Category:** Security
-- **Severity:** Critical
-- **Effort:** S
 - **Risk:** High
-- **Priority Score:** 18/22
-- **File:** `src/discord/config.rs` (lines 1070-1074)
-- **Description:** A hardcoded OpenRouter API key is present in test code. While it's in a test file, this is a security best practice violation.
+- **Priority Score:** 15/22
+- **Skill:** N/A
+- **Files:** Multiple test modules
+- **Description:** 24 tests are failing across the test suite. These failures affect validation, config parsing, and docker run integration tests. This is a significant regression that blocks production deployment.
 - **Evidence:**
-```rust
-assert_eq!(
-    llm.api_key_env,
-    "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",
-    "Expected api_key_env from switchboard.toml"
-);
-```
-- **Suggested Fix:** Replace with a test placeholder or mock value that doesn't look like a real API key
-- **Status:** 🆕 NEW
-- **Reference:** Never commit secrets to version control
+  ```
+  test result: FAILED. 523 passed; 24 failed; 0 ignored; 0 measured; 0 filtered out
+  
+  Failed tests include:
+  - commands::validate::tests::test_validate_lockfile_consistency_warns_orphaned_skills
+  - discord::config::tests::test_env_config_missing_openrouter_api_key
+  - docker::run::run::tests::test_integration_complete_flow_single_skill
+  - docker::run::run::tests::test_skill_install_success_log_has_prefix
+  - And 20 more...
+  ```
+- **Suggested Fix:** Analyze each failing test to identify the root cause. Many appear related to changes in skill installation logic and environment variable handling. Run individual tests with `cargo test <test_name>` to debug.
+- **Status:** OPEN
 
 ---
 
-### 🟡 Medium Priority (Refactoring)
-
-#### [MED-001] 🔄 RECURRING - God Module - docker/run/run.rs at 5115 Lines
-
-- **Category:** Structure
-- **Severity:** Medium
-- **Effort:** L
-- **Risk:** Medium
-- **Priority Score:** 10/22
-- **Files:** `src/docker/run/run.rs` (lines 1-5115)
-- **Description:** Single file contains over 5000 lines with all Docker run logic. This is a major maintainability issue.
-- **Evidence:**
-```bash
-$ wc -l src/docker/run/run.rs
-5115 src/docker/run/run.rs
-```
-- **Suggested Fix:** Split into: docker/run/container.rs, docker/run/network.rs, docker/run/volumes.rs
-- **Status:** 🔄 RECURRING
-- **Reference:** skills/rust-best-practices/SKILL.md (Chapter 1 - Code Organization)
-
----
-
-#### [MED-002] 🔄 RECURRING - God Module - config/mod.rs at 3512 Lines
-
-- **Category:** Structure
-- **Severity:** Medium
-- **Effort:** L
-- **Risk:** Medium
-- **Priority Score:** 10/22
-- **Files:** `src/config/mod.rs` (lines 1-3512)
-- **Description:** Single file contains Config, Agent, Settings structs + all validation + tests inline.
-- **Evidence:**
-```bash
-$ wc -l src/config/mod.rs
-3512 src/config/mod.rs
-```
-- **Suggested Fix:** Split into: config/agent.rs, config/settings.rs, config/validation.rs
-- **Status:** 🔄 RECURRING
-
----
-
-#### [MED-003] 🔄 RECURRING - CLI Module - 2146 Lines
-
-- **Category:** Structure
-- **Severity:** Medium
-- **Effort:** M
-- **Risk:** Low
-- **Priority Score:** 10/22
-- **Files:** `src/cli/mod.rs` (2146 lines)
-- **Description:** Contains all CLI commands and handlers in single file.
-- **Status:** ✅ SCHEDULED
-- **Scheduled:** Improvement Sprint 3
-
----
-
-#### [MED-004] 🔄 RECURRING - Commands Module - commands/skills/mod.rs at 1738 Lines
-
-- **Category:** Structure
-- **Severity:** Medium
-- **Effort:** M
-- **Risk:** Low
-- **Priority Score:** 10/22
-- **Files:** `src/commands/skills/mod.rs` (1738 lines)
-- **Description:** Single file for all skills subcommands.
-- **Status:** ✅ SCHEDULED
-
----
-
-### 🔵 Low Priority
-
-#### [LOW-001] 🔄 RECURRING - scheduler/mod.rs - 1293 Lines
-
-- **Category:** Structure
-- **Severity:** Low
-- **Effort:** M
-- **Risk:** Low
-- **Priority Score:** 7/22
-- **Files:** `src/scheduler/mod.rs` (1293 lines)
-- **Status:** ✅ SCHEDULED
-
----
-
-#### [LOW-002] 🆕 NEW - Clippy Warnings (Unused Imports)
-
+### FIND-002 🆕 NEW — Clippy Lints Fail Build with -D Warnings
 - **Category:** Code Quality
-- **Severity:** Low
+- **Severity:** Critical
 - **Effort:** S
-- **Risk:** Low
-- **Priority Score:** 5/22
-- **Files:** 
-  - `src/commands/skills/mod.rs:10` - unused import `skills_sh_search`
-  - `src/commands/skills/mod.rs:13` - unused imports `Attribute`, `Cell`, `Table`
-- **Description:** Two unused imports that generate clippy warnings.
+- **Risk:** Medium
+- **Priority Score:** 14/22
+- **Skill:** skills/rust-best-practices/references/chapter_02.md
+- **Files:** src/cli/mod.rs (line 16), src/commands/skills/mod.rs (lines 14-21), src/config/mod.rs (line 3453)
+- **Description:** Running `cargo clippy --all-targets -- -D warnings` fails due to unused imports and cannot test inner items. This violates the skill requirement to run clippy and fix warnings.
 - **Evidence:**
-```rust
-warning: unused import: `skills_sh_search`
-  --> src/commands/skills/mod.rs:10:26
-   |
-10 |     scan_project_skills, skills_sh_search, write_lockfile, LockfileStruct, SkillLockEntry,
-   |                          ^^^^^^^^^^^^^^^^
+  ```
+  error: unused import: `list_agents`
+    --> src/cli/mod.rs:16:23
+     |
+  16 | use crate::commands::{list_agents, metrics, BuildCommand, SkillsCommand, ValidateCommand};
+     |                       ^^^^^^^^^^^
 
-warning: unused imports: `Attribute`, `Cell`, and `Table`
-  --> src/commands/skills/mod.rs:13:19
-   |
-13 | use comfy_table::{Attribute, Cell, Table};
-```
-- **Suggested Fix:** Remove unused imports or use them in the code
-- **Status:** 🆕 NEW
+  error: unused imports: `LockfileStruct`, `SkillLockEntry`, `find_skill_directory`, ...
+    --> src/commands/skills/mod.rs:14:48
+  ```
+- **Suggested Fix:** Remove unused imports from src/cli/mod.rs and src/commands/skills/mod.rs. Add #[allow(unnameable_test_items)] or move inner tests to proper test module in src/config/mod.rs.
+- **Status:** OPEN
 
 ---
 
-### ⚪ Convention Issues
+### FIND-003 🆕 NEW — God Module: docker/run/run.rs
+- **Category:** Complexity
+- **Severity:** High
+- **Effort:** L
+- **Risk:** Medium
+- **Priority Score:** 12/22
+- **Skill:** skills/rust-best-practices/SKILL.md
+- **Files:** src/docker/run/run.rs (5115 lines)
+- **Description:** The run.rs file has 5115 lines, making it extremely large and difficult to maintain. This violates Single Responsibility Principle - it handles container execution, skill installation, metrics, and error handling all in one module.
+- **Evidence:**
+  ```
+  5115 src/docker/run/run.rs
+  ```
+- **Suggested Fix:** Extract into separate modules: container_execution.rs, skill_installation.rs, metrics_collection.rs, error_handling.rs. Consider creating a RunContext struct to encapsulate the execution state.
+- **Status:** OPEN
 
-#### [CONV-001] ✅ SCHEDULED - Inconsistent Error Handling
+---
 
-- **Category:** Convention
-- **Severity:** Low
+### FIND-004 🆕 NEW — God Module: config/mod.rs
+- **Category:** Complexity
+- **Severity:** High
+- **Effort:** L
+- **Risk:** Medium
+- **Priority Score:** 12/22
+- **Skill:** skills/rust-best-practices/SKILL.md
+- **Files:** src/config/mod.rs (3512 lines)
+- **Description:** The config/mod.rs file has 3512 lines, containing Config, Agent, Settings structs with extensive validation logic. Should be split into multiple files.
+- **Evidence:**
+  ```
+  3512 src/config/mod.rs
+  ```
+- **Suggested Fix:** Split into: config/structs.rs (types), config/validation.rs (validation functions), config/parsing.rs (TOML parsing), config/mod.rs (re-exports and thin orchestration layer).
+- **Status:** OPEN
+
+---
+
+### FIND-005 🆕 NEW — Unwrap/Expect Usage in Production Code
+- **Category:** Error Handling
+- **Severity:** High
 - **Effort:** M
 - **Risk:** Medium
-- **Priority Score:** 7/22
-- **Files:** Mixed Result<T,E> vs Box<dyn Error> vs thiserror
-- **Description:** The codebase uses multiple error handling patterns inconsistently:
-  - `thiserror::Error` in skills/error.rs, config/error.rs, metrics/error.rs
-  - `Box<dyn std::error::Error>` in CLI entry points
-  - Custom Result types with String errors scattered throughout
+- **Priority Score:** 11/22
+- **Skill:** skills/rust-best-practices/references/chapter_04.md, skills/rust-engineer/references/error-handling.md
+- **Files:** src/scheduler/mod.rs (line 1291), src/docker/client.rs (lines 115-127), src/commands/list.rs (line 45), src/discord/api.rs (lines 273-319)
+- **Description:** Multiple .unwrap() and .expect() calls in production code outside of tests. While some are in initialization paths where failure is catastrophic, others could use proper error handling.
 - **Evidence:**
-```rust
-// Pattern 1: Box<dyn Error> in CLI
-pub fn run_list(_config: Option<String>) -> Result<(), Box<dyn std::error::Error>>
-
-// Pattern 2: String errors
-pub fn list_agents(config: &Config) -> Result<(), String>
-
-// Pattern 3: Custom error types
-pub fn load(&self) -> Result<AllMetrics, MetricsError>
-```
-- **Status:** ✅ SCHEDULED
-- **Reference:** skills/rust-best-practices/SKILL.md (Chapter 4 - Error Handling)
+  ```rust
+  // src/scheduler/mod.rs:1291
+  Self::new_sync(None, None, None).expect("Failed to create default Scheduler")
+  
+  // src/docker/client.rs:115-116
+  .strip_prefix("unix://")
+      .expect("socket_path starts with 'unix://' so strip_prefix should succeed");
+  
+  // src/commands/list.rs:45
+  let value: u64 = value_str.parse().ok()?;
+  ```
+- **Suggested Fix:** For scheduler initialization, consider returning Result from new() or using unwrap_or_else with proper error logging. For parse operations, use proper error mapping.
+- **Status:** OPEN
 
 ---
 
-#### [CONV-002] 🔄 RECURRING - Module Organization
-
+### FIND-006 🆕 NEW — Formatting Inconsistencies
 - **Category:** Convention
-- **Severity:** Low
+- **Severity:** Medium
+- **Effort:** S
+- **Risk:** Low
+- **Priority Score:** 8/22
+- **Skill:** skills/rust-engineer/SKILL.md
+- **Files:** src/commands/skills/installed.rs, src/commands/skills/list.rs, src/commands/skills/mod.rs
+- **Description:** `cargo fmt --check` shows diffs in multiple files, indicating inconsistent formatting that doesn't match project standards.
+- **Evidence:**
+  ```
+  Diff in /workspace/src/commands/skills/installed.rs:6:
+  -    get_agents_using_skill, read_lockfile, scan_global_skills, scan_project_skills,
+  +    get_agents_using_skill, read_lockfile, scan_global_skills, scan_project_skills, LockfileStruct,
+  ```
+- **Suggested Fix:** Run `cargo fmt` to auto-fix formatting issues across the codebase.
+- **Status:** OPEN
+
+---
+
+### FIND-007 🆕 NEW — Large CLI Module
+- **Category:** Complexity
+- **Severity:** Medium
 - **Effort:** M
 - **Risk:** Low
 - **Priority Score:** 7/22
-- **Files:** src/docker/, src/discord/
-- **Description:** Some modules have inconsistent organization patterns. docker/run/ has split submodules while docker/build.rs is still monolithic.
-- **Status:** 🔄 RECURRING
+- **Skill:** N/A
+- **Files:** src/cli/mod.rs (2082 lines)
+- **Description:** The CLI module at 2082 lines is large but acceptable for a CLI application. Contains command parsing and handler functions.
+- **Evidence:**
+  ```
+  2082 src/cli/mod.rs
+  ```
+- **Suggested Fix:** Consider extracting command handlers to separate modules (src/cli/handlers/) if the file grows further.
+- **Status:** OPEN
 
 ---
 
-#### [CONV-003] 🆕 NEW - Formatting Issues
-
-- **Category:** Convention
+### FIND-008 🆕 NEW — Large Scheduler Module
+- **Category:** Complexity
 - **Severity:** Low
-- **Effort:** S
+- **Effort:** M
 - **Risk:** Low
 - **Priority Score:** 5/22
-- **Files:** 
-  - `src/commands/skills/list.rs` - import ordering
-  - `src/commands/skills/mod.rs` - module ordering
-- **Description:** Two files don't pass cargo fmt --check
+- **Skill:** N/A
+- **Files:** src/scheduler/mod.rs (1293 lines)
+- **Description:** The scheduler module at 1293 lines contains cron parsing, scheduling logic, and agent management. Already reasonably organized.
 - **Evidence:**
-```
-Diff in /workspace/src/commands/skills/list.rs:4:
-- use crate::skills::{
--     skills_sh_search, NPX_NOT_FOUND_ERROR, SkillsManager,
-- };
-+ use crate::skills::{skills_sh_search, SkillsManager, NPX_NOT_FOUND_ERROR};
-
-Diff in /workspace/src/commands/skills/mod.rs:1:
--pub mod types;
- pub mod list;
-+pub mod types;
-```
-- **Status:** 🆕 NEW
-
----
-
-#### [CONV-004] ✅ ANALYZED - Test Organization
-
-- **Category:** Convention
-- **Severity:** Low
-- **Effort:** S
-- **Risk:** Low
-- **Priority Score:** 7/22
-- **Files:** Throughout codebase
-- **Description:** Tests are mixed between inline (#[cfg(test)] modules) and external files in tests/ directory. No consistent pattern.
-- **Status:** ✅ ANALYZED
-- **Analysis Result:** Tests already well-organized - inline tests are appropriate for unit tests and integration tests within modules
-
----
-
-## Skills Compliance Audit
-
-### Rust Best Practices Compliance
-
-| Practice | Status | Notes |
-|----------|--------|-------|
-| Borrowing vs Cloning | ✅ PASS | Code uses references appropriately |
-| Error Handling with Result | ⚠️ PARTIAL | CONV-001 - inconsistent patterns |
-| Clippy Lints | ✅ PASS | Only minor unused import warnings |
-| Test Organization | ✅ PASS | Well-organized |
-| Documentation | ✅ PASS | Good doc comments |
-| Performance | ✅ PASS | No obvious performance issues |
-
-### Findings Against Skills
-
-1. **Error Handling** (skills/rust-best-practices/Chapter 4): Multiple error patterns in use - should standardize on thiserror for library code
-2. **Code Organization** (skills/rust-best-practices/Chapter 1): Large files (5000+ lines) violate single responsibility - need to split
-3. **Testing** (skills/rust-best-practices/Chapter 5): 24 failing tests need investigation
+  ```
+  1293 src/scheduler/mod.rs
+  ```
+- **Suggested Fix:** Monitor for growth. Currently acceptable.
+- **Status:** OPEN
 
 ---
 
 ## Recommendations Roadmap
 
 ### Immediate (This Sprint)
-- [ ] Fix 24 failing tests (CRIT-001) - 4+ hours
-- [ ] Remove hardcoded API key in test (CRIT-002) - 15 minutes
-- [ ] Fix clippy warnings (LOW-002) - 15 minutes
-- [ ] Fix formatting issues (CONV-003) - 15 minutes
+- [ ] Fix 24 failing tests - Run individual tests to debug root causes (L)
+- [ ] Fix clippy unused imports in src/cli/mod.rs and src/commands/skills/mod.rs (S)
+- [ ] Run `cargo fmt` to fix formatting issues (S)
 
 ### Short-term (Next 2-4 weeks)
-- [ ] Standardize error handling approach (CONV-001) - 2-4 hours
-- [ ] Continue god module refactoring (MED-001 to MED-004) - ongoing
+- [ ] Refactor docker/run/run.rs - Extract into multiple modules (L)
+- [ ] Refactor config/mod.rs - Split into validation/parsing/structs modules (L)
+- [ ] Audit .unwrap()/.expect() usage in production code - Convert to proper error handling (M)
 
 ### Long-term (Backlog)
-- [ ] Split docker/run/run.rs into smaller modules (MED-001) - 8+ hours
-- [ ] Split config/mod.rs into smaller modules (MED-002) - 8+ hours
+- [ ] Add #[derive(thiserror::Error)] to more error types for consistent error handling
+- [ ] Consider adding integration tests for critical paths
+- [ ] Set up CI to fail on clippy warnings
 
 ---
 
 ## Appendix
 
-### Files Scanned
-- src/lib.rs, src/main.rs, src/logging.rs
-- src/cli/mod.rs (2146 lines)
-- src/commands/*.rs (build.rs, list.rs, logs.rs, metrics.rs, skills/mod.rs, validate.rs)
-- src/config/*.rs (mod.rs, env.rs, env_ext.rs)
-- src/discord/*.rs (api.rs, config.rs, conversation.rs, gateway.rs, listener.rs, mod.rs, outbox.rs, security.rs, llm/*.rs, tools/*.rs)
-- src/docker/*.rs (build.rs, client.rs, mod.rs, run/run.rs, skills.rs)
-- src/logger/*.rs (file.rs, mod.rs, terminal.rs)
-- src/metrics/*.rs (collector.rs, mod.rs, store.rs)
-- src/scheduler/mod.rs (1293 lines)
-- src/skills/*.rs (error.rs, lockfile.rs, metadata.rs, mod.rs, validate.rs)
-- src/traits/mod.rs
-- src/ui/*.rs
+### Files Scanned (Top 30 by line count)
+| File | Lines |
+|------|-------|
+| src/docker/run/run.rs | 5115 |
+| src/config/mod.rs | 3512 |
+| src/cli/mod.rs | 2082 |
+| src/commands/validate.rs | 1453 |
+| src/commands/skills/mod.rs | 1365 |
+| src/scheduler/mod.rs | 1293 |
+| src/docker/skills.rs | 1282 |
+| src/metrics/store.rs | 1132 |
+| src/discord/config.rs | 1101 |
+| src/skills/mod.rs | 1036 |
 
 ### Skipped Files
-- None - full scan completed
+- None - all source files scanned
 
-### Health History Trend
-```
-Date            | Total | Crit | High | Med | Low | Conv
-----------------|-------|------|------|-----|-----|-----
-2026-02-28T14:02| 10    | 1    | 0    | 4   | 2   | 3
-2026-02-28T16:01| 10    | 1    | 0    | 4   | 1   | 3
-2026-02-28T18:00| 9     | 1    | 0    | 4   | 1   | 3
-2026-02-28T22:01| 11    | 2    | 0    | 4   | 2   | 3  ← Current
-```
-Health score stable at 5/10. New issues found: hardcoded API key, clippy warnings, formatting.
+### Health Check Results
+- **Build:** PASS (with warnings)
+- **Tests:** FAIL (24 failed, 523 passed)
+- **Clippy:** FAIL (unused imports block -D warnings build)
+- **Format:** FAIL (inconsistent formatting in skills commands)
