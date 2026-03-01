@@ -52,6 +52,24 @@
 
 ---
 
+## Story 5.1: Clean Up Commit History
+
+- **Implemented by:** dev-2
+- **Sprint:** 3
+- **Commits:** 0d9d3b7
+- **Story file:** `.switchboard/state/stories/story-5-1-clean-commit-history.md`
+- **Files changed:** git history (rebased), src/metrics/collector.rs, .switchboard/heartbeat.json
+- **Status:** ✅ APPROVED
+- **Acceptance Criteria:**
+  - [x] Git history shows meaningful commit messages — verified by: `git log --oneline -20` shows consolidated commits with meaningful messages
+  - [x] Build passes — verified by: `cargo build --release` completed successfully
+  - [x] [FIND-xxx] commits consolidated — verified by: git log shows consolidated commits (0d9d3b7, c3e8be1)
+- **Findings:**
+  - NICE TO HAVE: Pre-existing clippy warning in tests/performance_common.rs (unrelated to this story)
+- **Summary:** Git history successfully cleaned up with FIND commits squashed into meaningful groupings. Compilation fix in src/metrics/collector.rs properly handles new metric fields.
+
+---
+
 # Review Summary (2026-03-01)
 
 - **Total Stories Reviewed:** 3
