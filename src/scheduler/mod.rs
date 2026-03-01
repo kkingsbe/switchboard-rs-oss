@@ -1288,6 +1288,6 @@ impl Default for Scheduler {
         // Use expect() for Default since this is a convenience constructor
         // that shouldn't fail in normal circumstances
         // Note: This will fail if Docker is not available - use new_sync with a mock for testing
-        Self::new_sync(None, None, None).expect("Failed to create default Scheduler")
+        Self::new_sync(None, None, None).unwrap_or_else(|e| panic!("Failed to create default Scheduler: {}", e))
     }
 }
