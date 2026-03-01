@@ -1,20 +1,21 @@
 # IMPROVEMENT_BACKLOG.md
 
-> Last Audit: 2026-03-01T02:14:00Z
-> Commit Audited: ba2258d
-> Health Trend: Stable (8 findings, similar to previous audit)
+> Last Audit: 2026-03-01T04:07:00Z
+> Commit Audited: 6cbb824
+> Health Trend: Stable (7 findings, -1 vs last audit due to formatting fix)
 
 ## Summary
-| Severity | Count |
-|----------|-------|
-| Critical | 2 |
-| High     | 3 |
-| Medium   | 2 |
-| Low      | 1 |
+| Severity | Count | Change |
+|----------|-------|--------|
+| Critical | 2     | 0     |
+| High     | 2     | -1    |
+| Medium   | 2     | 0     |
+| Low      | 1     | 0     |
 
 ## Active Findings
 
-### FIND-001 — Test Failures in Test Suite
+### FIND-001 [🔄 RECURRING (×2)] — Test Failures in Test Suite
+
 - **Category:** Testing
 - **Severity:** Critical
 - **Effort:** L
@@ -26,50 +27,53 @@
 - **Evidence:**
   ```
   test result: FAILED. 523 passed; 24 failed; 0 ignored; 0 measured; 0 filtered out
-  
+
   Failed tests include:
   - commands::validate::tests::test_validate_lockfile_consistency_warns_orphaned_skills
   - discord::config::tests::test_env_config_missing_openrouter_api_key
   - docker::run::run::tests::test_integration_complete_flow_single_skill
   - docker::run::run::tests::test_skill_install_success_log_has_prefix
-  - docker::run::run::tests::test_script_injection_content_matches_expected_format
-  - docker::run::run::tests::test_skills_multiple_generates_custom_entrypoint
   - docker::skills::tests::test_generate_entrypoint_script_skill_not_in_preexisting_list
   - skills::tests::test_check_npx_available_with_mock_error
-  - And 16 more...
+  - And 19 more...
   ```
 - **Suggested Fix:** Analyze each failing test to identify the root cause. Many appear related to changes in skill installation logic and environment variable handling. Run individual tests with `cargo test <test_name>` to debug.
 - **Status:** OPEN
 
 ---
 
-### FIND-002 — Clippy Lints Fail Build with -D Warnings
-- **Category:** Code Quality
+### FIND-002 [🔄 RECURRING (×2)] — Clippy Lints Fail Build with -D Warnings
+
+- **Category:** Code Quality / Skill Violation
 - **Severity:** Critical
 - **Effort:** S
 - **Risk:** Medium
 - **Priority Score:** 14/22
-- **Skill:** skills/rust-best-practices/references/chapter_02.md
-- **Files:** src/cli/mod.rs (line 16), src/commands/skills/mod.rs (lines 14-26), src/commands/skills/install.rs (lines 4-12)
-- **Description:** Running `cargo clippy --all-targets -- -D warnings` fails due to unused imports and cannot test inner items. This violates the skill requirement to run clippy and fix warnings.
+- **Skill:** skills/rust-best-practices/references/chapter_02.md §2.2
+- **Files:** src/cli/mod.rs (lines 21-46), src/cli/commands/up.rs (lines 10-24), src/commands/skills/install.rs (lines 4-11), src/commands/skills/mod.rs (line 16)
+- **Description:** Running `cargo clippy --all-targets -- -D warnings` fails due to unused imports. This violates the skill requirement to run clippy and fix all warnings. Partial fix was applied in recent commits but more unused imports remain.
 - **Evidence:**
   ```
-  error: unused import: `list_agents`
-    --> src/cli/mod.rs:16:23
-     |
-  16 | use crate::commands::{list_agents, metrics, BuildCommand, SkillsCommand, ValidateCommand};
-     |                       ^^^^^^^^^^^
-
-  error: unused imports: `LockfileStruct`, `SkillLockEntry`, `find_skill_directory`, ...
-    --> src/commands/skills/mod.rs:14:48
+  error: unused import: `crate::logging::init_logging`
+    --> src/cli/mod.rs:21:5
+  error: unused import: `crate::scheduler::Scheduler`
+    --> src/cli/mod.rs:23:5
+  error: unused import: `RealProcessExecutor`
+    --> src/cli/mod.rs:25:62
+  error: unused imports: `LockfileStruct`, `SkillLockEntry`, `SkillMetadata`
+    --> src/commands/skills/install.rs:4:48
+  error: unused import: `crate::skills::SkillMetadata`
+    --> src/commands/skills/mod.rs:16:5
+  error: function `default_executor` is never used
+    --> src/cli/commands/up.rs:213:4
   ```
-- **Suggested Fix:** Remove unused imports from src/cli/mod.rs and src/commands/skills/mod.rs. Add #[allow(unnameable_test_items)] or move inner tests to proper test module in src/config/mod.rs.
-- **Status:** SCHEDULED
-  - Scheduled: Improvement Sprint 3, assigned to .switchboard/state/REFACTOR_TODO1.md
+- **Suggested Fix:** Remove all unused imports from cli/mod.rs, cli/commands/up.rs, commands/skills/install.rs, and commands/skills/mod.rs. Also remove the unused `default_executor` function or mark it with `#[allow(dead_code)]`.
+- **Status:** OPEN
 
 ---
 
-### FIND-003 — God Module: docker/run/run.rs
+### FIND-003 [🔄 RECURRING (×2)] — God Module: docker/run/run.rs
+
 - **Category:** Complexity
 - **Severity:** High
 - **Effort:** L
@@ -87,7 +91,8 @@
 
 ---
 
-### FIND-004 — God Module: config/mod.rs
+### FIND-004 [🔄 RECURRING (×2)] — God Module: config/mod.rs
+
 - **Category:** Complexity
 - **Severity:** High
 - **Effort:** L
@@ -105,15 +110,16 @@
 
 ---
 
-### FIND-005 — Unwrap/Expect Usage in Production Code
-- **Category:** Error Handling
+### FIND-005 [🔄 RECURRING (×2)] — Unwrap/Expect Usage in Production Code
+
+- **Category:** Error Handling / Skill Violation
 - **Severity:** High
 - **Effort:** M
 - **Risk:** Medium
 - **Priority Score:** 11/22
-- **Skill:** skills/rust-best-practices/references/chapter_04.md, skills/rust-engineer/references/error-handling.md
-- **Files:** src/scheduler/mod.rs (line 1291), src/docker/client.rs (lines 115-127), src/commands/list.rs (line 45), src/discord/api.rs (lines 273-319)
-- **Description:** Multiple .unwrap() and .expect() calls in production code outside of tests. While some are in initialization paths where failure is catastrophic, others could use proper error handling.
+- **Skill:** skills/rust-best-practices/references/chapter_04.md §4.2, skills/rust-engineer/SKILL.md
+- **Files:** src/scheduler/mod.rs (line 1291), src/docker/client.rs (lines 115-127), src/commands/logs.rs (line 306)
+- **Description:** Multiple .unwrap() and .expect() calls in production code outside of tests. While some are in initialization paths where failure is catastrophic, others could use proper error handling. This violates the skill requirement to avoid unwrap/expect in production.
 - **Evidence:**
   ```rust
   // src/scheduler/mod.rs:1291
@@ -123,61 +129,55 @@
   .strip_prefix("unix://")
       .expect("socket_path starts with 'unix://' so strip_prefix should succeed");
   
-  // src/commands/list.rs:45
-  let value: u64 = value_str.parse().ok()?;
+  // src/commands/logs.rs:306
+  let sigterm = signal(SignalKind::terminate()).expect("Failed to setup SIGTERM handler");
   ```
-- **Suggested Fix:** For scheduler initialization, consider returning Result from new() or using unwrap_or_else with proper error logging. For parse operations, use proper error mapping.
+- **Suggested Fix:** For scheduler initialization, consider returning Result from new() or using unwrap_or_else with proper error logging. For parse operations, use proper error mapping. For signal handler, use Result propagation.
 - **Status:** OPEN
 
 ---
 
-### FIND-006 — Formatting Inconsistencies
+### FIND-006 — Formatting Inconsistencies (RESOLVED)
+
 - **Category:** Convention
 - **Severity:** Medium
 - **Effort:** S
 - **Risk:** Low
 - **Priority Score:** 8/22
 - **Skill:** skills/rust-engineer/SKILL.md
-- **Files:** src/commands/skills/installed.rs, src/commands/skills/list.rs, src/commands/skills/mod.rs, src/cli/process.rs
-- **Description:** `cargo fmt --check` shows diffs in multiple files, indicating inconsistent formatting that doesn't match project standards.
+- **Description:** `cargo fmt --check` showed diffs in multiple files. This has been FIXED in recent commits.
 - **Evidence:**
   ```
-  Diff in /workspace/src/commands/skills/installed.rs:6:
-  -    get_agents_using_skill, read_lockfile, scan_global_skills, scan_project_skills,
-  +    get_agents_using_skill, read_lockfile, scan_global_skills, scan_project_skills, LockfileStruct,
-  
-  Diff in /workspace/src/cli/process.rs:96:
-  -pub fn check_and_clean_stale_pid_file(pid_file_path: &Path) -> Result<(), Box<dyn std::error::Error>> {
-  +pub fn check_and_clean_stale_pid_file(
-  +    pid_file_path: &Path,
-  +) -> Result<(), Box<dyn std::error::Error>> {
+  cargo fmt --check passes without diffs (2026-03-01)
   ```
-- **Suggested Fix:** Run `cargo fmt` to auto-fix formatting issues across the codebase.
-- **Status:** SCHEDULED
-  - Scheduled: Improvement Sprint 3, assigned to .switchboard/state/REFACTOR_TODO1.md
+- **Suggested Fix:** N/A - Already resolved
+- **Status:** RESOLVED
+  - **Resolved:** 2026-03-01 (commit 6cbb824)
+  - **Resolution:** Formatting issues fixed by running `cargo fmt`
 
 ---
 
-### FIND-007 — Large CLI Module
+### FIND-007 [🔄 RECURRING (×2)] — Large CLI Module
+
 - **Category:** Complexity
 - **Severity:** Medium
 - **Effort:** M
 - **Risk:** Low
 - **Priority Score:** 7/22
 - **Skill:** N/A
-- **Files:** src/cli/mod.rs (2082 lines)
-- **Description:** The CLI module at 2082 lines is large but acceptable for a CLI application. Contains command parsing and handler functions.
+- **Files:** src/cli/mod.rs (1256 lines, down from 2082)
+- **Description:** The CLI module at 1256 lines is large but improved from 2082 lines. Partial refactoring was done to remove duplicate code. Still large but has improved.
 - **Evidence:**
   ```
-  2082 src/cli/mod.rs
+  1256 src/cli/mod.rs (was 2082 in previous audit)
   ```
 - **Suggested Fix:** Consider extracting command handlers to separate modules (src/cli/handlers/) if the file grows further.
-- **Status:** SCHEDULED
-  - Scheduled: Improvement Sprint 3, assigned to .switchboard/state/REFACTOR_TODO2.md
+- **Status:** OPEN (improved)
 
 ---
 
-### FIND-008 — Large Scheduler Module
+### FIND-008 [🔄 RECURRING (×2)] — Large Scheduler Module
+
 - **Category:** Complexity
 - **Severity:** Low
 - **Effort:** M
@@ -198,9 +198,8 @@
 ## Recommendations Roadmap
 
 ### Immediate (This Sprint)
-- [ ] Fix 24 failing tests - Run individual tests to debug root causes (L)
-- [ ] Fix clippy unused imports in src/cli/mod.rs and src/commands/skills/mod.rs (S)
-- [ ] Run `cargo fmt` to fix formatting issues (S)
+- [ ] Fix clippy unused imports - Remove 19 unused imports (S)
+- [ ] Investigate and fix 24 failing tests (L)
 
 ### Short-term (Next 2-4 weeks)
 - [ ] Refactor docker/run/run.rs - Extract into multiple modules (L)
@@ -216,29 +215,38 @@
 
 ## Appendix
 
-### Files Scanned (Top 30 by line count)
+### Files Scanned (Top 20 by line count)
 | File | Lines |
 |------|-------|
 | src/docker/run/run.rs | 5115 |
 | src/config/mod.rs | 3512 |
-| src/cli/mod.rs | 2082 |
 | src/commands/validate.rs | 1453 |
-| src/commands/skills/mod.rs | 1365 |
 | src/scheduler/mod.rs | 1293 |
 | src/docker/skills.rs | 1282 |
+| src/cli/mod.rs | 1256 |
 | src/metrics/store.rs | 1132 |
 | src/discord/config.rs | 1101 |
 | src/skills/mod.rs | 1036 |
-
-### Skipped Files
-- None - all source files scanned
+| src/docker/client.rs | 1025 |
 
 ### Health Check Results
-- **Build:** PASS (with 12 warnings - unused imports)
+- **Build:** PASS (with 19 warnings - unused imports)
 - **Tests:** FAIL (24 failed, 523 passed)
 - **Clippy:** FAIL (unused imports block -D warnings build)
-- **Format:** FAIL (inconsistent formatting in skills commands)
+- **Format:** PASS ✓
 
 ### Skill Compliance Notes
-- **rust-best-practices/SKILL.md:** Clippy not passing (Critical), unwrap/expect usage (High)
-- **rust-engineer/SKILL.md:** Formatting inconsistencies (Medium)
+- **rust-best-practices/SKILL.md:** Clippy not passing (Critical - FIND-002), unwrap/expect usage (High - FIND-005)
+- **rust-engineer/SKILL.md:** Formatting fixed ✓
+
+### Previous Audit Findings - Resolution Status
+| Finding | Status | Change |
+|---------|--------|--------|
+| FIND-001 (Test failures) | OPEN | Same |
+| FIND-002 (Clippy) | OPEN | Partial fix applied |
+| FIND-003 (God module run.rs) | OPEN | Same |
+| FIND-004 (God module config) | OPEN | Same |
+| FIND-005 (Unwrap/expect) | OPEN | Same |
+| FIND-006 (Formatting) | RESOLVED | Fixed |
+| FIND-007 (CLI module) | OPEN | Improved (2082→1256) |
+| FIND-008 (Scheduler) | OPEN | Same |
