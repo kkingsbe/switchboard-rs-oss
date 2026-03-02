@@ -79,3 +79,4 @@ http = "1.0"
 default = ["discord"]
 scheduler = []
 discord = []
+gateway = []
