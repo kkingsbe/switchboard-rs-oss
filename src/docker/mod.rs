@@ -24,6 +24,9 @@ pub mod build;
 /// Connection and client management module
 pub mod client;
 
+/// Docker connection trait module
+pub mod connection;
+
 // Re-export all public items from client module for backward compatibility
 pub use client::{
     check_docker_available, connect_to_docker, get_docker_socket_path, DockerClient, DockerError,

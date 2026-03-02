@@ -14,6 +14,9 @@ RUN apt-get update && apt-get install -y \
     file \
     libssl-dev \
     pkg-config \
+    libsoup-3.0-dev \
+    libjavascriptcoregtk-4.1-dev \
+    libwebkit2gtk-4.1-dev \
     sudo \
     && rm -rf /var/lib/apt/lists/*
 

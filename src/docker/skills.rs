@@ -196,7 +196,7 @@ pub fn generate_entrypoint_script(
     
     // Error propagation - immediately exit on any command failure to prevent cascading errors
     script.push_str("# Error propagation - immediately exit on any command failure to prevent cascading errors\n");
-    script.push_str("\n");
+    script.push('\n');
     
     // Install skills - only for skills NOT in preexisting_skills (those need runtime installation)
     // Skills in preexisting_skills are already mounted via bind-mounts
@@ -214,7 +214,7 @@ pub fn generate_entrypoint_script(
     }
     
     if has_skill_install {
-        script.push_str("\n");
+        script.push('\n');
     }
     
     // Hand off to Kilo Code CLI
