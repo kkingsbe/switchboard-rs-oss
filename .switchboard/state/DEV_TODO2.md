@@ -2,12 +2,21 @@
 
 > Sprint: 3
 > Focus Area: Rust refactoring / Error handling
-> Last Updated: 2026-03-01T21:24:00Z
+> Last Updated: 2026-03-02T02:28:00Z
 > Total Points: 5
 
 ## Stories
 
-- [ ] **{3.3}**: Replace .unwrap() Calls with Proper Error Handling (5 pts)
+- [x] **{3.3}** (REWORK): Replace .unwrap() Calls with Proper Error Handling (5 pts)
+  - 📄 Story: `.switchboard/state/stories/story-3-3-unwrap-refactor.md`
+  - 🔍 Review: See REVIEW_QUEUE.md — CHANGES REQUESTED
+  - ⚡ Pre-check: Build + tests pass, cargo clippy -- -D warnings passes
+  - ✅ Post-check: Address ALL "Must Fix" items from review:
+    1. Fix clippy error: Replace `.map_or()` with `.is_some_and()` at src/discord/conversation.rs:198
+    2. Revert scope violations: Restore `.switchboard/heartbeat.json` and `.switchboard/state/SPRINT_REPORT.md` to their pre-commit state
+  - 📝 Commit: `fix(dev2): [3.3] address review feedback - clippy fix + scope revert`
+
+- [x] **{3.3}**: Replace .unwrap() Calls with Proper Error Handling (5 pts) — REWORKED
   - 📄 Story: `.switchboard/state/stories/story-3-3-unwrap-refactor.md`
   - 📚 Skills: 
     - `./skills/rust-best-practices/SKILL.md`

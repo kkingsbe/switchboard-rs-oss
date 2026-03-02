@@ -187,12 +187,41 @@ pub fn generate_entrypoint_script(
     }
 
     // Per Section 3.6: Skills are bind-mounted from host, NOT installed at runtime
-    // Generate simple entrypoint script that just runs kilocode
-    // No npx skills add needed - skills are already available via bind-mount
-    let mut script = String::from("#!/bin/sh\nset -e\n\n");
-
-    // Add the kilocode execution command
-    // Skills are already mounted at /workspace/skills/<skill-name>/ via Docker bind-mounts
+    // Generate entrypoint script with skill installation commands for non-preexisting skills
+    let mut script = String::from("#!/bin/sh\n");
+    
+    // POSIX shell for maximum compatibility across container environments
+    script.push_str("# POSIX shell for maximum compatibility across container environments\n");
+    script.push_str("set -e\n");
+    
+    // Error propagation - immediately exit on any command failure to prevent cascading errors
+    script.push_str("# Error propagation - immediately exit on any command failure to prevent cascading errors\n");
+    script.push_str("\n");
+    
+    // Install skills - only for skills NOT in preexisting_skills (those need runtime installation)
+    // Skills in preexisting_skills are already mounted via bind-mounts
+    let mut has_skill_install = false;
+    for skill in skills {
+        let skill_name = extract_skill_name(skill).unwrap_or_else(|_| skill.clone());
+        if !preexisting_skills.contains(&skill_name) {
+            if !has_skill_install {
+                script.push_str("# Install skills\n");
+                script.push_str("# Skills are installed sequentially in declaration order to satisfy dependencies\n");
+                has_skill_install = true;
+            }
+            script.push_str(&format!("npx skills add {} -a kilo -y\n", skill));
+        }
+    }
+    
+    if has_skill_install {
+        script.push_str("\n");
+    }
+    
+    // Hand off to Kilo Code CLI
+    script.push_str("# Hand off to Kilo Code CLI\n");
+    
+    // Process replacement - replaces shell with kilocode, ensuring proper signal handling and exit code propagation
+    script.push_str("# Process replacement - replaces shell with kilocode, ensuring proper signal handling and exit code propagation\n");
     script.push_str("exec kilocode --yes \"$@\"\n");
 
     Ok(script)

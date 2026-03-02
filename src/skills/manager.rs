@@ -100,12 +100,9 @@ impl SkillsManager {
     /// }
     /// ```
     pub fn check_npx_available(&mut self) -> Result<(), SkillsError> {
-        // On Windows, npx is a .cmd batch file that needs cmd /c to execute properly
-        // Use create_npx_command() which handles this correctly on all platforms
-        let mut cmd = create_npx_command();
-        cmd.arg("--version");
-
-        let result = cmd.output();
+        // Use the executor to check if npx is available
+        // This allows for mocking in tests
+        let result = self.executor.execute("npx", &["--version".to_string()]);
 
         match result {
             Ok(output) => {

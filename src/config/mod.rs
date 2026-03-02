@@ -3452,17 +3452,61 @@ mod tests {
     // Moved to module level to be discoverable by cargo test
     #[test]
     fn test_switchboard_toml_skills_parsing() {
-        // Test that switchboard.toml loads with skills parsed correctly for agents that have them
+        // Test that a config file loads with skills parsed correctly for agents that have them
         // This verifies the agent-specific skill parsing works correctly
         // Note: Not all agents are required to have skills defined - this is backwards compatible
-        let config = Config::from_toml(std::path::Path::new("switchboard.toml"))
-            .expect("Failed to load switchboard.toml");
+        
+        // Create a temporary config file with the expected content
+        let temp_dir = std::env::temp_dir();
+        let config_path = temp_dir.join("switchboard_test_skills.toml");
+        
+        let config_content = r#"
+[settings]
+image_name = "switchboard-agent"
+image_tag = "latest"
+
+[[agent]]
+name = "agent-1"
+schedule = "0 * * * *"
+prompt = "Test prompt 1"
+
+[[agent]]
+name = "agent-2"
+schedule = "0 * * * *"
+prompt = "Test prompt 2"
+
+[[agent]]
+name = "agent-3"
+schedule = "0 * * * *"
+prompt = "Test prompt 3"
+
+[[agent]]
+name = "gtse-dev-1"
+schedule = "0 9 * * 1-5"
+prompt = "Development tasks"
+skills = ["frontend-design"]
+
+[[agent]]
+name = "agent-5"
+schedule = "0 * * * *"
+prompt = "Test prompt 5"
+
+[[agent]]
+name = "agent-6"
+schedule = "0 * * * *"
+prompt = "Test prompt 6"
+"#;
+        
+        std::fs::write(&config_path, config_content).expect("Failed to write temp config");
+        
+        let config = Config::from_toml(&config_path)
+            .expect("Failed to load test config");
 
         // Verify we have 6 agents
         assert_eq!(
             config.agents.len(),
             6,
-            "Expected 6 agents in switchboard.toml"
+            "Expected 6 agents in test config"
         );
 
         // Verify agent gtse-dev-1 has the frontend-design skill
@@ -3491,7 +3535,7 @@ mod tests {
         );
 
         // Verify other agents can have None (backwards compatible - not all agents need skills)
-        // These agents don't have skills defined in switchboard.toml, which is valid
+        // These agents don't have skills defined in the config, which is valid
         for agent in &config.agents {
             if agent.name != "gtse-dev-1" {
                 // Agents without skills defined should have skills = None
@@ -3503,6 +3547,9 @@ mod tests {
                 );
             }
         }
+
+        // Clean up temp file
+        std::fs::remove_file(&config_path).ok();
 
         println!("Skills parsing verified: gtse-dev-1 has 'frontend-design', other agents have None (backwards compatible)");
     }

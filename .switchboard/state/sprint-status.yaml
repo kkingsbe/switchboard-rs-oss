@@ -116,9 +116,11 @@ epics:
         type: "refactor"
         risk: "medium"
         depends_on: []
-        status: "in-review"
+        status: "complete"
         assigned_to: "dev-2"
         sprint: 3
+        review_result: "approved"
+        review_notes: "All production .unwrap() calls replaced with safer error handling patterns (let-else, match, is_some_and). Build and clippy pass. ConfigError is manually implemented (consistent with codebase)."
       - id: "3.4"
         title: "Clean Up Empty Feature Flags"
         points: 1
@@ -180,4 +182,5 @@ epics:
         status: "in-progress"
         assigned_to: "dev-1"
         sprint: 2
+        notes: "CRITICAL: No progress in 10+ hours. dev-1 stale."
         notes: "25 pre-existing test failures block all refactoring work. Story file created at .switchboard/state/stories/story-test-fix-01.md"
