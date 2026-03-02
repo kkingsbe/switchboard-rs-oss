@@ -195,7 +195,7 @@ impl ChatMessage {
 
     /// Check if this message is a tool call request.
     pub fn is_tool_call(&self) -> bool {
-        self.tool_calls.as_ref().map_or(false, |tc| !tc.is_empty())
+        self.tool_calls.as_ref().is_some_and(|tc| !tc.is_empty())
     }
 
     /// Get the text content, handling tool calls gracefully.
