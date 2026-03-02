@@ -77,7 +77,5 @@ http = "1.0"
 
 [features]
 default = ["discord"]
-integration = []
 scheduler = []
-streams = []
 discord = []
