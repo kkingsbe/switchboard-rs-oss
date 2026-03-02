@@ -10,6 +10,7 @@ Cargo.lock
 
 # Switchboard runtime
 .switchboard/logs/
+.switchboard/state/
 .sprint_complete
 .architect_in_progress
 .state/
