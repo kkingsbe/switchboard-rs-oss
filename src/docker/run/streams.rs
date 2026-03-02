@@ -88,8 +88,15 @@ pub async fn attach_and_stream_logs(
                         }
                     }
                     // Write to log file
-                    if let Err(e) = logger.lock().unwrap().write_agent_log(agent_name, &message) {
-                        eprintln!("Failed to write agent log: {}", e);
+                    match logger.lock() {
+                        Ok(logger_guard) => {
+                            if let Err(e) = logger_guard.write_agent_log(agent_name, &message) {
+                                eprintln!("Failed to write agent log: {}", e);
+                            }
+                        }
+                        Err(e) => {
+                            eprintln!("Failed to acquire logger lock: {}", e);
+                        }
                     }
                 }
             }

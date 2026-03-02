@@ -1397,11 +1397,9 @@ pub fn validate_timezone(timezone: &str) -> Result<(), ConfigError> {
 /// ```
 pub fn validate_timeout_value(timeout: Option<&str>) -> Result<(), ConfigError> {
     // If timeout is None, it's valid (default will be used)
-    if timeout.is_none() {
+    let Some(timeout_str) = timeout else {
         return Ok(());
-    }
-
-    let timeout_str = timeout.unwrap();
+    };
 
     // Parse the timeout using the existing timeout parsing logic
     // This validates the format (e.g., "30s", "5m", "1h")
