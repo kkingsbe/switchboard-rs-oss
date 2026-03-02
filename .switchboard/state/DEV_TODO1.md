@@ -15,12 +15,5 @@
   - 📝 Commit: `test(dev1): [TEST-FIX-01] fix pre-existing test failures`
   - ⚠️ CRITICAL: This unblocks stories 3.1, 3.2 which require passing tests
 
-- [ ] **{2.3}**: Clean Up Committed Artifacts (2 pts)
-  - 📄 Story: See sprint-status.yaml for details
-  - ⚡ Pre-check: Build + tests pass
-  - ✅ Post-check: Build + tests pass
-  - 🔒 Risk: Medium
-  - 📝 Commit: `chore(dev1): [2.3] clean up committed artifacts`
-
 - [ ] AGENT QA: Run full build and test suite. If green, create
   `.switchboard/state/.dev_done_1`.

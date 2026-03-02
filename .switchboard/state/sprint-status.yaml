@@ -58,8 +58,9 @@ epics:
         risk: "medium"
         depends_on: []
         status: "in-progress"
-        assigned_to: "dev-1"
+        assigned_to: "dev-2"
         sprint: 2
+        notes: "> ⚠️ Rebalanced by Sprint Planner on 2026-03-02"
       - id: "2.4"
         title: "Document Kilo Code Dependency"
         points: 2
