@@ -15,7 +15,7 @@ Before starting any stories, read these files:
 
 ## Stories
 
-- [ ] **story-004-05**: Define message protocol types (2 pts)
+- [x] **story-004-05**: Define message protocol types (2 pts) ✅ queued for review
   - 📄 Story: `.switchboard/state/stories/story-004-05-message-protocol-types.md`
   - 📚 Skills: `./skills/rust-best-practices/SKILL.md`, `./skills/rust-engineer/references/traits.md`
   - ⚡ Pre-check: Build + tests pass
