@@ -189,15 +189,15 @@ pub fn generate_entrypoint_script(
     // Per Section 3.6: Skills are bind-mounted from host, NOT installed at runtime
     // Generate entrypoint script with skill installation commands for non-preexisting skills
     let mut script = String::from("#!/bin/sh\n");
-    
+
     // POSIX shell for maximum compatibility across container environments
     script.push_str("# POSIX shell for maximum compatibility across container environments\n");
     script.push_str("set -e\n");
-    
+
     // Error propagation - immediately exit on any command failure to prevent cascading errors
     script.push_str("# Error propagation - immediately exit on any command failure to prevent cascading errors\n");
     script.push('\n');
-    
+
     // Install skills - only for skills NOT in preexisting_skills (those need runtime installation)
     // Skills in preexisting_skills are already mounted via bind-mounts
     let mut has_skill_install = false;
@@ -212,14 +212,14 @@ pub fn generate_entrypoint_script(
             script.push_str(&format!("npx skills add {} -a kilo -y\n", skill));
         }
     }
-    
+
     if has_skill_install {
         script.push('\n');
     }
-    
+
     // Hand off to Kilo Code CLI
     script.push_str("# Hand off to Kilo Code CLI\n");
-    
+
     // Process replacement - replaces shell with kilocode, ensuring proper signal handling and exit code propagation
     script.push_str("# Process replacement - replaces shell with kilocode, ensuring proper signal handling and exit code propagation\n");
     script.push_str("exec kilocode --yes \"$@\"\n");

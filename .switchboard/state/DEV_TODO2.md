@@ -1,9 +1,9 @@
 # DEV_TODO2 — Development Agent 2
 
-> Sprint: 
-> Focus Area: 
-> Last Updated: 
-> Total Points: 
+> Sprint: 3
+> Focus Area: Gateway protocol types
+> Last Updated: 2026-03-02
+> Total Points: 2
 
 ## Orientation
 
@@ -15,7 +15,13 @@ Before starting any stories, read these files:
 
 ## Stories
 
-(No stories assigned)
+- [ ] **story-004-05**: Define message protocol types (2 pts)
+  - 📄 Story: `.switchboard/state/stories/story-004-05-message-protocol-types.md`
+  - 📚 Skills: `./skills/rust-best-practices/SKILL.md`, `./skills/rust-engineer/references/traits.md`
+  - ⚡ Pre-check: Build + tests pass
+  - ✅ Post-check: Build + tests pass, acceptance criteria met
+  - 🔒 Risk: Low
+  - 📝 Commit: `feat(dev2): [story-004-05] define message protocol types`
 
 ---
 

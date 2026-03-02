@@ -303,7 +303,9 @@ fn display_table_metrics(all_metrics: &AllMetrics, agent_names: &[&String]) -> R
 
         // Get last run timestamp
         let last_run_str = if !agent_data.runs.is_empty() {
-            let last_run = agent_data.runs.iter()
+            let last_run = agent_data
+                .runs
+                .iter()
                 .max_by_key(|r| r.timestamp)
                 .ok_or_else(|| "Cannot get last run from empty runs list".to_string())?;
             let last_run_dt = chrono::DateTime::from_timestamp(last_run.timestamp as i64, 0)
@@ -471,12 +473,16 @@ fn display_detailed_metrics(
         // Get first and last run timestamps from runs vector
         if !agent_data.runs.is_empty() {
             // Find first run (lowest timestamp)
-            let first_run = agent_data.runs.iter()
+            let first_run = agent_data
+                .runs
+                .iter()
                 .min_by_key(|r| r.timestamp)
                 .ok_or_else(|| "Cannot get first run from empty runs list".to_string())?;
 
             // Find last run (highest timestamp)
-            let last_run = agent_data.runs.iter()
+            let last_run = agent_data
+                .runs
+                .iter()
                 .max_by_key(|r| r.timestamp)
                 .ok_or_else(|| "Cannot get last run from empty runs list".to_string())?;
 

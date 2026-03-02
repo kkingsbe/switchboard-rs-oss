@@ -1,9 +1,9 @@
 # DEV_TODO1 — Development Agent 1
 
-> Sprint: 
-> Focus Area: 
-> Last Updated: 
-> Total Points: 
+> Sprint: 3
+> Focus Area: Gateway module infrastructure
+> Last Updated: 2026-03-02
+> Total Points: 1
 
 ## Orientation
 
@@ -16,7 +16,13 @@ Before starting any stories, read these files:
 
 ## Stories
 
-(No stories assigned)
+- [ ] **story-004-01**: Create gateway module structure (1 pt)
+  - 📄 Story: `.switchboard/state/stories/story-004-01-gateway-module-structure.md`
+  - 📚 Skills: `./skills/rust-best-practices/SKILL.md`, `./skills/rust-engineer/SKILL.md`
+  - ⚡ Pre-check: Build + tests pass
+  - ✅ Post-check: Build + tests pass, acceptance criteria met
+  - 🔒 Risk: Low
+  - 📝 Commit: `feat(dev1): [story-004-01] create gateway module structure`
 
 ---
 

@@ -586,7 +586,10 @@ mod tests {
 
         // Set DISCORD_TOKEN and remove OPENROUTER_API_KEY
         // Use a valid test token (50+ chars with dot) to pass validation
-        env::set_var(DISCORD_TOKEN_ENV, "test.token.value.that.is.long.enough.for.validation.purpose.12345");
+        env::set_var(
+            DISCORD_TOKEN_ENV,
+            "test.token.value.that.is.long.enough.for.validation.purpose.12345",
+        );
         env::remove_var(OPENROUTER_API_KEY_ENV);
 
         let result = load_discord_config();
@@ -614,7 +617,10 @@ mod tests {
         let original_key = env::var(OPENROUTER_API_KEY_ENV).ok();
 
         // Set both environment variables with valid values (50+ chars with dot)
-        env::set_var(DISCORD_TOKEN_ENV, "test.discord.token.value.that.is.long.enough.for.validation.12345");
+        env::set_var(
+            DISCORD_TOKEN_ENV,
+            "test.discord.token.value.that.is.long.enough.for.validation.12345",
+        );
         env::set_var(OPENROUTER_API_KEY_ENV, "test_openrouter_key");
 
         let result = load_discord_config();
@@ -633,10 +639,13 @@ mod tests {
         if let Err(e) = &result {
             eprintln!("DEBUG ERROR: {}", e);
         }
-        
+
         assert!(result.is_ok());
         let config = result.unwrap();
-        assert_eq!(config.discord_token, "test.discord.token.value.that.is.long.enough.for.validation.12345");
+        assert_eq!(
+            config.discord_token,
+            "test.discord.token.value.that.is.long.enough.for.validation.12345"
+        );
         assert_eq!(config.openrouter_api_key, "test_openrouter_key");
     }
 
@@ -1030,7 +1039,7 @@ mod tests {
         // Create a temporary config file with expected values
         let temp_dir = std::env::temp_dir();
         let config_path = temp_dir.join("switchboard_test_discord.toml");
-        
+
         let config_content = r#"
 [settings]
 image_name = "switchboard-agent"
@@ -1056,30 +1065,20 @@ max_tokens = 1024
 max_history = 30
 ttl_minutes = 120
 "#;
-        
+
         std::fs::write(&config_path, config_content).expect("Failed to write temp config");
-        
+
         // Load the discord section from the temp config file
         let result = load_discord_section_from_toml(config_path.to_str().unwrap());
 
-        assert!(
-            result.is_ok(),
-            "Failed to load config: {:?}",
-            result.err()
-        );
+        assert!(result.is_ok(), "Failed to load config: {:?}", result.err());
         let config = result.unwrap();
-        assert!(
-            config.is_some(),
-            "Expected [discord] section in config"
-        );
+        assert!(config.is_some(), "Expected [discord] section in config");
 
         let discord = config.unwrap();
 
         // Verify enabled = true from config
-        assert!(
-            discord.enabled,
-            "Expected enabled = true from config"
-        );
+        assert!(discord.enabled, "Expected enabled = true from config");
 
         // Verify token_env is read from config
         assert_eq!(
@@ -1094,9 +1093,7 @@ ttl_minutes = 120
         );
 
         // Verify LLM configuration
-        let llm = discord
-            .llm
-            .expect("LLM config should be present in config");
+        let llm = discord.llm.expect("LLM config should be present in config");
         assert_eq!(
             llm.provider, "openrouter",
             "Expected provider = openrouter from config"
@@ -1131,7 +1128,7 @@ ttl_minutes = 120
             conversation.ttl_minutes, 120,
             "Expected ttl_minutes = 120 from config"
         );
-        
+
         // Clean up temp file
         std::fs::remove_file(&config_path).ok();
     }

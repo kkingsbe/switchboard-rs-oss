@@ -58,9 +58,7 @@ pub enum ProcessError {
         exit_status: std::process::ExitStatus,
     },
     /// Mock error for testing
-    MockError {
-        message: String,
-    },
+    MockError { message: String },
 }
 
 impl std::fmt::Display for ProcessError {
@@ -216,11 +214,9 @@ impl ProcessExecutorTrait for RealProcessExecutor {
     }
 
     fn wait_child(&self, child: &mut Child) -> Result<ExitStatus, ProcessError> {
-        child.wait().map_err(|e| {
-            ProcessError::IoError {
-                error_details: e.to_string(),
-                suggestion: "Failed to wait for process".to_string(),
-            }
+        child.wait().map_err(|e| ProcessError::IoError {
+            error_details: e.to_string(),
+            suggestion: "Failed to wait for process".to_string(),
         })
     }
 
@@ -430,11 +426,9 @@ impl ProcessExecutorTrait for MockProcessExecutor {
         cmd.stdout(Stdio::null());
         cmd.stderr(Stdio::null());
 
-        cmd.spawn().map_err(|e| {
-            ProcessError::IoError {
-                error_details: e.to_string(),
-                suggestion: "Mock spawn failed".to_string(),
-            }
+        cmd.spawn().map_err(|e| ProcessError::IoError {
+            error_details: e.to_string(),
+            suggestion: "Mock spawn failed".to_string(),
         })
     }
 
@@ -446,15 +440,13 @@ impl ProcessExecutorTrait for MockProcessExecutor {
 
         // Check if we have a configured wait status
         if let Some(ref status) = self.config.wait_status {
-            return Ok(status.clone());
+            return Ok(*status);
         }
 
         // Use the real wait
-        child.wait().map_err(|e| {
-            ProcessError::IoError {
-                error_details: e.to_string(),
-                suggestion: "Mock wait failed".to_string(),
-            }
+        child.wait().map_err(|e| ProcessError::IoError {
+            error_details: e.to_string(),
+            suggestion: "Mock wait failed".to_string(),
         })
     }
 
@@ -480,13 +472,13 @@ mod tests {
     #[test]
     fn test_mock_process_executor_success() {
         let mock = MockProcessExecutor::with_success();
-        
+
         // Spawn should succeed
         let result = mock.spawn_child(Command::new("true"));
         assert!(result.is_ok(), "Spawn should succeed: {:?}", result.err());
-        
+
         let mut child = result.unwrap();
-        
+
         // Wait should return success status
         let status = mock.wait_child(&mut child);
         assert!(status.is_ok(), "Wait should succeed: {:?}", status.err());
@@ -497,13 +489,13 @@ mod tests {
     #[test]
     fn test_mock_process_executor_failure() {
         let mock = MockProcessExecutor::with_failure(1);
-        
+
         // Spawn should succeed
         let result = mock.spawn_child(Command::new("true"));
         assert!(result.is_ok(), "Spawn should succeed: {:?}", result.err());
-        
+
         let mut child = result.unwrap();
-        
+
         // Wait should return failure status
         let status = mock.wait_child(&mut child);
         assert!(status.is_ok(), "Wait should succeed: {:?}", status.err());
@@ -518,7 +510,7 @@ mod tests {
             suggestion: "Install the program".to_string(),
         };
         let mock = MockProcessExecutor::with_spawn_error(error.clone());
-        
+
         // Spawn should fail with the configured error
         let result = mock.spawn_child(Command::new("nonexistent"));
         assert!(result.is_err(), "Spawn should fail");
@@ -533,13 +525,13 @@ mod tests {
             suggestion: "Test suggestion".to_string(),
         };
         let mock = MockProcessExecutor::with_wait_error(error.clone());
-        
+
         // Spawn should succeed (no spawn error configured)
         let result = mock.spawn_child(Command::new("true"));
         assert!(result.is_ok());
-        
+
         let mut child = result.unwrap();
-        
+
         // Wait should fail with the configured error
         let result = mock.wait_child(&mut child);
         assert!(result.is_err(), "Wait should fail");
@@ -555,24 +547,33 @@ mod tests {
             exit_status,
         };
         let mock = MockProcessExecutor::with_wait_error(error.clone());
-        
+
         // Spawn should succeed (no spawn error configured)
         let result = mock.spawn_child(Command::new("true"));
         assert!(result.is_ok(), "Spawn should succeed: {:?}", result.err());
-        
+
         let mut child = result.unwrap();
-        
+
         // Wait should fail with ProcessAlreadyExited error
         let result = mock.wait_child(&mut child);
-        assert!(result.is_err(), "Wait should fail when process already exited");
+        assert!(
+            result.is_err(),
+            "Wait should fail when process already exited"
+        );
         let actual_error = result.unwrap_err();
-        
+
         // Verify it's the correct error type
         match actual_error {
-            ProcessError::ProcessAlreadyExited { program, exit_status: _ } => {
+            ProcessError::ProcessAlreadyExited {
+                program,
+                exit_status: _,
+            } => {
                 assert_eq!(program, "test-program", "Program name should match");
             }
-            _ => panic!("Expected ProcessAlreadyExited error, got: {:?}", actual_error),
+            _ => panic!(
+                "Expected ProcessAlreadyExited error, got: {:?}",
+                actual_error
+            ),
         }
     }
 
@@ -585,15 +586,15 @@ mod tests {
             suggestion: "Check permissions".to_string(),
         };
         let mock = MockProcessExecutor::with_kill_error(error.clone());
-        
+
         // Spawn should succeed
         let mut cmd = Command::new("sleep");
         cmd.arg("10");
         let result = mock.spawn_child(cmd);
         assert!(result.is_ok());
-        
+
         let mut child = result.unwrap();
-        
+
         // Kill should fail with the configured error
         let result = mock.kill_child(&mut child);
         assert!(result.is_err(), "Kill should fail");
@@ -604,15 +605,15 @@ mod tests {
     #[test]
     fn test_real_process_executor() {
         let executor = RealProcessExecutor::new();
-        
+
         let mut cmd = Command::new("echo");
         cmd.arg("hello");
-        
+
         let result = executor.spawn_child(cmd);
         assert!(result.is_ok(), "Spawn should succeed: {:?}", result.err());
-        
+
         let mut child = result.unwrap();
-        
+
         let status = executor.wait_child(&mut child);
         assert!(status.is_ok(), "Wait should succeed: {:?}", status.err());
         // echo exits with 0

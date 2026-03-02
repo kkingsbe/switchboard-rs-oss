@@ -3455,11 +3455,11 @@ mod tests {
         // Test that a config file loads with skills parsed correctly for agents that have them
         // This verifies the agent-specific skill parsing works correctly
         // Note: Not all agents are required to have skills defined - this is backwards compatible
-        
+
         // Create a temporary config file with the expected content
         let temp_dir = std::env::temp_dir();
         let config_path = temp_dir.join("switchboard_test_skills.toml");
-        
+
         let config_content = r#"
 [settings]
 image_name = "switchboard-agent"
@@ -3496,18 +3496,13 @@ name = "agent-6"
 schedule = "0 * * * *"
 prompt = "Test prompt 6"
 "#;
-        
+
         std::fs::write(&config_path, config_content).expect("Failed to write temp config");
-        
-        let config = Config::from_toml(&config_path)
-            .expect("Failed to load test config");
+
+        let config = Config::from_toml(&config_path).expect("Failed to load test config");
 
         // Verify we have 6 agents
-        assert_eq!(
-            config.agents.len(),
-            6,
-            "Expected 6 agents in test config"
-        );
+        assert_eq!(config.agents.len(), 6, "Expected 6 agents in test config");
 
         // Verify agent gtse-dev-1 has the frontend-design skill
         let gtse_dev_1 = config

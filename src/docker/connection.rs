@@ -6,10 +6,8 @@
 //! - `MockDockerConnection` - Mock implementation for testing
 
 use bollard::Docker;
-use std::sync::Arc;
 
 use crate::docker::DockerError;
-use crate::traits::{ProcessExecutorTrait, RealProcessExecutor};
 
 /// Trait for Docker connection management
 ///
@@ -71,31 +69,40 @@ impl DockerConnectionTrait for RealDockerConnection {
     fn get_docker_socket_path(&self) -> Result<String, DockerError> {
         // Use tokio::runtime to run the async function synchronously
         // This is necessary because the trait method is synchronous
-        let rt = tokio::runtime::Runtime::new()
-            .map_err(|e| DockerError::ConnectionError(format!("Failed to create runtime: {}", e)))?;
+        let rt = tokio::runtime::Runtime::new().map_err(|e| {
+            DockerError::ConnectionError(format!("Failed to create runtime: {}", e))
+        })?;
 
         rt.block_on(async {
             crate::docker::get_docker_socket_path(None)
                 .await
-                .map_err(|e| DockerError::ConnectionError(format!("Failed to get socket path: {}", e)))
-                .and_then(|opt| opt.ok_or_else(|| DockerError::ConnectionError("No socket path found".to_string())))
+                .map_err(|e| {
+                    DockerError::ConnectionError(format!("Failed to get socket path: {}", e))
+                })
+                .and_then(|opt| {
+                    opt.ok_or_else(|| {
+                        DockerError::ConnectionError("No socket path found".to_string())
+                    })
+                })
         })
     }
 
     fn connect_to_docker(&self) -> Result<Docker, DockerError> {
-        let rt = tokio::runtime::Runtime::new()
-            .map_err(|e| DockerError::ConnectionError(format!("Failed to create runtime: {}", e)))?;
+        let rt = tokio::runtime::Runtime::new().map_err(|e| {
+            DockerError::ConnectionError(format!("Failed to create runtime: {}", e))
+        })?;
 
         rt.block_on(async {
-            crate::docker::connect_to_docker(None)
-                .await
-                .map_err(|e| DockerError::ConnectionError(format!("Failed to connect to Docker: {}", e)))
+            crate::docker::connect_to_docker(None).await.map_err(|e| {
+                DockerError::ConnectionError(format!("Failed to connect to Docker: {}", e))
+            })
         })
     }
 
     fn check_docker_available(&self) -> Result<bool, DockerError> {
-        let rt = tokio::runtime::Runtime::new()
-            .map_err(|e| DockerError::ConnectionError(format!("Failed to create runtime: {}", e)))?;
+        let rt = tokio::runtime::Runtime::new().map_err(|e| {
+            DockerError::ConnectionError(format!("Failed to create runtime: {}", e))
+        })?;
 
         rt.block_on(async {
             match crate::docker::check_docker_available().await {
@@ -188,7 +195,9 @@ impl DockerConnectionTrait for MockDockerConnection {
         if let Some(timeout) = self.connect_timeout {
             return Err(DockerError::ConnectionTimeout {
                 timeout_duration: format!("{:?}", timeout),
-                suggestion: "Consider increasing the connection timeout or checking Docker daemon status".to_string(),
+                suggestion:
+                    "Consider increasing the connection timeout or checking Docker daemon status"
+                        .to_string(),
             });
         }
 
@@ -237,8 +246,7 @@ mod tests {
 
     #[test]
     fn test_mock_docker_connection_builder_default() {
-        let mock = MockDockerConnectionBuilder::new()
-            .build();
+        let mock = MockDockerConnectionBuilder::new().build();
 
         // Default mock should return available
         assert!(mock.check_docker_available().is_ok());
@@ -250,7 +258,10 @@ mod tests {
             .with_socket_path(Some("/custom/socket.sock".to_string()))
             .build();
 
-        assert_eq!(mock.get_docker_socket_path().unwrap(), "/custom/socket.sock");
+        assert_eq!(
+            mock.get_docker_socket_path().unwrap(),
+            "/custom/socket.sock"
+        );
     }
 
     #[test]
@@ -277,7 +288,7 @@ mod tests {
         let mock: Box<dyn DockerConnectionTrait> = Box::new(
             MockDockerConnectionBuilder::new()
                 .with_available(true)
-                .build()
+                .build(),
         );
 
         assert!(mock.check_docker_available().is_ok());
@@ -299,7 +310,10 @@ mod tests {
 
         // Verify the mock was configured with timeout
         let result = mock.connect_to_docker();
-        assert!(result.is_err(), "Connection should fail when timeout is configured");
+        assert!(
+            result.is_err(),
+            "Connection should fail when timeout is configured"
+        );
 
         // Verify it's a timeout error
         match result.unwrap_err() {
@@ -314,7 +328,7 @@ mod tests {
         let mock: Box<dyn DockerConnectionTrait> = Box::new(
             MockDockerConnectionBuilder::new()
                 .with_connect_timeout(Some(std::time::Duration::from_secs(10)))
-                .build()
+                .build(),
         );
 
         let result = mock.connect_to_docker();
@@ -327,7 +341,10 @@ mod tests {
                 timeout_duration,
                 suggestion,
             } => {
-                assert!(timeout_duration.contains("10s"), "Timeout duration should be 10s");
+                assert!(
+                    timeout_duration.contains("10s"),
+                    "Timeout duration should be 10s"
+                );
                 assert!(!suggestion.is_empty(), "Suggestion should not be empty");
             }
             other => panic!("Expected ConnectionTimeout error, got: {:?}", other),
