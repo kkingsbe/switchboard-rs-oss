@@ -39,3 +39,6 @@ switchboard.env
 coverage/
 summarizer-narratives/
 reports/
+
+# Runtime logs
+logs/
