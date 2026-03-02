@@ -73,7 +73,9 @@ mod tests {
         assert!(json.contains("test-project-123"));
         let deserialized: GatewayMessage =
             serde_json::from_str(&json).expect("Failed to deserialize Register");
-        assert!(matches!(deserialized, GatewayMessage::Register { project_id } if project_id == "test-project-123"));
+        assert!(
+            matches!(deserialized, GatewayMessage::Register { project_id } if project_id == "test-project-123")
+        );
     }
 
     /// Test RegisterAck message serialization and deserialization roundtrip
@@ -119,24 +121,32 @@ mod tests {
     /// Test Heartbeat serialization and deserialization roundtrip
     #[test]
     fn test_heartbeat_serialization_roundtrip() {
-        let msg = GatewayMessage::Heartbeat { timestamp: 1699999999 };
+        let msg = GatewayMessage::Heartbeat {
+            timestamp: 1699999999,
+        };
         let json = serde_json::to_string(&msg).expect("Failed to serialize Heartbeat");
         assert!(json.contains("\"heartbeat\""));
         assert!(json.contains("1699999999"));
         let deserialized: GatewayMessage =
             serde_json::from_str(&json).expect("Failed to deserialize Heartbeat");
-        assert!(matches!(deserialized, GatewayMessage::Heartbeat { timestamp } if timestamp == 1699999999));
+        assert!(
+            matches!(deserialized, GatewayMessage::Heartbeat { timestamp } if timestamp == 1699999999)
+        );
     }
 
     /// Test HeartbeatAck serialization and deserialization roundtrip
     #[test]
     fn test_heartbeat_ack_serialization_roundtrip() {
-        let msg = GatewayMessage::HeartbeatAck { timestamp: 1700000000 };
+        let msg = GatewayMessage::HeartbeatAck {
+            timestamp: 1700000000,
+        };
         let json = serde_json::to_string(&msg).expect("Failed to serialize HeartbeatAck");
         assert!(json.contains("\"heartbeatack\""));
         assert!(json.contains("1700000000"));
         let deserialized: GatewayMessage =
             serde_json::from_str(&json).expect("Failed to deserialize HeartbeatAck");
-        assert!(matches!(deserialized, GatewayMessage::HeartbeatAck { timestamp } if timestamp == 1700000000));
+        assert!(
+            matches!(deserialized, GatewayMessage::HeartbeatAck { timestamp } if timestamp == 1700000000)
+        );
     }
 }
