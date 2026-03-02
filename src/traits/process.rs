@@ -546,6 +546,36 @@ mod tests {
         assert_eq!(result.unwrap_err(), error);
     }
 
+    /// Test that waiting on an already-exited process returns ProcessAlreadyExited error
+    #[tokio::test]
+    async fn test_mock_process_executor_wait_already_exited() {
+        let exit_status = create_exit_status(0);
+        let error = ProcessError::ProcessAlreadyExited {
+            program: "test-program".to_string(),
+            exit_status,
+        };
+        let mock = MockProcessExecutor::with_wait_error(error.clone());
+        
+        // Spawn should succeed (no spawn error configured)
+        let result = mock.spawn_child(Command::new("true"));
+        assert!(result.is_ok(), "Spawn should succeed: {:?}", result.err());
+        
+        let mut child = result.unwrap();
+        
+        // Wait should fail with ProcessAlreadyExited error
+        let result = mock.wait_child(&mut child);
+        assert!(result.is_err(), "Wait should fail when process already exited");
+        let actual_error = result.unwrap_err();
+        
+        // Verify it's the correct error type
+        match actual_error {
+            ProcessError::ProcessAlreadyExited { program, exit_status: _ } => {
+                assert_eq!(program, "test-program", "Program name should match");
+            }
+            _ => panic!("Expected ProcessAlreadyExited error, got: {:?}", actual_error),
+        }
+    }
+
     /// Test that MockProcessExecutor can simulate kill errors
     #[test]
     fn test_mock_process_executor_kill_error() {
