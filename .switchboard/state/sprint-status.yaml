@@ -1,0 +1,206 @@
+# Sprint Status
+
+## Current Sprint
+
+**Sprint**: 3  
+**Start Date**: 2026-03-02  
+**End Date**: 2026-03-16
+
+---
+
+## Sprint 3 Stories
+
+### In Progress
+
+| Story | Points | Status | Assigned To |
+|-------|--------|--------|-------------|
+
+**Sprint 3 Total**: 0 points
+
+---
+
+## Sprint 2 Stories (Archived)
+
+### In Progress
+
+| Story | Points | Status | Assigned To |
+|-------------|--------|--------|-------------|
+| story-004-01 (gateway module structure) | 1 | In Progress | dev-1 |
+| story-004-02 (gateway config loading) | 2 | In Progress | dev-1 |
+| story-004-03 (HTTP server health check) | 3 | In Progress | dev-1 |
+| story-004-05 (message protocol types) | 2 | In Progress | dev-2 |
+
+**Sprint 2 Total**: 8 points
+
+---
+
+## Sprint 1 Stories (Archived)
+
+### In Progress
+
+| Story | Points | Status | Assigned To |
+|-------|--------|--------|-------------|
+| story-001-docker-connection-trait | 3 | Not Started | dev-1 |
+| story-002-process-executor-trait | 2 | Complete | dev-2 |
+| story-003-refactor-docker-mod | 5 | Not Started | dev-1 |
+
+**Sprint 1 Total**: 10 points (2 pts complete, 8 pts remaining)
+
+---
+
+## Sprint Goals
+
+1. Complete testability foundation
+2. Begin skills CLI implementation
+3. Plan Discord concierge architecture
+
+---
+
+## Backlog
+
+### Epic 003: Testability Enhancement
+
+| Task | Estimate | Status |
+|------|----------|--------|
+| Define DockerClientTrait | 2 days | Todo |
+| Define ProcessExecutorTrait | 1 day | Todo |
+| Refactor docker/mod.rs | 3 days | Todo |
+| Refactor docker/run.rs | 2 days | Todo |
+| Refactor scheduler/mod.rs | 2 days | Todo |
+| Refactor skills/mod.rs | 1 day | Todo |
+| Refactor architect/ | 2 days | Todo |
+| Refactor cli/mod.rs | 2 days | Todo |
+| Create test infrastructure | 2 days | Todo |
+| Write unit tests (300+) | 10 days | Todo |
+| Integration tests | 5 days | Todo |
+
+**Epic Total**: 32 days
+
+### Epic 002: Skills CLI
+
+| Task | Estimate | Status |
+|------|----------|--------|
+| Skills CLI commands | 3 days | Todo |
+| Per-agent config field | 1 day | Todo |
+| Container entrypoint generation | 2 days | Todo |
+| Container skill installation | 2 days | Todo |
+| Validate command updates | 1 day | Todo |
+| Integration testing | 2 days | Todo |
+
+**Epic Total**: 11 days
+
+### Epic 001: Discord Concierge
+
+| Task | Estimate | Status |
+|------|----------|--------|
+| Discord Gateway | 3 days | Todo |
+| REST API client | 2 days | Todo |
+| LLM integration | 3 days | Todo |
+| Tool definitions | 2 days | Todo |
+| Tool implementations | 3 days | Todo |
+| Conversation management | 2 days | Todo |
+| Outbox relay | 1 day | Todo |
+| Integration testing | 2 days | Todo |
+
+**Epic Total**: 18 days
+
+---
+
+## Sprint Plan
+
+### Sprint 1-2: Testability Foundation (4 days)
+
+- Define DockerClientTrait
+- Define ProcessExecutorTrait
+- Refactor docker/mod.rs
+- Refactor docker/run.rs
+
+### Sprint 3: Testability Completion (4 days)
+
+- Refactor scheduler/mod.rs
+- Refactor skills/mod.rs
+- Create test infrastructure
+
+### Sprint 4: Skills CLI (5 days)
+
+- Skills CLI commands
+- Per-agent config field
+- Container entrypoint generation
+
+### Sprint 5: Skills Integration (4 days)
+
+- Container skill installation
+- Validate command updates
+- Integration testing
+
+### Sprint 6-7: Discord Core (6 days)
+
+- Discord Gateway
+- REST API client
+- LLM integration
+
+### Sprint 8-9: Discord Tools (6 days)
+
+- Tool definitions
+- Tool implementations
+- Conversation management
+
+### Sprint 10: Discord Integration (4 days)
+
+- Outbox relay
+- Integration testing
+- Bug fixes
+
+---
+
+## Capacity Planning
+
+| Resource | Availability |
+|----------|--------------|
+| Developer | 6 hours/day |
+| Sprint Duration | 2 weeks |
+| Days per Sprint | 10 days |
+| Capacity per Sprint | 60 hours |
+
+---
+
+## Dependencies
+
+### External
+
+- Docker daemon availability
+- OpenRouter API access
+- Discord bot token
+- Node.js in container (node:22-slim)
+
+### Internal
+
+- Testability (Epic 003) must complete before other epics can be fully tested
+- Skills CLI (Epic 002) container changes depend on testability
+
+---
+
+## Risks
+
+| Risk | Likelihood | Impact | Mitigation |
+|------|------------|--------|------------|
+| Testability refactoring complexity | High | Low | Incremental changes |
+| Discord WebSocket stability | Medium | High | Resume/reconnect |
+| LLM response quality | Medium | Medium | Clear prompts |
+
+---
+
+## Velocity
+
+**Target**: 4 story points per sprint  
+**Initial estimate**: 61 days total = ~6 sprints
+
+---
+
+## Done Criteria
+
+- [ ] All acceptance criteria met
+- [ ] Code compiles without warnings
+- [ ] Tests pass
+- [ ] Documentation updated
+- [ ] Backward compatibility maintained
