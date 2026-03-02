@@ -1,0 +1,67 @@
+[settings]
+image_name = "switchboard-agent"
+image_tag = "latest"
+log_dir = ".switchboard/logs"
+timezone = "system"
+
+[[agent]]
+name = "sb-solution-architect"
+schedule = ""
+readonly = false
+timeout = "25m"
+prompt_file = ".switchboard/workflows/bmad/prompts/SOLUTION_ARCHITECT.md"
+env = { AGENT_COUNT = "2" }
+
+[[agent]]
+name = "sb-sprint-planner"
+schedule = "5,35 * * * *"                 # Every 30 min at :05 and :35
+readonly = false
+timeout = "25m"
+prompt_file = ".switchboard/workflows/bmad/prompts/SPRINT_PLANNER.md"
+env = { AGENT_COUNT = "2" }
+
+[[agent]]
+name = "sb-dev-1"
+schedule = "*/30 * * * *"                 # Every 30 min at :00 and :30
+readonly = false
+timeout = "30m"
+prompt_file = ".switchboard/workflows/bmad/prompts/DEV_PARALLEL.md"
+env = { AGENT_ID = "1" }
+
+[[agent]]
+name = "sb-dev-2"
+schedule = "15,45 * * * *"               # Every 30 min at :15 and :45
+readonly = false
+timeout = "30m"
+prompt_file = ".switchboard/workflows/bmad/prompts/DEV_PARALLEL.md"
+env = { AGENT_ID = "2" }
+
+[[agent]]
+name = "sb-code-reviewer"
+schedule = "20,50 * * * *"               # Every 30 min at :20 and :50
+readonly = false
+timeout = "20m"
+prompt_file = ".switchboard/workflows/bmad/prompts/CODE_REVIEWER.md"
+
+[[agent]]
+name = "sb-scrum-master"
+schedule = "0 * * * *"                    # Every hour on the hour
+readonly = false
+timeout = "15m"
+prompt_file = ".switchboard/workflows/bmad/prompts/SCRUM_MASTER.md"
+env = { AGENT_COUNT = "4" }
+
+[discord]
+enabled = true
+token_env = "${DISCORD_TOKEN}"
+channel_id = "${DISCORD_CHANNEL_ID}"
+
+[discord.llm]
+provider = "openrouter"
+api_key_env = "${OPENROUTER_API_KEY}"
+model = "anthropic/claude-sonnet-4"
+max_tokens = 1024
+
+[discord.conversation]
+max_history = 30
+ttl_minutes = 120

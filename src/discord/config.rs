@@ -585,8 +585,8 @@ mod tests {
         let original_key = env::var(OPENROUTER_API_KEY_ENV).ok();
 
         // Set DISCORD_TOKEN and remove OPENROUTER_API_KEY
-        // Always use a test token with a dot to pass validation
-        env::set_var(DISCORD_TOKEN_ENV, "test.token");
+        // Use a valid test token (50+ chars with dot) to pass validation
+        env::set_var(DISCORD_TOKEN_ENV, "test.token.value.that.is.long.enough.for.validation.purpose.12345");
         env::remove_var(OPENROUTER_API_KEY_ENV);
 
         let result = load_discord_config();
@@ -613,8 +613,8 @@ mod tests {
         let original_token = env::var(DISCORD_TOKEN_ENV).ok();
         let original_key = env::var(OPENROUTER_API_KEY_ENV).ok();
 
-        // Set both environment variables
-        env::set_var(DISCORD_TOKEN_ENV, "test.discord.token");
+        // Set both environment variables with valid values (50+ chars with dot)
+        env::set_var(DISCORD_TOKEN_ENV, "test.discord.token.value.that.is.long.enough.for.validation.12345");
         env::set_var(OPENROUTER_API_KEY_ENV, "test_openrouter_key");
 
         let result = load_discord_config();
@@ -636,7 +636,7 @@ mod tests {
         
         assert!(result.is_ok());
         let config = result.unwrap();
-        assert_eq!(config.discord_token, "test.discord.token");
+        assert_eq!(config.discord_token, "test.discord.token.value.that.is.long.enough.for.validation.12345");
         assert_eq!(config.openrouter_api_key, "test_openrouter_key");
     }
 
