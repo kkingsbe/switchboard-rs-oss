@@ -585,11 +585,8 @@ mod tests {
         let original_key = env::var(OPENROUTER_API_KEY_ENV).ok();
 
         // Set DISCORD_TOKEN and remove OPENROUTER_API_KEY
-        if let Some(ref token) = original_token {
-            env::set_var(DISCORD_TOKEN_ENV, token);
-        } else {
-            env::set_var(DISCORD_TOKEN_ENV, "test_token");
-        }
+        // Always use a test token with a dot to pass validation
+        env::set_var(DISCORD_TOKEN_ENV, "test.token");
         env::remove_var(OPENROUTER_API_KEY_ENV);
 
         let result = load_discord_config();
@@ -611,13 +608,13 @@ mod tests {
 
     #[test]
     #[serial]
-    fn test_env_config_success() {
+    fn test_env_config_success_debug() {
         // Save original env vars if they exist
         let original_token = env::var(DISCORD_TOKEN_ENV).ok();
         let original_key = env::var(OPENROUTER_API_KEY_ENV).ok();
 
         // Set both environment variables
-        env::set_var(DISCORD_TOKEN_ENV, "test_discord_token");
+        env::set_var(DISCORD_TOKEN_ENV, "test.discord.token");
         env::set_var(OPENROUTER_API_KEY_ENV, "test_openrouter_key");
 
         let result = load_discord_config();
@@ -632,9 +629,14 @@ mod tests {
             None => env::remove_var(OPENROUTER_API_KEY_ENV),
         }
 
+        // Debug: print the error if there is one
+        if let Err(e) = &result {
+            eprintln!("DEBUG ERROR: {}", e);
+        }
+        
         assert!(result.is_ok());
         let config = result.unwrap();
-        assert_eq!(config.discord_token, "test_discord_token");
+        assert_eq!(config.discord_token, "test.discord.token");
         assert_eq!(config.openrouter_api_key, "test_openrouter_key");
     }
 

@@ -1395,10 +1395,19 @@ mod tests {
 
     // === Lockfile Tests ===
 
-    /// Test validate_lockfile_consistency returns warnings for skills in lockfile not in config.
+    /// Test validate_lockfile_consistency returns empty when lockfile doesn't exist.
+    ///
+    /// This test ensures that when there is no lockfile in the skills directory,
+    /// the validation returns no warnings (since there's nothing to check).
     #[test]
     fn test_validate_lockfile_consistency_warns_orphaned_skills() {
-        // Create a minimal config
+        use tempfile::TempDir;
+
+        // Create a temp directory with no lockfile
+        let temp_dir = TempDir::new().expect("Failed to create temp dir");
+        let skills_dir = temp_dir.path().to_path_buf();
+
+        // Create a minimal config with an agent that has no skills
         let mut config = Config::default();
         config.agents = vec![Agent {
             name: "test-agent".to_string(),
@@ -1413,7 +1422,6 @@ mod tests {
             skills: Some(vec![]), // No skills
         }];
 
-        let skills_dir = PathBuf::from("./skills");
         let result = validate_lockfile_consistency(&config, &skills_dir);
 
         // Should return empty because lockfile doesn't exist
@@ -1424,9 +1432,16 @@ mod tests {
         );
     }
 
-    /// Test validate_lockfile_consistency returns empty when no skills field in config.
+    /// Test validate_lockfile_consistency returns warnings for orphaned skills in lockfile.
+    ///
+    /// This test ensures that when a lockfile exists with skills that are not
+    /// referenced in any agent configuration, warnings are returned.
     #[test]
     fn test_validate_lockfile_consistency_no_agents_with_skills() {
+        // Use the actual skills directory which has a lockfile with orphaned skills
+        let skills_dir = PathBuf::from("./skills");
+
+        // Create config with agent that has no skills
         let mut config = Config::default();
         config.agents = vec![Agent {
             name: "test-agent".to_string(),
@@ -1441,13 +1456,20 @@ mod tests {
             skills: None, // No skills field
         }];
 
-        let skills_dir = PathBuf::from("./skills");
         let result = validate_lockfile_consistency(&config, &skills_dir);
 
+        // Should return warnings because lockfile has skills not in config
         assert!(
-            result.is_empty(),
-            "Expected no warnings when agents have no skills, got: {:?}",
+            !result.is_empty(),
+            "Expected warnings when lockfile has skills not referenced in config, got: {:?}",
             result
+        );
+        // Verify the warnings mention the orphaned skills from the lockfile
+        let warning_text = result.join(" ");
+        assert!(
+            warning_text.contains("rust-engineer") || warning_text.contains("rust-best-practices"),
+            "Warning should mention orphaned skills from lockfile, got: {}",
+            warning_text
         );
     }
 }
