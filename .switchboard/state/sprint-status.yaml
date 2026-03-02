@@ -180,8 +180,9 @@ epics:
         risk: "medium"
         depends_on: []
         status: "in-progress"
-        assigned_to: "dev-1"
+        assigned_to: "dev-2"
         sprint: 4
         notes: "CRITICAL: No progress in 10+ hours. dev-1 stale."
         notes: "25 pre-existing test failures block all refactoring work. Story file created at .switchboard/state/stories/story-test-fix-01.md"
         notes: "CARRIED FORWARD from Sprint 3 - Sprint was stalled"
+        notes: "REBALANCED 2026-03-02: Moved from dev-1 to dev-2"
