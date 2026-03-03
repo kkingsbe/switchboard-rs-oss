@@ -114,23 +114,41 @@
 
 ---
 
-## Pending Review (2 stories)
+## Pending Review (3 stories)
 
 ### story-004-03: HTTP Server with Health Check
 
 - **Re-worked by:** dev-1
 - **Sprint:** 5
 - **Commit:** 36efc8d
-- **Status:** PENDING_REVIEW
-- **Notes:** Fixed formatting issues in src/gateway/server.rs (lines 353, 385, 392, 487, 495, 527, 541)
+- **Status:** ✅ APPROVED
+- **Reviewed by:** code-reviewer
+- **Review date:** 2026-03-03
+- **Acceptance Criteria:**
+  - [x] HTTP server on port 8080 — MET (verified by: GatewayServer::new creates server bound to http_port)
+  - [x] GET `/health` returns JSON {"status": "ok"} — MET (verified by: health_handler_returns_ok_status, router_responds_to_health_endpoint)
+  - [x] Graceful shutdown — MET (verified by: shutdown_signal() implements SIGINT/SIGTERM handling)
+- **Findings:**
+  - SHOULD FIX: None
+  - NICE TO HAVE: None
+- **Summary:** Implementation is complete with comprehensive tests covering health endpoint, server startup, and graceful shutdown. All 30+ gateway tests pass. Code follows Rust best practices with thiserror for error types, proper async patterns, and tracing for logging.
 
 ### story-004-07: Wire up Discord Gateway Connection
 
 - **Re-worked by:** dev-1
 - **Sprint:** 7
 - **Commit:** 36efc8d
-- **Status:** PENDING_REVIEW
-- **Notes:** Fixed formatting issues + replaced unwrap_or(0) with proper error logging
+- **Status:** ✅ APPROVED
+- **Reviewed by:** code-reviewer
+- **Review date:** 2026-03-03
+- **Acceptance Criteria:**
+  - [x] Gateway connects to Discord using twilight-gateway — MET (verified by: DiscordGateway initialized in server.run() with auto-reconnection)
+  - [x] Listens for MessageCreate events — MET (verified by: process_discord_events handles MessageCreate and forwards to registered projects)
+  - [x] Handle reconnection on disconnect — MET (verified by: exponential backoff reconnection loop with MAX_BACKOFF_SECS=60)
+- **Findings:**
+  - SHOULD FIX: None
+  - NICE TO HAVE: None
+- **Summary:** Implementation is complete with Discord Gateway connection, MessageCreate event handling, and robust reconnection with exponential backoff. All WebSocket and registration tests pass. Code follows Rust best practices with proper async/await patterns.
 
 ---
 
@@ -187,9 +205,14 @@
 - **Commits:** Already exists in codebase (pre-sprint implementation verified)
 - **Story file:** `.switchboard/state/stories/story-005-05-config-validation.md`
 - **Files changed:** `src/gateway/config.rs` (already existed)
-- **Status:** PENDING_REVIEW
+- **Status:** ✅ APPROVED
+- **Reviewed by:** code-reviewer
+- **Review date:** 2026-03-03
 - **Acceptance Criteria:**
-  - [x] Validate discord_token is not empty — verified by: `test_validation_fails_when_discord_token_empty`
-  - [x] Validate http_port and ws_port are valid (1024-65535) — verified by: `test_validation_fails_when_http_port_below_1024`, `test_validation_fails_when_ws_port_below_1024`, etc.
-  - [x] Validate channel mappings have required fields — verified by: `test_validation_fails_when_channel_missing_channel_id`, `test_validation_fails_when_channel_missing_project_name`
-- **Notes:** Implementation verified - all 28 config validation tests pass. Code already existed in codebase from previous work.
+  - [x] Validate discord_token is not empty — MET (verified by: validate_should_return_error_when_token_empty, test_validation_fails_when_discord_token_empty)
+  - [x] Validate http_port and ws_port are valid (1024-65535) — MET (verified by: validate_should_return_error_when_http_port_too_low/too_high, test_validation_fails_when_http_port_below_1024/above_65535)
+  - [x] Validate channel mappings have required fields — MET (verified by: validate_should_return_error_when_channel_missing_channel_id/project_name, test_validation_fails_when_channel_missing_channel_id/project_name)
+- **Findings:**
+  - SHOULD FIX: None
+  - NICE TO HAVE: None
+- **Summary:** Implementation is complete with comprehensive validation covering all acceptance criteria. 28 config validation tests pass. Uses thiserror for error types as per project conventions. Build and clippy checks pass.
