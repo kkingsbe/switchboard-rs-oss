@@ -353,7 +353,8 @@ impl GatewayServer {
                     }
 
                     // Create shutdown channel for this connection
-                    let (_gateway_shutdown_tx, gateway_shutdown_rx) = tokio::sync::oneshot::channel();
+                    let (_gateway_shutdown_tx, gateway_shutdown_rx) =
+                        tokio::sync::oneshot::channel();
 
                     // Spawn the event processor for this connection
                     let registry_clone = registry_for_events.clone();
@@ -385,12 +386,16 @@ impl GatewayServer {
                             warn!("Discord Gateway connection error: {}, attempting reconnection in {}s", e, backoff_secs);
 
                             // Wait with exponential backoff before reconnecting
-                            tokio::time::sleep(tokio::time::Duration::from_secs(backoff_secs)).await;
+                            tokio::time::sleep(tokio::time::Duration::from_secs(backoff_secs))
+                                .await;
 
                             // Exponential backoff: double the backoff, max out at MAX_BACKOFF_SECS
                             backoff_secs = (backoff_secs * 2).min(MAX_BACKOFF_SECS);
 
-                            info!("Discord Gateway: reconnection attempt, backoff now {}s", backoff_secs);
+                            info!(
+                                "Discord Gateway: reconnection attempt, backoff now {}s",
+                                backoff_secs
+                            );
                         }
                     }
                 }
@@ -487,18 +492,14 @@ async fn process_discord_events(
             } => {
                 info!(
                     "Received MessageCreate from channel {}: {}",
-                    channel_id,
-                    content
+                    channel_id, content
                 );
 
                 // Look up projects subscribed to this channel
                 let project_ids = registry.projects_for_channel(&channel_id).await;
 
                 if project_ids.is_empty() {
-                    debug!(
-                        "No projects subscribed to channel {}",
-                        channel_id
-                    );
+                    debug!("No projects subscribed to channel {}", channel_id);
                     continue;
                 }
 
@@ -508,7 +509,12 @@ async fn process_discord_events(
                         // Create the message payload
                         let message = GatewayMessage::Message {
                             payload: content.clone(),
-                            channel_id: channel_id.parse().unwrap_or(0),
+                            channel_id: channel_id
+                                .parse::<u64>()
+                                .map_err(|e| {
+                                    warn!("Failed to parse channel_id '{}': {}", channel_id, e);
+                                })
+                                .unwrap_or(0),
                         };
 
                         if let Ok(json) = serde_json::to_string(&message) {
@@ -527,8 +533,14 @@ async fn process_discord_events(
                     }
                 }
             }
-            DiscordEvent::Ready { user_id, session_id } => {
-                info!("Discord Gateway ready: user_id={}, session_id={}", user_id, session_id);
+            DiscordEvent::Ready {
+                user_id,
+                session_id,
+            } => {
+                info!(
+                    "Discord Gateway ready: user_id={}, session_id={}",
+                    user_id, session_id
+                );
             }
             DiscordEvent::Resumed => {
                 info!("Discord Gateway session resumed");
@@ -541,10 +553,7 @@ async fn process_discord_events(
                 channel_id,
                 guild_id: _,
             } => {
-                debug!(
-                    "Message {} deleted in channel {}",
-                    message_id, channel_id
-                );
+                debug!("Message {} deleted in channel {}", message_id, channel_id);
             }
             DiscordEvent::InvalidSession => {
                 warn!("Discord Gateway received invalid session, will reconnect");
