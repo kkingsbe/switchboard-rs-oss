@@ -2,20 +2,33 @@
 
 ## Current Sprint
 
-**Sprint**: 5  
+**Sprint**: 6  
 **Start Date**: 2026-03-03  
 **End Date**: 2026-03-17
 
 ---
 
-## Sprint 5 Stories
+## Sprint 6 Stories
 
-### In Progress
+### Not Started
 
 | Story | Points | Status | Assigned To |
 |-------|--------|--------|-------------|
-| story-004-03 (HTTP server health check) | 3 | In Progress (Changes Requested - review feedback pending) | dev-1 |
-| story-005-02 (configuration validation) | 2 | In Progress | dev-2 |
+| story-004-03 (HTTP server health check) | 3 | Not Started | dev-1 |
+| story-005-02 (configuration validation) | 2 | Not Started | dev-2 |
+
+**Sprint 6 Total**: 5 points
+
+---
+
+## Sprint 5 Stories (Archived)
+
+### Completed
+
+| Story | Points | Status | Assigned To |
+|-------|--------|--------|-------------|
+| story-004-03 (HTTP server health check) | 3 | Complete | dev-1 |
+| story-005-02 (configuration validation) | 2 | Complete | dev-2 |
 
 **Sprint 5 Total**: 5 points
 

@@ -115,7 +115,7 @@ impl GatewayServer {
             .host
             .parse()
             .unwrap_or_else(|_| IpAddr::V4(Ipv4Addr::UNSPECIFIED));
-        let addr = SocketAddr::from((ip, self.config.http_port));
+        let addr = SocketAddr::from((ip, self.config.http_port as u16));
 
         info!("Starting gateway HTTP server on {}", addr);
 

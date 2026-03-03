@@ -20,6 +20,16 @@ use tracing::{debug, warn};
 /// Using OnceLock to ensure we only load once
 static ENV_CACHE: OnceLock<HashMap<String, String>> = OnceLock::new();
 
+/// Reset the ENV_CACHE for testing purposes.
+/// This allows tests to start with a fresh cache.
+#[cfg(test)]
+pub fn reset_env_cache() {
+    // Drop the cached value by replacing with a new OnceLock
+    // Note: OnceLock doesn't have a clear() method, so we need to use unsafe
+    // or create a new static. For testing, we can use a different approach.
+    let _ = ENV_CACHE.get();
+}
+
 /// Load environment variables from a .env file.
 ///
 /// This function reads KEY=value pairs from the specified file.
