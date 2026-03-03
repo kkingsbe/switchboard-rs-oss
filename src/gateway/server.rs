@@ -4,12 +4,7 @@
 //! and graceful shutdown support.
 
 use crate::gateway::config::{GatewayConfig, ServerConfig};
-use axum::{
-    extract::State,
-    response::Json,
-    routing::get,
-    Router,
-};
+use axum::{extract::State, response::Json, routing::get, Router};
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 use std::sync::Arc;
 use thiserror::Error;
@@ -114,7 +109,7 @@ impl GatewayServer {
             .config
             .host
             .parse()
-            .unwrap_or_else(|_| IpAddr::V4(Ipv4Addr::UNSPECIFIED));
+            .unwrap_or(IpAddr::V4(Ipv4Addr::UNSPECIFIED));
         let addr = SocketAddr::from((ip, self.config.http_port as u16));
 
         info!("Starting gateway HTTP server on {}", addr);
@@ -133,7 +128,10 @@ impl GatewayServer {
         // Create the server with graceful shutdown
         let listener = tokio::net::TcpListener::bind(addr)
             .await
-            .map_err(|source| GatewayServerError::BindError { address: addr, source })?;
+            .map_err(|source| GatewayServerError::BindError {
+                address: addr,
+                source,
+            })?;
 
         info!("Gateway HTTP server listening on {}", addr);
 
@@ -164,7 +162,8 @@ async fn shutdown_signal() {
     let terminate = async {
         use tokio::signal::unix::{signal, SignalKind};
         let mut sigint = signal(SignalKind::interrupt()).expect("Failed to install SIGINT handler");
-        let mut sigterm = signal(SignalKind::terminate()).expect("Failed to install SIGTERM handler");
+        let mut sigterm =
+            signal(SignalKind::terminate()).expect("Failed to install SIGTERM handler");
         tokio::select! {
             _ = sigint.recv() => info!("Received SIGINT"),
             _ = sigterm.recv() => info!("Received SIGTERM"),
