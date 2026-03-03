@@ -2,6 +2,7 @@
 
 pub mod config;
 pub mod protocol;
+pub mod ratelimit;
 pub mod registry;
 pub mod routing;
 pub mod server;

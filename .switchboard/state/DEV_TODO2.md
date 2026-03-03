@@ -14,13 +14,12 @@ Before starting any stories, read these files:
 
 ## Stories
 
-- [ ] **story-005-03**: Route Messages by Channel (3 pts)
+- [x] **story-005-03**: Route Messages by Channel (3 pts)
   - 📄 Story: `.switchboard/state/stories/story-005-03-route-by-channel.md`
-  - 📚 Skills: `./skills/rust-engineer/SKILL.md`, `./skills/rust-engineer/references/async.md`, `./skills/DISCLI.md`
+  - 🔍 Review: See REVIEW_QUEUE.md — CHANGES_REQUESTED (scope violation)
   - ⚡ Pre-check: Build + tests pass
-  - ✅ Post-check: Build + tests pass, acceptance criteria met
-  - 🔒 Risk: Medium
-  - 📝 Commit: `feat(dev2): [005-03] Route messages by channel`
+  - ✅ Post-check: Revert changes to .switchboard/knowledge/journals/sprint-planner.md
+  - 📝 Commit: `fix(dev2): [005-03] revert out-of-scope changes`
 
 - [ ] **story-006-06**: Rate Limiting (2 pts)
   - 📄 Story: `.switchboard/state/stories/story-006-06-rate-limiting.md`

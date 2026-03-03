@@ -148,6 +148,9 @@ pub enum Commands {
 
     /// Check scheduler health and status
     Status,
+
+    /// Start the Discord Gateway service
+    Gateway(commands::gateway::GatewayCommand),
 }
 
 /// Build agent image and start scheduler
@@ -287,6 +290,7 @@ pub async fn run() -> Result<ColorMode, Box<dyn std::error::Error>> {
         Commands::Validate(args) => run_validate(args, cli.config).await,
         Commands::Skills(args) => commands::skills::run_skills(args, cli.config).await,
         Commands::Status => run_status(cli.config),
+        Commands::Gateway(args) => run_gateway(args).await,
     };
 
     // Return the color_mode regardless of success or failure
@@ -425,6 +429,28 @@ pub async fn run_up(
     config_path: Option<String>,
 ) -> Result<(), Box<dyn std::error::Error>> {
     crate::cli::commands::up::run_up(args, config_path).await
+}
+
+/// Handler for the 'gateway' command - Start the Discord Gateway service
+///
+/// This command starts the Discord Gateway service which provides HTTP and
+/// WebSocket endpoints for receiving Discord messages and forwarding them to
+/// registered project endpoints.
+///
+/// # Arguments
+///
+/// * `args` - The [`GatewayCommand`] containing CLI arguments
+///
+/// # Returns
+///
+/// Returns `Ok(())` on success, or an error if:
+/// - Configuration file not found
+/// - Configuration parsing or validation fails
+/// - Server fails to start
+pub async fn run_gateway(
+    args: commands::gateway::GatewayCommand,
+) -> Result<(), Box<dyn std::error::Error>> {
+    commands::gateway::run_gateway(args).await
 }
 
 /// Handler for the 'run' command - Immediately execute a single agent

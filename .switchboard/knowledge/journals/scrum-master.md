@@ -114,3 +114,17 @@
 - **Project state:** NOT complete - Sprint 1 still has 2 not-started stories (story-001: 3pts, story-003: 5pts)
 - **Coordination:** Ran Sprint Completion Protocol - wrote report to SPRINT_REPORT.md
 - **Recommendations:** Story-005-05 should be prioritized next sprint; address Docker tests in maintenance
+
+---
+
+### 2026-03-03T17:00:00Z — Sprint 8 Observation
+
+- **Sprint status:** Sprint 8 active (2026-03-03 to 2026-03-17), 10 points total
+- **Agent load:** Dev-1: 5 pts (story-004-08 CLI, story-007-04 logging), Dev-2: 5 pts (story-005-03 routing, story-006-06 rate limiting)
+- **Progress:** No completed stories yet. Dev-1 working on CLI and logging. Dev-2's story-005-03 returned CHANGES_REQUESTED (scope violation - modified sprint-planner.md outside of story scope)
+- **Review quality:** 1 CHANGES_REQUESTED - scope violation in story-005-03
+- **Blockers:** 1 active - pre-existing Docker test failures (6 tests) - unrelated to Sprint 8
+- **Sprint health:** At risk - dev-2's story rejected, requires revert of out-of-scope changes
+- **Skills in use:** rust-engineer, rust-best-practices - for CLI, routing, logging, and async patterns
+- **Coordination:** SM session detected Active Feature Sprint (Phase 7) - updated SPRINT_REPORT.md with progress
+- **Pattern observation:** Dev-2 made out-of-scope changes to sprint-planner.md - story scope not being respected
