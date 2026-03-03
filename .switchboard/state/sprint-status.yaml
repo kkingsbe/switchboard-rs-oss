@@ -2,13 +2,39 @@
 
 ## Current Sprint
 
-**Sprint**: 8  
+**Sprint**: 9  
 **Start Date**: 2026-03-03  
 **End Date**: 2026-03-17
 
 ---
 
+## Sprint 9 Stories
+
+### Completed
+
+| Story | Points | Status | Assigned To |
+|-------|--------|--------|-------------|
+| story-007-03 (PID file management) | 1 | Complete (APPROVED 2026-03-03) | dev-2 |
+| story-007-04 (Gateway logging) | 2 | Complete (APPROVED 2026-03-03) | dev-2 |
+
+### In Progress
+
+| Story | Points | Status | Assigned To |
+|-------|--------|--------|-------------|
+| story-006-01 (Project connection management) | 3 | In Progress | dev-1 |
+| story-006-05 (Fan-out message delivery) | 2 | In Progress | dev-1 |
+
+**Sprint 9 Total**: 8 points (dev-1: 5 pts, dev-2: 3 pts) - 3 pts COMPLETE
+
+---
+
 ## Sprint 8 Stories
+
+### Completed
+
+| Story | Points | Status | Assigned To |
+|-------|--------|--------|-------------|
+| story-006-06 (Rate limiting) | 2 | Complete (APPROVED 2026-03-03) | dev-2 |
 
 ### In Progress
 
@@ -16,10 +42,8 @@
 |-------|--------|--------|-------------|
 | story-004-08 (CLI gateway up) | 3 | In Progress | dev-1 |
 | story-005-03 (Route by channel) | 3 | In Progress | dev-2 |
-| story-006-06 (Rate limiting) | 2 | Complete (APPROVED 2026-03-03) | dev-2 |
-| story-007-04 (Gateway logging) | 2 | In Progress | dev-1 |
 
-**Sprint 8 Total**: 10 points (dev-1: 5 pts, dev-2: 5 pts)
+**Sprint 8 Total**: 10 points (dev-1: 5 pts, dev-2: 5 pts) - 2 pts COMPLETE
 
 ---
 
