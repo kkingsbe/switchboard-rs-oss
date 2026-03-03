@@ -12,7 +12,7 @@ Before starting, read the review feedback in REVIEW_QUEUE.md for story-004-03 an
 
 ## Stories
 
-- [ ] **{story-004-07}**: Discord Gateway Connection (5 pts) — REWORK
+- [x] **{story-004-07}**: Discord Gateway Connection (5 pts) — QUEUED_FOR_REVIEW
   - 📄 Story: `.switchboard/state/stories/story-004-07-*.md`
   - 📚 Skills: `./skills/rust-engineer/SKILL.md`, `./skills/rust-best-practices/SKILL.md`
   - ⚡ Pre-check: `cargo build --tests 2>&1 | head -50`
@@ -20,7 +20,7 @@ Before starting, read the review feedback in REVIEW_QUEUE.md for story-004-03 an
   - 🔒 Risk: High
   - 📝 Commit: `fix(dev1): [story-004-07] address review feedback - formatting + unwrap_or`
 
-- [ ] **{story-004-03}**: HTTP Server with Health Check (3 pts) — REWORK
+- [x] **{story-004-03}**: HTTP Server with Health Check (3 pts) — QUEUED_FOR_REVIEW
   - 📄 Story: `.switchboard/state/stories/archive/sprint-5/story-004-03-http-server-health-check.md`
   - 📚 Skills: `./skills/rust-best-practices/SKILL.md`
   - ⚡ Pre-check: Build and tests pass
