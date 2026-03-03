@@ -15,7 +15,7 @@ Before starting any stories, read these files:
 
 ## Stories
 
-- [ ] **{story-004-06}: Registration Protocol** (3 pts)
+- [x] **{story-004-06}: Registration Protocol** (3 pts) ✅ implemented
   - 📄 Story: `.switchboard/state/stories/sprint-6/story-004-06-registration-protocol.md`
   - 📚 Skills: `./skills/rust-best-practices/SKILL.md`, `./skills/rust-engineer/SKILL.md`
   - ⚡ Pre-check: Build + tests pass
