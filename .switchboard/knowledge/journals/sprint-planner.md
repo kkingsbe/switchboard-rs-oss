@@ -93,3 +93,36 @@ When .dev_done_* files appear:
 - **Agent distribution:** Dev-1 received story-004-04 (3 pts, medium risk) - the only eligible story.
 - **Data cleanup:** Fixed sprint-status.yaml which had duplicate entries (same stories appearing as both "Complete" in Sprint 5 and "Not Started" in Sprint 6).
 - **Insight:** Many stories were already marked "already-implemented" in prior sprints, suggesting significant progress made before formal sprint planning began.
+
+---
+
+### 2026-03-03 — Sprint 8 Planning
+
+**Sprint 8 Summary:**
+- **Stories selected:** 4 (10 points total)
+- **Dev agent 1:** story-004-08 (CLI gateway up, 3pts) + story-007-04 (logging, 2pts) = 5pts
+- **Dev agent 2:** story-005-03 (route by channel, 3pts) + story-006-06 (rate limiting, 2pts) = 5pts
+
+**Distribution decisions:**
+- CLI + Logging → dev-1 (focus on CLI commands, low risk)
+- Routing + Rate limiting → dev-2 (both touch gateway/server.rs, medium risk stories grouped)
+
+**Dependency analysis:**
+- 4 ready stories with all dependencies complete
+- Epic 6 stories mostly blocked by Epic 6.1 (connection management)
+- Epic 7 stories partially blocked
+
+**Sprint capacity vs actual:**
+- Target: 2 agents × 3 = 6 stories, 16 points max
+- Actual: 4 stories, 10 points (conservative to ensure completion)
+
+**Patterns observed:**
+- Epic 6 (connection management) is a critical path blocker - many stories depend on 6.1
+- Epic 4 CLI stories are dependency-light and good for starting new epics
+- Gateway stories cluster well by module (server.rs touches multiple)
+
+**Deferred stories:**
+- story-006-02 (heartbeat) - blocked by 6.1
+- story-006-03 (reconnect) - blocked by 6.2
+- story-007-02 (gateway down) - blocked by 4.8
+- story-007-05 (client library) - partially blocked
