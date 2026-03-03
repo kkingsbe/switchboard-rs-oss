@@ -151,15 +151,9 @@ struct ConnectionManagerInner {
 ///
 /// Uses `Arc<RwLock<ConnectionManagerInner>>` to allow concurrent
 /// access from multiple async tasks.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct ConnectionManager {
     inner: Arc<RwLock<ConnectionManagerInner>>,
-}
-
-impl Default for ConnectionManager {
-    fn default() -> Self {
-        Self::new()
-    }
 }
 
 impl ConnectionManager {
