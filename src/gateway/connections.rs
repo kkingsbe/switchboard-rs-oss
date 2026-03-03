@@ -588,7 +588,10 @@ mod tests {
         manager.add_connection(connection).await.unwrap();
 
         // Get original heartbeat
-        let original = manager.get_connection(&"project-1".to_string()).await.unwrap();
+        let original = manager
+            .get_connection(&"project-1".to_string())
+            .await
+            .unwrap();
         let original_heartbeat = original.last_heartbeat;
 
         // Wait a tiny bit and update heartbeat
@@ -598,7 +601,10 @@ mod tests {
             .await
             .unwrap();
 
-        let updated = manager.get_connection(&"project-1".to_string()).await.unwrap();
+        let updated = manager
+            .get_connection(&"project-1".to_string())
+            .await
+            .unwrap();
         assert!(updated.last_heartbeat >= original_heartbeat);
     }
 
@@ -620,13 +626,19 @@ mod tests {
         // Disconnect
         manager.disconnect(&"project-1".to_string()).await.unwrap();
 
-        let conn = manager.get_connection(&"project-1".to_string()).await.unwrap();
+        let conn = manager
+            .get_connection(&"project-1".to_string())
+            .await
+            .unwrap();
         assert_eq!(conn.state, ConnectionState::Disconnected);
 
         // Reconnect
         manager.reconnect(&"project-1".to_string()).await.unwrap();
 
-        let conn = manager.get_connection(&"project-1".to_string()).await.unwrap();
+        let conn = manager
+            .get_connection(&"project-1".to_string())
+            .await
+            .unwrap();
         assert_eq!(conn.state, ConnectionState::Connected);
     }
 
@@ -669,7 +681,10 @@ mod tests {
             .await
             .unwrap();
 
-        let conn = manager.get_connection(&"project-1".to_string()).await.unwrap();
+        let conn = manager
+            .get_connection(&"project-1".to_string())
+            .await
+            .unwrap();
         assert!(conn.subscriptions.contains(&"channel-new".to_string()));
 
         // Remove subscription
@@ -678,7 +693,10 @@ mod tests {
             .await
             .unwrap();
 
-        let conn = manager.get_connection(&"project-1".to_string()).await.unwrap();
+        let conn = manager
+            .get_connection(&"project-1".to_string())
+            .await
+            .unwrap();
         assert!(!conn.subscriptions.contains(&"channel-new".to_string()));
     }
 
@@ -694,11 +712,8 @@ mod tests {
 
         // Create detector with very short timeout
         let callback = Arc::new(|_: Vec<ProjectId>| {});
-        let detector = StaleConnectionDetector::new(
-            manager.clone(),
-            Duration::milliseconds(1),
-            callback,
-        );
+        let detector =
+            StaleConnectionDetector::new(manager.clone(), Duration::milliseconds(1), callback);
 
         // Wait longer than timeout
         sleep(std::time::Duration::from_millis(50)).await;
@@ -732,7 +747,8 @@ mod tests {
         });
 
         // Create detector with short timeout and start it
-        let mut detector = StaleConnectionDetector::new(manager, Duration::milliseconds(10), callback);
+        let mut detector =
+            StaleConnectionDetector::new(manager, Duration::milliseconds(10), callback);
         detector.start(Duration::milliseconds(10));
 
         // Wait longer than timeout
@@ -782,7 +798,11 @@ mod tests {
 
         for project_id in &projects {
             let conn = manager.get_connection(&project_id.to_string()).await;
-            assert!(conn.is_some(), "Project {} should be in connection list", project_id);
+            assert!(
+                conn.is_some(),
+                "Project {} should be in connection list",
+                project_id
+            );
         }
     }
 
@@ -850,7 +870,8 @@ mod tests {
             cleanup_count_clone.fetch_add(projects.len(), Ordering::SeqCst);
         });
 
-        let mut detector = StaleConnectionDetector::new(manager.clone(), Duration::milliseconds(10), callback);
+        let mut detector =
+            StaleConnectionDetector::new(manager.clone(), Duration::milliseconds(10), callback);
 
         // Start the background detector
         detector.start(Duration::milliseconds(10));

@@ -178,7 +178,7 @@ impl ChannelRegistry {
     /// Removes the project from all channel subscriptions.
     pub async fn unregister(&self, project_id: &ProjectId) -> RegistryResult<()> {
         let project_id_str = project_id.clone();
-        
+
         let mut inner = self.inner.write().await;
 
         // Check if project exists

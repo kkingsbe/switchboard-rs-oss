@@ -230,7 +230,7 @@ impl RateLimiter {
 
         // Use the retry-after header if provided, otherwise use current backoff
         let wait_time = retry_after.unwrap_or(state.backoff_secs);
-        
+
         // Store the retry-after value if provided, so check_rate_limit can use it
         // If retry_after is not provided, clear the stored value so we use backoff
         if retry_after.is_some() {
