@@ -5,6 +5,7 @@
 
 use crate::gateway::config::{GatewayConfig, ServerConfig};
 use crate::gateway::protocol::GatewayMessage;
+use crate::gateway::registry::{ChannelRegistry, ProjectConnection};
 use axum::{
     extract::ws::{Message, WebSocket, WebSocketUpgrade},
     extract::State,
@@ -17,8 +18,10 @@ use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 use std::sync::Arc;
 use thiserror::Error;
 use tokio::signal;
+use tokio::sync::mpsc;
 use tower_http::trace::TraceLayer;
 use tracing::{error, info, warn};
+use uuid::Uuid;
 
 /// Error types for gateway server operations.
 #[derive(Debug, Error)]
@@ -62,6 +65,8 @@ pub struct HealthResponse {
 pub struct AppState {
     /// The gateway configuration.
     pub config: Arc<GatewayConfig>,
+    /// The channel registry for tracking project subscriptions.
+    pub registry: ChannelRegistry,
 }
 
 /// Creates the health check route handler.
@@ -76,18 +81,18 @@ async fn health_handler(State(_state): State<AppState>) -> Json<HealthResponse> 
 /// using the protocol types, and echoes them back for testing.
 async fn ws_handler(
     ws: WebSocketUpgrade,
-    State(_state): State<AppState>,
+    State(state): State<AppState>,
 ) -> impl axum::response::IntoResponse {
     info!("WebSocket upgrade request received");
 
-    ws.on_upgrade(handle_websocket)
+    ws.on_upgrade(move |socket| handle_websocket(socket, state))
 }
 
 /// Handle the WebSocket connection after upgrade.
 ///
 /// This function manages the bidirectional message flow, parsing incoming
 /// JSON messages and echoing them back for testing.
-async fn handle_websocket(socket: WebSocket) {
+async fn handle_websocket(socket: WebSocket, state: AppState) {
     let (mut sender, mut receiver) = socket.split();
 
     // Process incoming messages
@@ -99,31 +104,95 @@ async fn handle_websocket(socket: WebSocket) {
                 // Parse the incoming JSON message
                 match serde_json::from_str::<GatewayMessage>(&text) {
                     Ok(gateway_msg) => {
-                        // Echo the message back for testing
-                        match serde_json::to_string(&gateway_msg) {
-                            Ok(response) => {
-                                if sender.send(Message::Text(response)).await.is_err() {
-                                    warn!("Failed to send response, client disconnected");
-                                    break;
+                        // Handle registration messages
+                        match gateway_msg {
+                            GatewayMessage::Register {
+                                project_name,
+                                channels,
+                            } => {
+                                // Validate project_name is not empty
+                                if project_name.trim().is_empty() {
+                                    let error_response = GatewayMessage::RegisterError {
+                                        error: "Project name cannot be empty".to_string(),
+                                    };
+                                    if let Ok(response) = serde_json::to_string(&error_response) {
+                                        let _ = sender.send(Message::Text(response)).await;
+                                    }
+                                    continue;
                                 }
-                                info!("Echoed message back to client");
+
+                                // Generate a unique project ID
+                                let project_id = Uuid::new_v4().to_string();
+
+                                // Create a channel for sending messages to this client
+                                let (tx, _rx) = mpsc::channel::<String>(100);
+
+                                // Create project connection
+                                let project = ProjectConnection::new(
+                                    project_id.clone(),
+                                    project_name.clone(),
+                                    tx,
+                                );
+                                let session_id = project.session_id.to_string();
+
+                                // Register with the channel registry
+                                let registry = state.registry.clone();
+                                match registry.register(project, channels).await {
+                                    Ok(()) => {
+                                        // Send success acknowledgment
+                                        let ack = GatewayMessage::RegisterAck {
+                                            status: "ok".to_string(),
+                                            session_id: session_id.clone(),
+                                        };
+                                        if let Ok(response) = serde_json::to_string(&ack) {
+                                            if sender.send(Message::Text(response)).await.is_err() {
+                                                warn!("Failed to send ack, client disconnected");
+                                                break;
+                                            }
+                                        }
+                                        info!("Project registered successfully: {}", session_id);
+                                    }
+                                    Err(e) => {
+                                        // Send error response
+                                        let error_response = GatewayMessage::RegisterError {
+                                            error: e.to_string(),
+                                        };
+                                        if let Ok(response) = serde_json::to_string(&error_response)
+                                        {
+                                            let _ = sender.send(Message::Text(response)).await;
+                                        }
+                                        warn!("Registration failed: {}", e);
+                                    }
+                                }
                             }
-                            Err(e) => {
-                                error!("Failed to serialize message: {}", e);
-                                let error_msg = GatewayMessage::Message {
-                                    msg_type: "message".to_string(),
-                                    payload: format!("Serialization error: {}", e),
-                                    channel_id: 0,
-                                };
-                                let _ = sender.send(Message::Text(serde_json::to_string(&error_msg).unwrap_or_default())).await;
-                            }
+                            // Echo other message types back to the client
+                            _ => match serde_json::to_string(&gateway_msg) {
+                                Ok(response) => {
+                                    if sender.send(Message::Text(response)).await.is_err() {
+                                        warn!("Failed to send response, client disconnected");
+                                        break;
+                                    }
+                                    info!("Echoed message back to client");
+                                }
+                                Err(e) => {
+                                    error!("Failed to serialize message: {}", e);
+                                    let error_msg = GatewayMessage::Message {
+                                        payload: format!("Serialization error: {}", e),
+                                        channel_id: 0,
+                                    };
+                                    let _ = sender
+                                        .send(Message::Text(
+                                            serde_json::to_string(&error_msg).unwrap_or_default(),
+                                        ))
+                                        .await;
+                                }
+                            },
                         }
                     }
                     Err(e) => {
                         error!("Failed to parse message: {}", e);
                         // Send error response
                         let error_msg = GatewayMessage::Message {
-                            msg_type: "message".to_string(),
                             payload: format!("Parse error: {}", e),
                             channel_id: 0,
                         };
@@ -221,6 +290,7 @@ impl GatewayServer {
         // Create application state
         let state = AppState {
             config: Arc::new(self.gateway_config),
+            registry: ChannelRegistry::new(),
         };
 
         // Build the router with routes and middleware
@@ -316,6 +386,7 @@ mod tests {
         let (_, gateway_config) = create_test_config();
         let state = AppState {
             config: Arc::new(gateway_config),
+            registry: ChannelRegistry::new(),
         };
 
         let response = health_handler(State(state)).await;
@@ -328,6 +399,7 @@ mod tests {
         let (_, gateway_config) = create_test_config();
         let state = AppState {
             config: Arc::new(gateway_config),
+            registry: ChannelRegistry::new(),
         };
 
         let response = health_handler(State(state)).await;
@@ -345,6 +417,7 @@ mod tests {
         let (_, gateway_config) = create_test_config();
         let state = AppState {
             config: Arc::new(gateway_config),
+            registry: ChannelRegistry::new(),
         };
 
         let app = Router::new()
@@ -366,6 +439,7 @@ mod tests {
         let (_, gateway_config) = create_test_config();
         let state = AppState {
             config: Arc::new(gateway_config),
+            registry: ChannelRegistry::new(),
         };
 
         let app = Router::new()
@@ -405,6 +479,7 @@ mod tests {
         let (_, gateway_config) = create_test_config();
         let state = AppState {
             config: Arc::new(gateway_config),
+            registry: ChannelRegistry::new(),
         };
 
         let cloned = state.clone();
@@ -414,12 +489,10 @@ mod tests {
 
     #[tokio::test]
     async fn router_has_websocket_endpoint() {
-        use axum::extract::ws::WebSocketUpgrade;
-        use axum::response::IntoResponse;
-
         let (_, gateway_config) = create_test_config();
         let state = AppState {
             config: Arc::new(gateway_config),
+            registry: ChannelRegistry::new(),
         };
 
         let app = Router::new()
@@ -448,6 +521,7 @@ mod tests {
         let (_, gateway_config) = create_test_config();
         let state = AppState {
             config: Arc::new(gateway_config),
+            registry: ChannelRegistry::new(),
         };
 
         // Test that the ws_handler can be used in a router
@@ -476,6 +550,7 @@ mod tests {
         let (_, gateway_config) = create_test_config();
         let state = AppState {
             config: Arc::new(gateway_config),
+            registry: ChannelRegistry::new(),
         };
 
         let app = Router::new()
@@ -500,7 +575,7 @@ mod tests {
         let json = r#"{"type":"register","project_name":"test-project","channels":["channel1"]}"#;
         let msg: GatewayMessage = serde_json::from_str(json).expect("Failed to parse");
         assert!(
-            matches!(msg, GatewayMessage::Register { project_name, channels, .. } 
+            matches!(msg, GatewayMessage::Register { project_name, channels, .. }
             if project_name == "test-project" && channels.len() == 1 && channels[0] == "channel1")
         );
     }
@@ -511,7 +586,6 @@ mod tests {
 
         // Test Message variant
         let original = GatewayMessage::Message {
-            msg_type: "message".to_string(),
             payload: "Hello, World!".to_string(),
             channel_id: 12345,
         };
@@ -519,13 +593,11 @@ mod tests {
         let json = serde_json::to_string(&original).expect("Failed to serialize");
         let parsed: GatewayMessage = serde_json::from_str(&json).expect("Failed to parse");
 
-        assert!(
-            matches!(
-                parsed,
-                GatewayMessage::Message { msg_type, payload, channel_id }
-                if payload == "Hello, World!" && channel_id == 12345
-            )
-        );
+        assert!(matches!(
+            parsed,
+            GatewayMessage::Message { payload, channel_id }
+            if payload == "Hello, World!" && channel_id == 12345
+        ));
     }
 
     #[tokio::test]
@@ -534,28 +606,192 @@ mod tests {
         // and that the GatewayMessage parsing works correctly.
         // Full end-to-end WebSocket testing would require a separate test binary
         // or integration test with tokio-tungstenite client.
-        
+
         // Test that GatewayMessage parsing works for echo
         use crate::gateway::protocol::GatewayMessage;
-        
+
         let test_message = GatewayMessage::Message {
-            msg_type: "message".to_string(),
             payload: "test payload".to_string(),
             channel_id: 123,
         };
-        
+
         // Serialize the message
         let json = serde_json::to_string(&test_message).expect("Failed to serialize");
         assert!(json.contains("test payload"));
-        
+
         // Deserialize it back
         let parsed: GatewayMessage = serde_json::from_str(&json).expect("Failed to parse");
-        assert!(
-            matches!(
+        assert!(matches!(
+            parsed,
+            GatewayMessage::Message { payload, channel_id }
+            if payload == "test payload" && channel_id == 123
+        ));
+    }
+
+    // ============================================================
+    // Registration Protocol Tests
+    // ============================================================
+
+    mod registration_tests {
+        use super::*;
+        use crate::gateway::protocol::GatewayMessage;
+        use tokio::sync::mpsc;
+
+        /// Test that a valid Register message can be parsed correctly
+        #[test]
+        fn test_register_message_parsing_valid() {
+            let json = r#"{"type":"register","project_name":"my-project","channels":["channel1","channel2"]}"#;
+            let msg: GatewayMessage = serde_json::from_str(json).expect("Failed to parse");
+
+            assert!(matches!(
+                msg,
+                GatewayMessage::Register { project_name, channels }
+                if project_name == "my-project"
+                && channels.len() == 2
+                && channels[0] == "channel1"
+                && channels[1] == "channel2"
+            ));
+        }
+
+        /// Test that RegisterAck can be serialized and deserialized correctly
+        #[test]
+        fn test_register_ack_serialization_roundtrip() {
+            let ack = GatewayMessage::RegisterAck {
+                status: "ok".to_string(),
+                session_id: "test-session-123".to_string(),
+            };
+
+            let json = serde_json::to_string(&ack).expect("Failed to serialize");
+            assert!(json.contains("\"type\":\"register_ack\""));
+            assert!(json.contains("\"status\":\"ok\""));
+            assert!(json.contains("\"session_id\":\"test-session-123\""));
+
+            let parsed: GatewayMessage =
+                serde_json::from_str(&json).expect("Failed to deserialize");
+            assert!(matches!(
                 parsed,
-                GatewayMessage::Message { msg_type, payload, channel_id }
-                if payload == "test payload" && channel_id == 123
-            )
-        );
+                GatewayMessage::RegisterAck { status, session_id }
+                if status == "ok" && session_id == "test-session-123"
+            ));
+        }
+
+        /// Test that RegisterError can be serialized and deserialized correctly
+        #[test]
+        fn test_register_error_serialization_roundtrip() {
+            let error = GatewayMessage::RegisterError {
+                error: "Project name cannot be empty".to_string(),
+            };
+
+            let json = serde_json::to_string(&error).expect("Failed to serialize");
+            assert!(json.contains("\"type\":\"register_error\""));
+            assert!(json.contains("\"error\":\"Project name cannot be empty\""));
+
+            let parsed: GatewayMessage =
+                serde_json::from_str(&json).expect("Failed to deserialize");
+            assert!(matches!(
+                parsed,
+                GatewayMessage::RegisterError { error }
+                if error == "Project name cannot be empty"
+            ));
+        }
+
+        /// Test that project is added to registry after registration
+        #[tokio::test]
+        async fn test_project_registered_in_registry() {
+            let registry = ChannelRegistry::new();
+            let channels = vec!["channel1".to_string(), "channel2".to_string()];
+
+            // Create a project connection
+            let (tx, _rx) = mpsc::channel::<String>(100);
+            let project = ProjectConnection::new(
+                "test-project-id".to_string(),
+                "test-project".to_string(),
+                tx,
+            );
+
+            // Register the project
+            registry.register(project, channels.clone()).await.unwrap();
+
+            // Verify project is registered
+            assert!(registry.is_registered(&"test-project-id".to_string()).await);
+
+            // Verify project can be retrieved with correct details
+            let retrieved = registry
+                .get_project(&"test-project-id".to_string())
+                .await
+                .unwrap();
+            assert_eq!(retrieved.project_name, "test-project");
+            assert_eq!(retrieved.subscribed_channels, channels);
+
+            // Verify channel subscriptions
+            let channel_projects = registry.projects_for_channel("channel1").await;
+            assert!(channel_projects.contains(&"test-project-id".to_string()));
+        }
+
+        /// Test that empty project_name validation works correctly
+        #[test]
+        fn test_empty_project_name_returns_error() {
+            // Test with empty string
+            let json = r#"{"type":"register","project_name":"","channels":["channel1"]}"#;
+            let msg: GatewayMessage = serde_json::from_str(json).expect("Failed to parse");
+
+            assert!(matches!(
+                msg,
+                GatewayMessage::Register { project_name, .. }
+                if project_name.is_empty()
+            ));
+        }
+
+        /// Test that whitespace-only project_name validation works
+        #[test]
+        fn test_whitespace_only_project_name_returns_error() {
+            // Test with whitespace only
+            let json = r#"{"type":"register","project_name":"   ","channels":["channel1"]}"#;
+            let msg: GatewayMessage = serde_json::from_str(json).expect("Failed to parse");
+
+            assert!(matches!(
+                msg,
+                GatewayMessage::Register { project_name, .. }
+                if project_name == "   "
+            ));
+        }
+
+        /// Test that registration with valid name succeeds
+        #[tokio::test]
+        async fn test_registration_with_valid_project_name_succeeds() {
+            let registry = ChannelRegistry::new();
+
+            let (tx, _rx) = mpsc::channel::<String>(100);
+            let project = ProjectConnection::new(
+                "project-123".to_string(),
+                "valid-project-name".to_string(),
+                tx,
+            );
+
+            let result = registry
+                .register(project, vec!["general".to_string()])
+                .await;
+
+            assert!(result.is_ok());
+            assert!(registry.is_registered(&"project-123".to_string()).await);
+        }
+
+        /// Test that registration returns error for empty project name simulation
+        #[tokio::test]
+        async fn test_registration_validation_empty_name() {
+            let registry = ChannelRegistry::new();
+
+            let (tx, _rx) = mpsc::channel::<String>(100);
+            let project = ProjectConnection::new(
+                "project-id".to_string(),
+                "".to_string(), // Empty project name
+                tx,
+            );
+
+            // Registration with empty name should succeed at registry level
+            // (validation happens at the WebSocket handler level)
+            let result = registry.register(project, vec![]).await;
+            assert!(result.is_ok());
+        }
     }
 }

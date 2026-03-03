@@ -76,7 +76,6 @@ mod tests {
     #[test]
     fn test_register_serialization_roundtrip() {
         let msg = GatewayMessage::Register {
-            msg_type: "register".to_string(),
             project_name: "test-project-123".to_string(),
             channels: vec!["channel1".to_string(), "channel2".to_string()],
         };
@@ -99,7 +98,6 @@ mod tests {
     #[test]
     fn test_register_ack_serialization_roundtrip() {
         let msg = GatewayMessage::RegisterAck {
-            msg_type: "register_ack".to_string(),
             status: "ok".to_string(),
             session_id: "session-abc-123".to_string(),
         };
@@ -120,7 +118,6 @@ mod tests {
     #[test]
     fn test_register_error_serialization_roundtrip() {
         let msg = GatewayMessage::RegisterError {
-            msg_type: "register_error".to_string(),
             error: "Project name already exists".to_string(),
         };
         let json = serde_json::to_string(&msg).expect("Failed to serialize RegisterError");
@@ -138,7 +135,6 @@ mod tests {
     #[test]
     fn test_message_serialization_roundtrip() {
         let msg = GatewayMessage::Message {
-            msg_type: "message".to_string(),
             payload: "Hello, world!".to_string(),
             channel_id: 12345,
         };
@@ -159,7 +155,6 @@ mod tests {
     #[test]
     fn test_heartbeat_serialization_roundtrip() {
         let msg = GatewayMessage::Heartbeat {
-            msg_type: "heartbeat".to_string(),
             timestamp: 1699999999,
         };
         let json = serde_json::to_string(&msg).expect("Failed to serialize Heartbeat");
@@ -176,7 +171,6 @@ mod tests {
     #[test]
     fn test_heartbeat_ack_serialization_roundtrip() {
         let msg = GatewayMessage::HeartbeatAck {
-            msg_type: "heartbeat_ack".to_string(),
             timestamp: 1700000000,
         };
         let json = serde_json::to_string(&msg).expect("Failed to serialize HeartbeatAck");
