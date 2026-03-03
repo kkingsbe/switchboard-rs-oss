@@ -14,10 +14,9 @@
 
 | Story | Points | Status | Assigned To |
 |-------|--------|--------|-------------|
-| story-004-03 (HTTP server health check) | 3 | Not Started | dev-1 |
-| story-005-02 (configuration validation) | 2 | Not Started | dev-2 |
+| story-004-04 (WebSocket server) | 3 | In Progress | dev-1 |
 
-**Sprint 6 Total**: 5 points
+**Sprint 6 Total**: 3 points
 
 ---
 
