@@ -78,3 +78,11 @@
 - These tests are in docker::run::run, docker::build, and docker::skills modules
 - Documented blocker in .switchboard/state/BLOCKERS.md
 - My stories touched only src/gateway/ and src/config/ modules
+
+### 2026-03-03T17:40:00Z — Sprint 8, Stories: [005-03, 006-06]
+
+- Implemented channel-based message routing in src/gateway/routing.rs using HashMap
+- Fixed rate limit handle_429 bug in src/gateway/ratelimit.rs - was not respecting Discord's Retry-After header
+- Added retry_after_secs field to ChannelState to properly handle 429 responses
+- Tests: all gateway::ratelimit tests now pass (10/10)
+- Pre-existing docker/skills test failures (9) are unrelated to this sprint's work
