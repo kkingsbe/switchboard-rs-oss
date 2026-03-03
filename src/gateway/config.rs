@@ -39,11 +39,11 @@ pub struct ServerConfig {
 
     /// HTTP server port.
     #[serde(default = "default_http_port")]
-    pub http_port: u16,
+    pub http_port: u32,
 
     /// WebSocket server port.
     #[serde(default = "default_ws_port")]
-    pub ws_port: u16,
+    pub ws_port: u32,
 }
 
 impl Default for ServerConfig {
@@ -114,11 +114,11 @@ fn default_host() -> String {
     "0.0.0.0".to_string()
 }
 
-fn default_http_port() -> u16 {
+fn default_http_port() -> u32 {
     8080
 }
 
-fn default_ws_port() -> u16 {
+fn default_ws_port() -> u32 {
     9000
 }
 
@@ -193,10 +193,10 @@ impl GatewayConfig {
 
         // Get optional server config
         let host = resolve_env_var_from_map("GATEWAY_HOST", env_vars).unwrap_or_else(default_host);
-        let http_port: u16 = resolve_env_var_from_map("GATEWAY_HTTP_PORT", env_vars)
+        let http_port: u32 = resolve_env_var_from_map("GATEWAY_HTTP_PORT", env_vars)
             .and_then(|s| s.parse().ok())
             .unwrap_or_else(default_http_port);
-        let ws_port: u16 = resolve_env_var_from_map("GATEWAY_WS_PORT", env_vars)
+        let ws_port: u32 = resolve_env_var_from_map("GATEWAY_WS_PORT", env_vars)
             .and_then(|s| s.parse().ok())
             .unwrap_or_else(default_ws_port);
 
@@ -252,7 +252,7 @@ impl GatewayConfig {
         // Validate http_port is in range 1024-65535
         if self.server.http_port < 1024 || self.server.http_port > 65535 {
             return Err(GatewayConfigError::ValidationError(format!(
-                "http_port must be in range 1024-65535, got {}",
+                "http_port must be >= 1024, got {}",
                 self.server.http_port
             )));
         }
@@ -260,7 +260,7 @@ impl GatewayConfig {
         // Validate ws_port is in range 1024-65535
         if self.server.ws_port < 1024 || self.server.ws_port > 65535 {
             return Err(GatewayConfigError::ValidationError(format!(
-                "ws_port must be in range 1024-65535, got {}",
+                "ws_port must be >= 1024, got {}",
                 self.server.ws_port
             )));
         }
@@ -524,7 +524,10 @@ this is not valid toml
         // If it errors, that's also acceptable - means the .env cache was empty
     }
 
+    use serial_test::serial;
+
     #[test]
+    #[serial]
     fn test_from_env_with_token() {
         // Clean up any pre-existing values first
         env::remove_var("DISCORD_TOKEN");
@@ -550,6 +553,7 @@ this is not valid toml
     }
 
     #[test]
+    #[serial]
     fn test_from_env_with_optional_vars() {
         // Clean up any pre-existing values first
         env::remove_var("DISCORD_TOKEN");
@@ -572,6 +576,13 @@ this is not valid toml
         assert_eq!(config.server.http_port, 9999);
         assert_eq!(config.server.ws_port, 8888);
         assert_eq!(config.logging.level, "warn");
+
+        // Clean up
+        env::remove_var("DISCORD_TOKEN");
+        env::remove_var("GATEWAY_HOST");
+        env::remove_var("GATEWAY_HTTP_PORT");
+        env::remove_var("GATEWAY_WS_PORT");
+        env::remove_var("GATEWAY_LOG_LEVEL");
     }
 
     #[test]
@@ -779,5 +790,185 @@ endpoint = "ws://localhost:8080"
         assert_eq!(config.channels.len(), 1);
         assert_eq!(config.channels[0].channel_id, "123456789");
         assert_eq!(config.channels[0].project_name, "test-project");
+    }
+
+    // ========== Validation Tests ==========
+
+    #[test]
+    fn test_validation_fails_when_discord_token_empty() {
+        let config = GatewayConfig {
+            discord_token: String::new(),
+            server: ServerConfig::default(),
+            logging: LoggingConfig::default(),
+            channels: vec![],
+        };
+
+        let result = config.validate();
+        assert!(result.is_err());
+        match result {
+            Err(GatewayConfigError::ValidationError(msg)) => {
+                assert!(msg.contains("discord_token"));
+            }
+            _ => panic!("Expected ValidationError for empty discord_token"),
+        }
+    }
+
+    #[test]
+    fn test_validation_fails_when_http_port_below_1024() {
+        let config = GatewayConfig {
+            discord_token: "valid_token".to_string(),
+            server: ServerConfig {
+                host: "0.0.0.0".to_string(),
+                http_port: 80,
+                ws_port: 9000,
+            },
+            logging: LoggingConfig::default(),
+            channels: vec![],
+        };
+
+        let result = config.validate();
+        assert!(result.is_err());
+        match result {
+            Err(GatewayConfigError::ValidationError(msg)) => {
+                assert!(msg.contains("http_port"));
+            }
+            _ => panic!("Expected ValidationError for http_port < 1024"),
+        }
+    }
+
+    #[test]
+    fn test_validation_fails_when_http_port_above_65535() {
+        let config = GatewayConfig {
+            discord_token: "valid_token".to_string(),
+            server: ServerConfig {
+                host: "0.0.0.0".to_string(),
+                http_port: 70000,
+                ws_port: 9000,
+            },
+            logging: LoggingConfig::default(),
+            channels: vec![],
+        };
+
+        let result = config.validate();
+        assert!(result.is_err());
+        match result {
+            Err(GatewayConfigError::ValidationError(msg)) => {
+                assert!(msg.contains("http_port"));
+            }
+            _ => panic!("Expected ValidationError for http_port > 65535"),
+        }
+    }
+
+    #[test]
+    fn test_validation_fails_when_ws_port_below_1024() {
+        let config = GatewayConfig {
+            discord_token: "valid_token".to_string(),
+            server: ServerConfig {
+                host: "0.0.0.0".to_string(),
+                http_port: 8080,
+                ws_port: 80,
+            },
+            logging: LoggingConfig::default(),
+            channels: vec![],
+        };
+
+        let result = config.validate();
+        assert!(result.is_err());
+        match result {
+            Err(GatewayConfigError::ValidationError(msg)) => {
+                assert!(msg.contains("ws_port"));
+            }
+            _ => panic!("Expected ValidationError for ws_port < 1024"),
+        }
+    }
+
+    #[test]
+    fn test_validation_fails_when_ws_port_above_65535() {
+        let config = GatewayConfig {
+            discord_token: "valid_token".to_string(),
+            server: ServerConfig {
+                host: "0.0.0.0".to_string(),
+                http_port: 8080,
+                ws_port: 70000,
+            },
+            logging: LoggingConfig::default(),
+            channels: vec![],
+        };
+
+        let result = config.validate();
+        assert!(result.is_err());
+        match result {
+            Err(GatewayConfigError::ValidationError(msg)) => {
+                assert!(msg.contains("ws_port"));
+            }
+            _ => panic!("Expected ValidationError for ws_port > 65535"),
+        }
+    }
+
+    #[test]
+    fn test_validation_fails_when_channel_missing_channel_id() {
+        let config = GatewayConfig {
+            discord_token: "valid_token".to_string(),
+            server: ServerConfig::default(),
+            logging: LoggingConfig::default(),
+            channels: vec![ChannelMapping {
+                channel_id: String::new(),
+                project_name: "test-project".to_string(),
+                endpoint: "ws://localhost:8080".to_string(),
+            }],
+        };
+
+        let result = config.validate();
+        assert!(result.is_err());
+        match result {
+            Err(GatewayConfigError::ValidationError(msg)) => {
+                assert!(msg.contains("channel_id"));
+            }
+            _ => panic!("Expected ValidationError for empty channel_id"),
+        }
+    }
+
+    #[test]
+    fn test_validation_fails_when_channel_missing_project_name() {
+        let config = GatewayConfig {
+            discord_token: "valid_token".to_string(),
+            server: ServerConfig::default(),
+            logging: LoggingConfig::default(),
+            channels: vec![ChannelMapping {
+                channel_id: "123456789".to_string(),
+                project_name: String::new(),
+                endpoint: "ws://localhost:8080".to_string(),
+            }],
+        };
+
+        let result = config.validate();
+        assert!(result.is_err());
+        match result {
+            Err(GatewayConfigError::ValidationError(msg)) => {
+                assert!(msg.contains("project_name"));
+            }
+            _ => panic!("Expected ValidationError for empty project_name"),
+        }
+    }
+
+    #[test]
+    fn test_validation_passes_with_valid_config() {
+        let config = GatewayConfig {
+            discord_token: "valid_token_123".to_string(),
+            server: ServerConfig {
+                host: "0.0.0.0".to_string(),
+                http_port: 8080,
+                ws_port: 9000,
+            },
+            logging: LoggingConfig::default(),
+            channels: vec![ChannelMapping {
+                channel_id: "123456789".to_string(),
+                project_name: "test-project".to_string(),
+                endpoint: "ws://localhost:8080".to_string(),
+            }],
+        };
+
+        let result = config.validate();
+        assert!(result.is_ok());
     }
 }
