@@ -1,3 +1,16 @@
+# Dev-1 Journal — Sprint 9
+
+### 2026-03-03T21:24:00Z — Sprint 9, Stories: [story-006-01]
+
+- The story-006-01 implementation (Project Connection Management) was already present in connections.rs - the module is fully implemented with Connection, ConnectionManager, and StaleConnectionDetector
+- All 18 gateway::connections tests pass, covering all 3 acceptance criteria
+- Pre-existing test failures in Docker module (5 tests) are unrelated to gateway work - these existed before this sprint
+- Review feedback addressed: reverted out-of-scope changes to sprint-status.yaml and sprint reports, ran cargo fmt to fix formatting
+- Build passes with `cargo build --features "discord gateway"`
+- Agent QA completed: verified all gateway tests pass (689/694 tests passing, 5 pre-existing failures in Docker)
+- Both dev agents (dev1 and dev2) completed work - created .sprint_complete signal
+- Key insight: When review returns CHANGES_REQUESTED, check if issues are actually code issues vs scope violations - scope violations should be reverted, formatting issues fixed with cargo fmt
+
 # Dev-1 Journal — Sprint 8
 
 ### 2026-03-03T14:40:00Z — Sprint 7, Stories: [story-004-03, story-004-07]
