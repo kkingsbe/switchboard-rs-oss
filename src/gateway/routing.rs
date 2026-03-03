@@ -317,4 +317,143 @@ mod tests {
         // At least one should succeed
         assert!(result >= 1, "At least one message should be sent");
     }
+
+    /// Test 1: All subscribed projects receive the message
+    /// Verifies fan-out behavior: when 3 projects are subscribed to the same channel,
+    /// all 3 should receive the message.
+    #[tokio::test]
+    async fn test_fan_out_all_subscribed_projects_receive_message() {
+        let registry = ChannelRegistry::new();
+
+        // Register 3 projects to the same channel, keeping all receivers alive
+        let (project1, _sender1, mut receiver1) = create_test_project_with_receiver("project-1");
+        let (project2, _sender2, mut receiver2) = create_test_project_with_receiver("project-2");
+        let (project3, _sender3, mut receiver3) = create_test_project_with_receiver("project-3");
+
+        registry
+            .register(project1, vec!["123".to_string()])
+            .await
+            .unwrap();
+        registry
+            .register(project2, vec!["123".to_string()])
+            .await
+            .unwrap();
+        registry
+            .register(project3, vec!["123".to_string()])
+            .await
+            .unwrap();
+
+        let router = Router::new(registry);
+
+        // Spawn tasks to receive messages from each project
+        let handle1 = tokio::spawn(async move { receiver1.recv().await });
+        let handle2 = tokio::spawn(async move { receiver2.recv().await });
+        let handle3 = tokio::spawn(async move { receiver3.recv().await });
+
+        // Route message to channel "123"
+        let result = router.route_message("123", "Fan-out message").await.unwrap();
+
+        // Wait for all receivers to get the message
+        let received1 = tokio::time::timeout(tokio::time::Duration::from_millis(100), handle1).await;
+        let received2 = tokio::time::timeout(tokio::time::Duration::from_millis(100), handle2).await;
+        let received3 = tokio::time::timeout(tokio::time::Duration::from_millis(100), handle3).await;
+
+        // Verify all 3 projects received the message
+        assert_eq!(result, 3, "Message should be sent to all 3 projects");
+        assert!(received1.is_ok(), "Project 1 should receive the message");
+        assert!(received2.is_ok(), "Project 2 should receive the message");
+        assert!(received3.is_ok(), "Project 3 should receive the message");
+    }
+
+    /// Test 2: Failure isolation - one failure doesn't stop others
+    /// Verifies that when one project's sender is dropped (simulating disconnect),
+    /// the other projects still receive the message.
+    #[tokio::test]
+    async fn test_fan_out_failure_isolation_one_project_disconnected() {
+        let registry = ChannelRegistry::new();
+
+        // Register 3 projects to the same channel
+        let (project1, _sender1, mut receiver1) = create_test_project_with_receiver("project-1");
+        // Project 2: drop the sender to simulate disconnect
+        let (project2, sender2, receiver2) = create_test_project_with_receiver("project-2");
+        let (project3, _sender3, mut receiver3) = create_test_project_with_receiver("project-3");
+
+        registry
+            .register(project1, vec!["123".to_string()])
+            .await
+            .unwrap();
+        // Project 2's sender is dropped, but receiver is kept to not cause panic
+        // This simulates a disconnected client (sender dropped = connection closed)
+        drop(sender2);
+        registry
+            .register(project2, vec!["123".to_string()])
+            .await
+            .unwrap();
+        // Now drop receiver for project 2 to fully simulate disconnected state
+        drop(receiver2);
+
+        registry
+            .register(project3, vec!["123".to_string()])
+            .await
+            .unwrap();
+
+        let router = Router::new(registry);
+
+        // Spawn tasks to receive messages from projects 1 and 3
+        let handle1 = tokio::spawn(async move { receiver1.recv().await });
+        let handle3 = tokio::spawn(async move { receiver3.recv().await });
+
+        // Route message to channel "123"
+        let result = router.route_message("123", "Message despite disconnect").await.unwrap();
+
+        // Wait for receivers to get the message
+        let received1 = tokio::time::timeout(tokio::time::Duration::from_millis(100), handle1).await;
+        let received3 = tokio::time::timeout(tokio::time::Duration::from_millis(100), handle3).await;
+
+        // Verify projects 1 and 3 still receive the message (result should be 2)
+        assert_eq!(result, 2, "Message should be sent to 2 projects (project 2 failed)");
+        assert!(received1.is_ok(), "Project 1 should still receive the message");
+        assert!(received3.is_ok(), "Project 3 should still receive the message");
+    }
+
+    /// Test 3: Message ordering preserved per subscriber
+    /// Verifies that when multiple messages are sent in sequence,
+    /// each subscriber receives them in the same order.
+    #[tokio::test]
+    async fn test_fan_out_message_ordering_preserved_per_subscriber() {
+        let registry = ChannelRegistry::new();
+
+        // Register a project to channel "123", keeping receiver alive
+        let (project, _sender, mut receiver) = create_test_project_with_receiver("project-1");
+        registry
+            .register(project, vec!["123".to_string()])
+            .await
+            .unwrap();
+
+        let router = Router::new(registry);
+
+        // Send 3 messages in sequence
+        router.route_message("123", "Message 1").await.unwrap();
+        router.route_message("123", "Message 2").await.unwrap();
+        router.route_message("123", "Message 3").await.unwrap();
+
+        // Receive all 3 messages
+        let msg1 = tokio::time::timeout(tokio::time::Duration::from_millis(100), receiver.recv()).await;
+        let msg2 = tokio::time::timeout(tokio::time::Duration::from_millis(100), receiver.recv()).await;
+        let msg3 = tokio::time::timeout(tokio::time::Duration::from_millis(100), receiver.recv()).await;
+
+        // Verify all messages were received
+        assert!(msg1.is_ok(), "Should receive message 1");
+        assert!(msg2.is_ok(), "Should receive message 2");
+        assert!(msg3.is_ok(), "Should receive message 3");
+
+        // Verify ordering: check the payload content in the JSON
+        let content1 = msg1.unwrap().unwrap();
+        let content2 = msg2.unwrap().unwrap();
+        let content3 = msg3.unwrap().unwrap();
+
+        assert!(content1.contains("Message 1"), "First message should be 'Message 1'");
+        assert!(content2.contains("Message 2"), "Second message should be 'Message 2'");
+        assert!(content3.contains("Message 3"), "Third message should be 'Message 3'");
+    }
 }
