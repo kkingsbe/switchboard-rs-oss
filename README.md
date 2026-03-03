@@ -26,7 +26,7 @@ switchboard build
 
 # 3. Create config (switchboard.toml)
 echo '[settings]
-image_name = "kilosynth/prompter:latest"
+image_name = "switchboard-agent"
 
 [[agent]]
 name = "daily-coder"

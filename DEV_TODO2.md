@@ -1,24 +1,23 @@
-# Sprint 8 - Development Agent 2
+# Sprint 10 - Development Agent 2
 
 ## Agent: dev-2
-## Sprint: 8 (2026-03-03 to 2026-03-17)
+## Sprint: 10 (2026-03-03 to 2026-03-17)
 
 ---
 
 ## Stories
 
-- [x] **story-005-03**: Route Messages by Channel (3 pts) ✅ queued for review
-- [x] **story-006-05**: Fan-out Messages (2 pts) ✅ queued for review
-  - 📝 Commit: `feat(dev2): [006-05] Fan-out message delivery`
-- [x] **story-006-06**: Rate Limiting (2 pts) ✅ queued for review
+- [ ] **story-005-03**: Route Messages by Channel (3 pts)
+  - 📄 Story: `.switchboard/state/stories/story-005-03-route-by-channel.md`
+  - 📚 Skills: `./skills/rust-engineer/SKILL.md`, `./skills/rust-engineer/references/async.md`
+  - ⚡ Pre-check: Build + tests pass
+  - ✅ Post-check: Build + tests pass, acceptance criteria met
+  - 🔒 Risk: Medium
+  - 📝 Commit: `feat(dev2): [005-03] implement channel-based message routing`
 
-## Rework Queue
+- [ ] AGENT QA: Run full build and test suite. If green, create
+  `.switchboard/state/.dev_done_2` with date. If ALL `.dev_done_*`
+  files exist for all agents with work, also create
+  `.switchboard/state/.sprint_complete`.
 
-- [x] **story-006-05** (REWORK): Fan-out Messages ✅ COMPLETED
-  - 📄 Story: story-006-05
-  - 🔍 Review: See REVIEW_QUEUE.md — CHANGES_REQUESTED
-  - ⚡ Pre-check: Build + tests pass ✅
-  - ✅ Post-check: Fixed clippy error in src/gateway/connections.rs:46 - replaced manual Default impl with #[derive(Default)] ✅
-  - 📝 Commit: `fix(dev2): [006-05] address review feedback` ✅ COMMITTED
-
-**Total: 5 points**
+**Total: 3 points**

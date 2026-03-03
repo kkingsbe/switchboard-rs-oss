@@ -66,6 +66,26 @@ pub struct HealthResponse {
     pub status: &'static str,
 }
 
+/// Status response for a connected project.
+#[derive(serde::Serialize, Debug)]
+pub struct ProjectStatus {
+    /// The name of the project.
+    pub name: String,
+    /// List of channels the project is subscribed to.
+    pub channels: Vec<String>,
+}
+
+/// Status response JSON structure for the /status endpoint.
+#[derive(serde::Serialize, Debug)]
+pub struct StatusResponse {
+    /// Whether the gateway is running.
+    pub gateway_running: bool,
+    /// Whether Discord is connected.
+    pub discord_connected: bool,
+    /// List of connected projects with their channel subscriptions.
+    pub connected_projects: Vec<ProjectStatus>,
+}
+
 /// Application state for the HTTP server.
 #[derive(Clone)]
 pub struct AppState {
@@ -80,6 +100,33 @@ pub struct AppState {
 /// Creates the health check route handler.
 async fn health_handler(State(_state): State<AppState>) -> Json<HealthResponse> {
     Json(HealthResponse { status: "ok" })
+}
+
+/// Creates the status route handler.
+///
+/// Returns the current status of the gateway including Discord connection status
+/// and list of connected projects with their channel subscriptions.
+async fn status_handler(State(state): State<AppState>) -> Json<StatusResponse> {
+    // Check if Discord is connected
+    let discord_connected = state.discord_gateway.lock().await.is_some();
+
+    // Get all projects from the registry
+    let all_projects = state.registry.all_projects().await;
+
+    // Convert projects to ProjectStatus
+    let connected_projects: Vec<ProjectStatus> = all_projects
+        .into_iter()
+        .map(|project| ProjectStatus {
+            name: project.project_name,
+            channels: project.subscribed_channels,
+        })
+        .collect();
+
+    Json(StatusResponse {
+        gateway_running: true,
+        discord_connected,
+        connected_projects,
+    })
 }
 
 /// WebSocket handler for project connections.
@@ -466,6 +513,7 @@ impl GatewayServer {
         // Build the router with routes and middleware
         let app = Router::new()
             .route("/health", get(health_handler))
+            .route("/status", get(status_handler))
             .route("/ws", get(ws_handler))
             .layer(TraceLayer::new_for_http())
             .with_state(state);

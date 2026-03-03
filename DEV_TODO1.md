@@ -1,27 +1,31 @@
-# Sprint 8 - Development Agent 1
+# Sprint 10 - Development Agent 1
 
 ## Agent: dev-1
-## Sprint: 8 (2026-03-03 to 2026-03-17)
+## Sprint: 10 (2026-03-03 to 2026-03-17)
 
 ---
 
 ## Stories
 
-- [x] **story-004-08**: CLI `gateway up` Command (3 pts) ✅ queued for review
-- [x] **story-007-04**: Proper Logging (2 pts) ✅ queued for review
-
-- [x] **story-006-01** (REWORK): Project Connection Management ✅ queued for review
-  - 📄 Story: .switchboard/state/stories/story-006-01.md
-  - 🔍 Review: See REVIEW_QUEUE.md — CHANGES_REQUESTED (needs fixes)
+- [ ] **story-004-08**: CLI `gateway up` Command (3 pts)
+  - 📄 Story: `.switchboard/state/stories/story-004-08-gateway-up-cli.md`
+  - 📚 Skills: `./skills/rust-engineer/SKILL.md`, `./skills/rust-engineer/references/async.md`
   - ⚡ Pre-check: Build + tests pass
-  - ✅ Post-check: Address ALL "Must Fix" items
-  - 📝 Commit: `fix(dev1): [story-006-01] address review feedback`
+  - ✅ Post-check: Build + tests pass, acceptance criteria met
+  - 🔒 Risk: Low
+  - 📝 Commit: `feat(dev1): [004-08] implement gateway up CLI command`
 
-- [ ] **story-006-05** (REWORK): Fan-out Message Delivery
-  - 📄 Story: .switchboard/state/stories/story-006-05.md
-  - 🔍 Review: See REVIEW_QUEUE.md — CHANGES_REQUESTED
+- [ ] **story-007-01**: CLI `gateway status` Command (2 pts)
+  - 📄 Story: `.switchboard/state/stories/story-007-01-gateway-status.md`
+  - 📚 Skills: `./skills/rust-engineer/SKILL.md`
   - ⚡ Pre-check: Build + tests pass
-  - ✅ Post-check: Address ALL "Must Fix" items
-  - 📝 Commit: `fix(dev1): [story-006-05] address review feedback`
+  - ✅ Post-check: Build + tests pass, acceptance criteria met
+  - 🔒 Risk: Low
+  - 📝 Commit: `feat(dev1): [007-01] implement gateway status CLI command`
+
+- [ ] AGENT QA: Run full build and test suite. If green, create
+  `.switchboard/state/.dev_done_1` with date. If ALL `.dev_done_*`
+  files exist for all agents with work, also create
+  `.switchboard/state/.sprint_complete`.
 
 **Total: 5 points**

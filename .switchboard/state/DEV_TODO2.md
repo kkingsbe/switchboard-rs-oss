@@ -1,40 +1,29 @@
 # DEV_TODO2 — Development Agent 2
 
-> Sprint: 9
-> Focus Area: Epic 06 - Multi-Project Gateway
-> Total Points: 2
-> ⚠️ Rebalanced by Sprint Planner on 2026-03-03 (moved from dev-1)
+> Sprint: 10
+> Focus Area: Message Routing
+> Last Updated: 2026-03-03
+> Total Points: 3 pts
 
 ## Orientation
 
 Before starting any stories, read these files:
+
 - `.switchboard/planning/project-context.md`
 - `.switchboard/planning/architecture.md`
+- `./skills/rust-engineer/SKILL.md`
 
 ## Stories
 
-- [x] **story-007-03**: PID file management (1 pt) ✅ queued for review
-  - 📄 Story: `.switchboard/state/stories/story-007-03-pid-file.md`
-  - 📚 Skills: `./skills/rust-best-practices/SKILL.md`
+- [ ] **story-005-03**: Route Messages by Channel (3 pts)
+  - 📄 Story: `.switchboard/state/stories/story-005-03-route-by-channel.md`
+  - 📚 Skills: `./skills/rust-engineer/SKILL.md`, `./skills/rust-engineer/references/async.md`
   - ⚡ Pre-check: Build + tests pass
   - ✅ Post-check: Build + tests pass, acceptance criteria met
-  - 🔒 Risk: Low
-  - 📝 Commit: `feat(dev2): [007-03] PID file management`
+  - 🔒 Risk: Medium
+  - 📝 Commit: `feat(dev2): [005-03] implement channel-based message routing`
 
-- [x] **story-007-04**: Gateway logging (2 pts) ✅ queued for review
-  - 📄 Story: `.switchboard/state/stories/story-007-04-gateway-logging.md`
-  - 📚 Skills: `./skills/rust-best-practices/SKILL.md`, `./skills/rust-engineer/SKILL.md`
-  - ⚡ Pre-check: Build + tests pass
-  - ✅ Post-check: Build + tests pass, acceptance criteria met
-  - 🔒 Risk: Low
-  - 📝 Commit: `feat(dev2): [007-04] Gateway logging`
-
-- [ ] **story-006-05**: Fan-out message delivery (2 pts)
-  - 📄 Story: `.switchboard/state/stories/story-006-05-fan-out-messages.md`
-  - 📚 Skills: `./skills/rust-best-practices/SKILL.md`
-  - ⚡ Pre-check: Build + tests pass
-  - ✅ Post-check: Build + tests pass, acceptance criteria met
-  - 🔒 Risk: Low
-  - 📝 Commit: `feat(dev2): [006-05] Fan-out message delivery`
-
-- [ ] AGENT QA: Run full build and test suite. If green, create `.switchboard/state/.dev_done_2` with date.
+- [ ] AGENT QA: Run full build and test suite. If green, create
+  `.switchboard/state/.dev_done_2` with date. If ALL `.dev_done_*`
+  files exist for all agents with work, also create
+  `.switchboard/state/.sprint_complete`.
