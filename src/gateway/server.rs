@@ -592,6 +592,7 @@ mod tests {
         let state = AppState {
             config: Arc::new(gateway_config),
             registry: ChannelRegistry::new(),
+            discord_gateway: Arc::new(tokio::sync::Mutex::new(None)),
         };
 
         let response = health_handler(State(state)).await;
@@ -605,6 +606,7 @@ mod tests {
         let state = AppState {
             config: Arc::new(gateway_config),
             registry: ChannelRegistry::new(),
+            discord_gateway: Arc::new(tokio::sync::Mutex::new(None)),
         };
 
         let response = health_handler(State(state)).await;
@@ -623,6 +625,7 @@ mod tests {
         let state = AppState {
             config: Arc::new(gateway_config),
             registry: ChannelRegistry::new(),
+            discord_gateway: Arc::new(tokio::sync::Mutex::new(None)),
         };
 
         let app = Router::new()
@@ -645,6 +648,7 @@ mod tests {
         let state = AppState {
             config: Arc::new(gateway_config),
             registry: ChannelRegistry::new(),
+            discord_gateway: Arc::new(tokio::sync::Mutex::new(None)),
         };
 
         let app = Router::new()
@@ -685,6 +689,7 @@ mod tests {
         let state = AppState {
             config: Arc::new(gateway_config),
             registry: ChannelRegistry::new(),
+            discord_gateway: Arc::new(tokio::sync::Mutex::new(None)),
         };
 
         let cloned = state.clone();
@@ -698,6 +703,7 @@ mod tests {
         let state = AppState {
             config: Arc::new(gateway_config),
             registry: ChannelRegistry::new(),
+            discord_gateway: Arc::new(tokio::sync::Mutex::new(None)),
         };
 
         let app = Router::new()
@@ -731,6 +737,7 @@ mod tests {
         let state = AppState {
             config: Arc::new(gateway_config),
             registry: ChannelRegistry::new(),
+            discord_gateway: Arc::new(tokio::sync::Mutex::new(None)),
         };
 
         // Test that the ws_handler can be used in a router
@@ -765,6 +772,7 @@ mod tests {
         let state = AppState {
             config: Arc::new(gateway_config),
             registry: ChannelRegistry::new(),
+            discord_gateway: Arc::new(tokio::sync::Mutex::new(None)),
         };
 
         let app = Router::new()

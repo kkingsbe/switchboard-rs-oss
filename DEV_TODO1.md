@@ -1,53 +1,45 @@
 # DEV_TODO1 — Development Agent 1
 
-> ⚠️ Rebalanced by Sprint Planner on 2026-03-03
 > Sprint: 7
-> Focus Area: Discord Gateway Connection + Channel Registry & Configuration
-> Last Updated: 2026-03-03T13:10:28Z
-> Total Points: 9
+> Focus Area: Discord Gateway (blocked - needs rework)
+> Last Updated: 2026-03-03
+> Total Points: 5
+> ⚠️ Rebalanced by Sprint Planner on 2026-03-03
 
 ## Orientation
 
-Before starting any stories, read these files:
-
-- `.switchboard/planning/project-context.md`
-- `.switchboard/planning/architecture.md`
-- `src/discord/gateway.rs` — Discord Gateway patterns
+Before starting, read the review feedback in REVIEW_QUEUE.md for story-004-03 and story-004-07.
 
 ## Stories
 
-- [ ] **story-004-07** (REWORK): Wire up Discord Gateway Connection
-  - 📄 Story: .switchboard/state/stories/story-004-07.md
-  - 🔍 Review: See REVIEW_QUEUE.md — CHANGES_REQUESTED
-  - ⚡ Pre-check: Build + tests pass
-  - ✅ Post-check: Address ALL "Must Fix" items
-  - 📝 Commit: `fix(dev1): [story-004-07] address review feedback`
-
-- [x] **{story-004-07}**: Wire up Discord Gateway Connection (5 pts) ✅ queued for review
-  - 📄 Story: `.switchboard/state/stories/story-004-07-discord-gateway.md`
-  - 📚 Skills: `skills/rust-best-practices/SKILL.md`, `skills/rust-engineer/SKILL.md`
-  - ⚡ Pre-check: Build + tests pass
-  - ✅ Post-check: Build + tests pass, acceptance criteria met
+- [ ] **{story-004-07}**: Discord Gateway Connection (5 pts) — REWORK
+  - 📄 Story: `.switchboard/state/stories/story-004-07-*.md`
+  - 📚 Skills: `./skills/rust-engineer/SKILL.md`, `./skills/rust-best-practices/SKILL.md`
+  - ⚡ Pre-check: `cargo build --tests 2>&1 | head -50`
+  - ✅ Post-check: All tests compile, no warnings, `cargo fmt --check` passes
   - 🔒 Risk: High
-  - 📝 Commit: `feat(dev1): [story-004-07] Wire up Discord Gateway connection`
+  - 📝 Commit: `fix(dev1): [story-004-07] address review feedback - formatting + unwrap_or`
 
-- [ ] **{story-005-01}**: Implement ChannelRegistry (3 pts)
-  - 📄 Story: `.switchboard/state/stories/story-005-01-channel-registry.md`
-  - 📚 Skills: `skills/rust-best-practices/SKILL.md`, `skills/rust-engineer/SKILL.md`
-  - ⚡ Pre-check: Build + tests pass
-  - ✅ Post-check: Build + tests pass, acceptance criteria met
-  - 🔒 Risk: Medium
-  - 📝 Commit: `feat(dev1): [story-005-01] Implement ChannelRegistry`
+- [ ] **{story-004-03}**: HTTP Server with Health Check (3 pts) — REWORK
+  - 📄 Story: `.switchboard/state/stories/archive/sprint-5/story-004-03-http-server-health-check.md`
+  - 📚 Skills: `./skills/rust-best-practices/SKILL.md`
+  - ⚡ Pre-check: Build and tests pass
+  - ✅ Post-check: `cargo fmt --check` passes
+  - 📝 Commit: `fix(dev1): [story-004-03] run cargo fmt to fix formatting`
 
-- [ ] **{story-005-05}**: Add Configuration Validation (1 pt)
-  - 📄 Story: `.switchboard/state/stories/story-005-05-config-validation.md`
-  - 📚 Skills: `skills/rust-best-practices/SKILL.md`, `skills/rust-engineer/references/error-handling.md`
-  - ⚡ Pre-check: Build + tests pass
-  - ✅ Post-check: Build + tests pass, acceptance criteria met
-  - 🔒 Risk: Low
-  - 📝 Commit: `feat(dev1): [story-005-05] Add configuration validation`
+## Review Feedback Summary (from REVIEW_QUEUE.md)
 
-- [ ] AGENT QA: Run full build and test suite. If green, create
-  `.switchboard/state/.dev_done_1` with date. If ALL `.dev_done_*`
-  files exist for all agents with work, also create
-  `.switchboard/state/.sprint_complete`. ✅ done (562 passed, 5 pre-existing failures)
+Both stories share `src/gateway/server.rs`. Fixes needed:
+
+1. **Formatting** — Run `cargo fmt` to fix:
+   - Lines 353, 385, 392, 487, 495, 527, 541
+
+2. **unwrap_or in production** (story-004-07 only):
+   - Line 511: `channel_id.parse().unwrap_or(0)`
+   - Replace with proper error handling (use `?` or match)
+
+## Blocked Stories (moved to Dev 2)
+
+The following stories were moved to DEV_TODO2 for rebalancing:
+- story-005-01: ChannelRegistry (3 pts)
+- story-005-05: Config Validation (1 pt)
