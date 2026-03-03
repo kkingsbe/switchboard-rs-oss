@@ -1,6 +1,6 @@
 {
   "pid": 29368,
-  "last_heartbeat": "2026-03-03T09:27:28.285499900+00:00",
+  "last_heartbeat": "2026-03-03T10:02:28.630691100+00:00",
   "state": "running",
   "agents": [
     {
@@ -16,7 +16,7 @@
     {
       "name": "sb-dev-2",
       "schedule": "15,45 * * * *",
-      "current_run": null
+      "current_run": "starting"
     },
     {
       "name": "sb-code-reviewer",

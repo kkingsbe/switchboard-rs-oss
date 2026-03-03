@@ -10,7 +10,7 @@ use serde::{Deserialize, Serialize};
 /// in a "type" field at the top level, e.g.:
 /// {"type": "register", "project_name": "...", "channels": [...]}
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(tag = "type")]
+#[serde(tag = "type", rename_all = "snake_case")]
 pub enum GatewayMessage {
     /// Register a new project with the gateway
     ///

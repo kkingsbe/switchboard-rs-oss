@@ -592,8 +592,8 @@ mod tests {
     fn gateway_message_parse_register() {
         use crate::gateway::protocol::GatewayMessage;
 
-        // Use the correct format that matches protocol.rs internally-tagged serialization
-        let json = r#"{"type":"Register","project_name":"test-project","channels":["channel1"]}"#;
+        // Use the correct format that matches protocol.rs snake_case serialization
+        let json = r#"{"type":"register","project_name":"test-project","channels":["channel1"]}"#;
         let msg: GatewayMessage = serde_json::from_str(json).expect("Failed to parse");
         assert!(
             matches!(msg, GatewayMessage::Register { project_name, channels, .. }
@@ -661,8 +661,8 @@ mod tests {
         /// Test that a valid Register message can be parsed correctly
         #[test]
         fn test_register_message_parsing_valid() {
-            // Use the correct format that matches protocol.rs internally-tagged serialization
-            let json = r#"{"type":"Register","project_name":"my-project","channels":["channel1","channel2"]}"#;
+            // Use the correct format that matches protocol.rs snake_case serialization
+            let json = r#"{"type":"register","project_name":"my-project","channels":["channel1","channel2"]}"#;
             let msg: GatewayMessage = serde_json::from_str(json).expect("Failed to parse");
 
             assert!(matches!(
@@ -684,8 +684,8 @@ mod tests {
             };
 
             let json = serde_json::to_string(&ack).expect("Failed to serialize");
-            // Internally-tagged uses capitalized variant name
-            assert!(json.contains("\"type\":\"RegisterAck\""));
+            // snake_case uses lowercase variant name
+            assert!(json.contains("\"type\":\"register_ack\""));
             assert!(json.contains("\"status\":\"ok\""));
             assert!(json.contains("\"session_id\":\"test-session-123\""));
 
@@ -706,8 +706,8 @@ mod tests {
             };
 
             let json = serde_json::to_string(&error).expect("Failed to serialize");
-            // Internally-tagged uses capitalized variant name
-            assert!(json.contains("\"type\":\"RegisterError\""));
+            // snake_case uses lowercase variant name
+            assert!(json.contains("\"type\":\"register_error\""));
             assert!(json.contains("\"error\":\"Project name cannot be empty\""));
 
             let parsed: GatewayMessage =
@@ -755,8 +755,8 @@ mod tests {
         /// Test that empty project_name validation works correctly
         #[test]
         fn test_empty_project_name_returns_error() {
-            // Test with empty string - use correct internally-tagged format
-            let json = r#"{"type":"Register","project_name":"","channels":["channel1"]}"#;
+            // Test with empty string - use correct snake_case format
+            let json = r#"{"type":"register","project_name":"","channels":["channel1"]}"#;
             let msg: GatewayMessage = serde_json::from_str(json).expect("Failed to parse");
 
             assert!(matches!(
@@ -769,8 +769,8 @@ mod tests {
         /// Test that whitespace-only project_name validation works
         #[test]
         fn test_whitespace_only_project_name_returns_error() {
-            // Test with whitespace only - use correct internally-tagged format
-            let json = r#"{"type":"Register","project_name":"   ","channels":["channel1"]}"#;
+            // Test with whitespace only - use correct snake_case format
+            let json = r#"{"type":"register","project_name":"   ","channels":["channel1"]}"#;
             let msg: GatewayMessage = serde_json::from_str(json).expect("Failed to parse");
 
             assert!(matches!(
@@ -865,8 +865,8 @@ mod tests {
         /// Test that empty channels list validation works
         #[test]
         fn test_empty_channels_returns_error_message() {
-            // Test with empty channels array - use correct internally-tagged format
-            let json = r#"{"type":"Register","project_name":"my-project","channels":[]}"#;
+            // Test with empty channels array - use correct snake_case format
+            let json = r#"{"type":"register","project_name":"my-project","channels":[]}"#;
             let msg: GatewayMessage = serde_json::from_str(json).expect("Failed to parse");
 
             assert!(matches!(
@@ -879,8 +879,8 @@ mod tests {
         /// Test that channels with valid content pass validation
         #[test]
         fn test_channels_with_valid_content_passes() {
-            // Test with non-empty channels array
-            let json = r#"{"type":"Register","project_name":"my-project","channels":["general","random"]}"#;
+            // Test with non-empty channels array - use correct snake_case format
+            let json = r#"{"type":"register","project_name":"my-project","channels":["general","random"]}"#;
             let msg: GatewayMessage = serde_json::from_str(json).expect("Failed to parse");
 
             assert!(matches!(
