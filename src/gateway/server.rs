@@ -5,6 +5,7 @@
 
 use crate::discord::gateway::{DiscordEvent, DiscordGateway};
 use crate::gateway::config::{GatewayConfig, ServerConfig};
+use crate::gateway::pid::{PidFile, PidFileError};
 use crate::gateway::protocol::GatewayMessage;
 use crate::gateway::registry::{ChannelRegistry, ProjectConnection};
 use axum::{
@@ -44,6 +45,10 @@ pub enum GatewayServerError {
     /// Server encountered an error during runtime.
     #[error("Server runtime error: {0}")]
     RuntimeError(String),
+
+    /// PID file error.
+    #[error("PID file error: {0}")]
+    PidFileError(#[from] PidFileError),
 
     /// WebSocket error.
     #[error("WebSocket error: {0}")]
@@ -249,6 +254,8 @@ pub struct GatewayServer {
     config: ServerConfig,
     /// The gateway configuration.
     gateway_config: GatewayConfig,
+    /// Path to the PID file.
+    pid_path: std::path::PathBuf,
 }
 
 impl GatewayServer {
@@ -272,6 +279,7 @@ impl GatewayServer {
         Self {
             config,
             gateway_config,
+            pid_path: PidFile::default_path(),
         }
     }
 
@@ -292,6 +300,24 @@ impl GatewayServer {
     /// server.run().await?;
     /// ```
     pub async fn run(self) -> Result<(), GatewayServerError> {
+        let pid_path = self.pid_path.clone();
+
+        // Check if another gateway is already running
+        if let Err(e) = PidFile::check_existing(&pid_path) {
+            match e {
+                PidFileError::AlreadyRunning(pid) => {
+                    error!("Gateway is already running with PID {}. Exiting.", pid);
+                    return Err(GatewayServerError::PidFileError(
+                        PidFileError::AlreadyRunning(pid),
+                    ));
+                }
+                _ => {
+                    // For other errors (like parse errors on stale files), log and continue
+                    warn!("PID file check warning: {}, proceeding anyway", e);
+                }
+            }
+        }
+
         let ip: IpAddr = self
             .config
             .host
@@ -425,6 +451,11 @@ impl GatewayServer {
 
         info!("Gateway HTTP server listening on {}", addr);
 
+        // Create PID file after successfully binding to the port
+        if let Err(e) = PidFile::write_pid(&pid_path) {
+            error!("Failed to create PID file: {}. Server will continue without PID file.", e);
+        }
+
         // Run the server with graceful shutdown
         axum::serve(listener, app)
             .with_graceful_shutdown(shutdown_signal())
@@ -432,6 +463,11 @@ impl GatewayServer {
             .map_err(|e| GatewayServerError::RuntimeError(format!("{:?}", e)))?;
 
         info!("Gateway HTTP server shutdown complete");
+
+        // Clean up PID file on shutdown
+        if let Err(e) = PidFile::cleanup(&pid_path) {
+            warn!("Failed to clean up PID file: {}", e);
+        }
 
         Ok(())
     }
