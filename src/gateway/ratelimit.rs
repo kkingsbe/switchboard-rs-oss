@@ -251,7 +251,7 @@ impl RateLimiter {
         }
 
         debug!(
-            "Backoff increased to {}s for channel {}",
+            "Backoff set to {}s for channel {}",
             state.backoff_secs, channel_id
         );
 
@@ -428,24 +428,25 @@ mod tests {
         let wait1 = limiter.handle_429(channel_id, None).await;
         let backoff1 = limiter.get_backoff(channel_id).await;
         assert_eq!(wait1, INITIAL_BACKOFF_SECS); // Initial backoff is 1s
+        assert_eq!(backoff1, INITIAL_BACKOFF_SECS * 2); // Backoff doubled for next time
 
-        // Handle second 429 - backoff should double
+        // Handle second 429 - backoff should double again
         let wait2 = limiter.handle_429(channel_id, None).await;
         let backoff2 = limiter.get_backoff(channel_id).await;
         assert_eq!(wait2, INITIAL_BACKOFF_SECS * 2); // 2s
-        assert_eq!(backoff2, INITIAL_BACKOFF_SECS * 2);
+        assert_eq!(backoff2, INITIAL_BACKOFF_SECS * 4); // Backoff doubled again
 
         // Handle third 429 - backoff should double again
         let wait3 = limiter.handle_429(channel_id, None).await;
         let backoff3 = limiter.get_backoff(channel_id).await;
         assert_eq!(wait3, INITIAL_BACKOFF_SECS * 4); // 4s
-        assert_eq!(backoff3, INITIAL_BACKOFF_SECS * 4);
+        assert_eq!(backoff3, INITIAL_BACKOFF_SECS * 8); // Backoff doubled again
 
         // Handle fourth 429 - backoff should double again
         let wait4 = limiter.handle_429(channel_id, None).await;
         let backoff4 = limiter.get_backoff(channel_id).await;
         assert_eq!(wait4, INITIAL_BACKOFF_SECS * 8); // 8s
-        assert_eq!(backoff4, INITIAL_BACKOFF_SECS * 8);
+        assert_eq!(backoff4, INITIAL_BACKOFF_SECS * 16); // Backoff doubled again
     }
 
     /// Test that backoff is capped at max value.
