@@ -506,15 +506,19 @@ async fn process_discord_events(
                 // Forward message to each subscribed project
                 for project_id in project_ids {
                     if let Ok(project) = registry.get_project(&project_id).await {
+                        // Parse channel_id - skip if invalid
+                        let parsed_channel_id = match channel_id.parse::<u64>() {
+                            Ok(id) => id,
+                            Err(e) => {
+                                warn!("Failed to parse channel_id '{}': {}", channel_id, e);
+                                continue;
+                            }
+                        };
+
                         // Create the message payload
                         let message = GatewayMessage::Message {
                             payload: content.clone(),
-                            channel_id: channel_id
-                                .parse::<u64>()
-                                .map_err(|e| {
-                                    warn!("Failed to parse channel_id '{}': {}", channel_id, e);
-                                })
-                                .unwrap_or(0),
+                            channel_id: parsed_channel_id,
                         };
 
                         if let Ok(json) = serde_json::to_string(&message) {
