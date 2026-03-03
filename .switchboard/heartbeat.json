@@ -1,6 +1,6 @@
 {
   "pid": 29368,
-  "last_heartbeat": "2026-03-03T13:02:30.304258700+00:00",
+  "last_heartbeat": "2026-03-03T13:04:30.317901700+00:00",
   "state": "running",
   "agents": [
     {
@@ -26,7 +26,7 @@
     {
       "name": "sb-scrum-master",
       "schedule": "0 * * * *",
-      "current_run": "starting"
+      "current_run": null
     }
   ]
 }
