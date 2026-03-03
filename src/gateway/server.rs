@@ -68,6 +68,8 @@ pub struct AppState {
     pub config: Arc<GatewayConfig>,
     /// The channel registry for tracking project subscriptions.
     pub registry: ChannelRegistry,
+    /// The Discord Gateway for reconnection support.
+    pub discord_gateway: Arc<tokio::sync::Mutex<Option<DiscordGateway>>>,
 }
 
 /// Creates the health check route handler.
@@ -303,6 +305,7 @@ impl GatewayServer {
         let state = AppState {
             config: Arc::new(self.gateway_config.clone()),
             registry: ChannelRegistry::new(),
+            discord_gateway: Arc::new(tokio::sync::Mutex::new(None)),
         };
 
         // Clone registry for Discord event handler
@@ -313,39 +316,86 @@ impl GatewayServer {
         let has_discord_token = !discord_token.is_empty();
 
         if has_discord_token {
-            // Create channel for Discord events
-            let (event_sender, event_receiver) = mpsc::channel::<DiscordEvent>(100);
-
-            // Default intents: GUILD_MESSAGES + DIRECT_MESSAGES + MESSAGE_CONTENT
-            const DEFAULT_INTENTS: u32 = 512 | 4096 | 16384;
-
-            // Create Discord Gateway
-            let mut gateway = DiscordGateway::new(
-                discord_token.clone(),
-                DEFAULT_INTENTS,
-                event_sender,
-            );
-
-            // Create shutdown channel for gateway
-            let (_gateway_shutdown_tx, gateway_shutdown_rx) = tokio::sync::oneshot::channel();
-
-            // Spawn Discord Gateway connection task
-            let _gateway_token = discord_token.clone();
+            // Spawn Discord Gateway connection task with auto-reconnection
+            let discord_gateway_for_state = state.discord_gateway.clone();
+            let discord_token_for_reconnect = discord_token.clone();
+            let registry_for_events = registry_for_events.clone();
             tokio::spawn(async move {
-                info!("Discord Gateway: Starting connection...");
-                match gateway.connect_with_shutdown(gateway_shutdown_rx).await {
-                    Ok(_) => {
-                        info!("Discord Gateway connection closed normally");
+                // Default intents: GUILD_MESSAGES + DIRECT_MESSAGES + MESSAGE_CONTENT
+                const DEFAULT_INTENTS: u32 = 512 | 4096 | 16384;
+
+                // Reconnection configuration
+                const INITIAL_BACKOFF_SECS: u64 = 1;
+                const MAX_BACKOFF_SECS: u64 = 60;
+                let mut backoff_secs = INITIAL_BACKOFF_SECS;
+
+                loop {
+                    info!("Discord Gateway: Starting connection...");
+
+                    // Create a new gateway for this connection attempt
+                    let (event_sender, event_receiver) = mpsc::channel::<DiscordEvent>(100);
+                    let mut gateway = DiscordGateway::new(
+                        discord_token_for_reconnect.clone(),
+                        DEFAULT_INTENTS,
+                        event_sender,
+                    );
+
+                    // Store the gateway in AppState for reconnection support
+                    // We need to clone the token and recreate the gateway for storage
+                    let gateway_for_storage = DiscordGateway::new(
+                        discord_token_for_reconnect.clone(),
+                        DEFAULT_INTENTS,
+                        mpsc::channel::<DiscordEvent>(100).0,
+                    );
+                    {
+                        let mut guard = discord_gateway_for_state.lock().await;
+                        *guard = Some(gateway_for_storage);
                     }
-                    Err(e) => {
-                        error!("Discord Gateway connection error: {}", e);
+
+                    // Create shutdown channel for this connection
+                    let (_gateway_shutdown_tx, gateway_shutdown_rx) = tokio::sync::oneshot::channel();
+
+                    // Spawn the event processor for this connection
+                    let registry_clone = registry_for_events.clone();
+                    tokio::spawn(async move {
+                        process_discord_events(event_receiver, registry_clone).await;
+                    });
+
+                    // Run the connection
+                    let result = gateway.connect_with_shutdown(gateway_shutdown_rx).await;
+
+                    // Check if shutdown was requested
+                    if gateway.is_shutdown_requested() {
+                        info!("Discord Gateway: shutdown requested, stopping reconnection loop");
+                        // Clear the gateway from AppState
+                        let mut guard = discord_gateway_for_state.lock().await;
+                        *guard = None;
+                        break;
+                    }
+
+                    match result {
+                        Ok(_) => {
+                            info!("Discord Gateway connection closed normally");
+                            // Normal close - exit the loop
+                            let mut guard = discord_gateway_for_state.lock().await;
+                            *guard = None;
+                            break;
+                        }
+                        Err(e) => {
+                            warn!("Discord Gateway connection error: {}, attempting reconnection in {}s", e, backoff_secs);
+
+                            // Wait with exponential backoff before reconnecting
+                            tokio::time::sleep(tokio::time::Duration::from_secs(backoff_secs)).await;
+
+                            // Exponential backoff: double the backoff, max out at MAX_BACKOFF_SECS
+                            backoff_secs = (backoff_secs * 2).min(MAX_BACKOFF_SECS);
+
+                            info!("Discord Gateway: reconnection attempt, backoff now {}s", backoff_secs);
+                        }
                     }
                 }
-            });
 
-            // Spawn Discord event processor task
-            tokio::spawn(async move {
-                process_discord_events(event_receiver, registry_for_events).await;
+                info!("Discord Gateway: event loop ended");
             });
 
             info!("Discord Gateway event loop started");

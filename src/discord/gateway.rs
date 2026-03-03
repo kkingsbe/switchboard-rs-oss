@@ -268,6 +268,11 @@ impl DiscordGateway {
         self.shutdown
             .store(true, std::sync::atomic::Ordering::Relaxed);
     }
+
+    /// Check if shutdown was requested
+    pub fn is_shutdown_requested(&self) -> bool {
+        self.shutdown.load(std::sync::atomic::Ordering::Relaxed)
+    }
 }
 
 /// Convert switchboard's u32 intents to twilight Intents type

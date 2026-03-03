@@ -2,32 +2,27 @@
 
 ## Current Sprint
 
-**Sprint**: 6  
+**Sprint**: 7  
 **Start Date**: 2026-03-03  
 **End Date**: 2026-03-17
 
 ---
 
-## Sprint 6 Stories
+## Sprint 7 Stories
 
 ### Not Started
 
 | Story | Points | Status | Assigned To |
 |-------|--------|--------|-------------|
-| story-004-04 (WebSocket server) | 3 | Not Started | dev-1 |
-| story-004-06 (Registration Protocol) | 3 | Not Started | dev-2 |
+| story-004-07 (Discord Gateway) | 5 | In Progress | dev-1 |
+| story-005-01 (ChannelRegistry) | 3 | In Progress | dev-2 |
+| story-005-05 (Config Validation) | 1 | In Progress | dev-2 |
 
-### Already Implemented
-
-| Story | Points | Status |
-|-------|--------|--------|
-| story-004-05 (Message Protocol Types) | 2 | Already Implemented |
-
-**Sprint 6 Total**: 8 points (6 not started + 2 already implemented)
+**Sprint 7 Total**: 9 points
 
 ---
 
-## Sprint 5 Stories (Archived)
+## Sprint 6 Stories (Archived)
 
 ### Completed
 

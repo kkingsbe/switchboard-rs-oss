@@ -2,7 +2,7 @@
 
 > Sprint: 7
 > Focus Area: Discord Gateway Connection
-> Last Updated: 2026-03-03T12:05:06Z
+> Last Updated: 2026-03-03T13:00:38Z
 > Total Points: 5
 
 ## Orientation
@@ -14,6 +14,13 @@ Before starting any stories, read these files:
 - `src/discord/gateway.rs` — Discord Gateway patterns
 
 ## Stories
+
+- [ ] **story-004-07** (REWORK): Wire up Discord Gateway Connection
+  - 📄 Story: .switchboard/state/stories/story-004-07.md
+  - 🔍 Review: See REVIEW_QUEUE.md — CHANGES_REQUESTED
+  - ⚡ Pre-check: Build + tests pass
+  - ✅ Post-check: Address ALL "Must Fix" items
+  - 📝 Commit: `fix(dev1): [story-004-07] address review feedback`
 
 - [x] **{story-004-07}**: Wire up Discord Gateway Connection (5 pts) ✅ queued for review
   - 📄 Story: `.switchboard/state/stories/story-004-07-discord-gateway.md`
