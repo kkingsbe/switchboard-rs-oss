@@ -15,6 +15,13 @@ Before starting any stories, read these files:
 
 ## Stories
 
+- [ ] **{story-004-03}** (REWORK): HTTP Server with Health Check - Fix test compilation errors
+  - 📄 Story: `.switchboard/state/stories/archive/sprint-5/story-004-03-http-server-health-check.md`
+  - 🔍 Review: See REVIEW_QUEUE.md — CHANGES_REQUESTED
+  - ⚡ Pre-check: Build + tests pass
+  - ✅ Post-check: Address ALL "Must Fix" items
+  - 📝 Commit: `fix(dev1): [story-004-03] fix test compilation errors and formatting`
+
 - [ ] **{story-004-04}: WebSocket server for project connections** (3 pts)
   - 📄 Story: `.switchboard/state/stories/sprint-6/story-004-04-websocket-server.md`
   - 📚 Skills: `./skills/rust-best-practices/SKILL.md`, `./skills/rust-engineer/SKILL.md`

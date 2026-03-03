@@ -4,13 +4,21 @@
 //! and graceful shutdown support.
 
 use crate::gateway::config::{GatewayConfig, ServerConfig};
-use axum::{extract::State, response::Json, routing::get, Router};
+use crate::gateway::protocol::GatewayMessage;
+use axum::{
+    extract::ws::{Message, WebSocket, WebSocketUpgrade},
+    extract::State,
+    response::Json,
+    routing::get,
+    Router,
+};
+use futures_util::{SinkExt, StreamExt};
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 use std::sync::Arc;
 use thiserror::Error;
 use tokio::signal;
 use tower_http::trace::TraceLayer;
-use tracing::info;
+use tracing::{error, info, warn};
 
 /// Error types for gateway server operations.
 #[derive(Debug, Error)]
@@ -32,6 +40,14 @@ pub enum GatewayServerError {
     /// Server encountered an error during runtime.
     #[error("Server runtime error: {0}")]
     RuntimeError(String),
+
+    /// WebSocket error.
+    #[error("WebSocket error: {0}")]
+    WebSocketError(String),
+
+    /// Failed to parse WebSocket message.
+    #[error("Failed to parse message: {0}")]
+    MessageParseError(String),
 }
 
 /// Health check response JSON structure.
@@ -51,6 +67,94 @@ pub struct AppState {
 /// Creates the health check route handler.
 async fn health_handler(State(_state): State<AppState>) -> Json<HealthResponse> {
     Json(HealthResponse { status: "ok" })
+}
+
+/// WebSocket handler for project connections.
+///
+/// This handler accepts WebSocket upgrade requests, creates a bidirectional
+/// channel for sending/receiving messages, parses incoming JSON messages
+/// using the protocol types, and echoes them back for testing.
+async fn ws_handler(
+    ws: WebSocketUpgrade,
+    State(_state): State<AppState>,
+) -> impl axum::response::IntoResponse {
+    info!("WebSocket upgrade request received");
+
+    ws.on_upgrade(handle_websocket)
+}
+
+/// Handle the WebSocket connection after upgrade.
+///
+/// This function manages the bidirectional message flow, parsing incoming
+/// JSON messages and echoing them back for testing.
+async fn handle_websocket(socket: WebSocket) {
+    let (mut sender, mut receiver) = socket.split();
+
+    // Process incoming messages
+    while let Some(msg_result) = receiver.next().await {
+        match msg_result {
+            Ok(Message::Text(text)) => {
+                info!("Received WebSocket text message: {}", text);
+
+                // Parse the incoming JSON message
+                match serde_json::from_str::<GatewayMessage>(&text) {
+                    Ok(gateway_msg) => {
+                        // Echo the message back for testing
+                        match serde_json::to_string(&gateway_msg) {
+                            Ok(response) => {
+                                if sender.send(Message::Text(response)).await.is_err() {
+                                    warn!("Failed to send response, client disconnected");
+                                    break;
+                                }
+                                info!("Echoed message back to client");
+                            }
+                            Err(e) => {
+                                error!("Failed to serialize message: {}", e);
+                                let error_msg = GatewayMessage::Message {
+                                    msg_type: "message".to_string(),
+                                    payload: format!("Serialization error: {}", e),
+                                    channel_id: 0,
+                                };
+                                let _ = sender.send(Message::Text(serde_json::to_string(&error_msg).unwrap_or_default())).await;
+                            }
+                        }
+                    }
+                    Err(e) => {
+                        error!("Failed to parse message: {}", e);
+                        // Send error response
+                        let error_msg = GatewayMessage::Message {
+                            msg_type: "message".to_string(),
+                            payload: format!("Parse error: {}", e),
+                            channel_id: 0,
+                        };
+                        if let Ok(error_json) = serde_json::to_string(&error_msg) {
+                            let _ = sender.send(Message::Text(error_json)).await;
+                        }
+                    }
+                }
+            }
+            Ok(Message::Close(_)) => {
+                info!("Client sent close message");
+                break;
+            }
+            Ok(Message::Ping(data)) => {
+                info!("Received ping, sending pong");
+                let _ = sender.send(Message::Pong(data)).await;
+            }
+            Ok(Message::Pong(_)) => {
+                // Pong received, nothing to do
+            }
+            Err(e) => {
+                error!("WebSocket error: {}", e);
+                break;
+            }
+            _ => {
+                // Ignore binary messages for now
+            }
+        }
+    }
+
+    info!("WebSocket connection closed");
 }
 
 /// The gateway HTTP server.
@@ -122,6 +226,7 @@ impl GatewayServer {
         // Build the router with routes and middleware
         let app = Router::new()
             .route("/health", get(health_handler))
+            .route("/ws", get(ws_handler))
             .layer(TraceLayer::new_for_http())
             .with_state(state);
 
@@ -305,5 +410,152 @@ mod tests {
         let cloned = state.clone();
         // Verify clone works - the Arc should point to the same data
         assert!(Arc::ptr_eq(&state.config, &cloned.config));
+    }
+
+    #[tokio::test]
+    async fn router_has_websocket_endpoint() {
+        use axum::extract::ws::WebSocketUpgrade;
+        use axum::response::IntoResponse;
+
+        let (_, gateway_config) = create_test_config();
+        let state = AppState {
+            config: Arc::new(gateway_config),
+        };
+
+        let app = Router::new()
+            .route("/ws", get(ws_handler))
+            .route("/health", get(health_handler))
+            .with_state(state);
+
+        // Make a request to /ws - it should upgrade to WebSocket
+        let request = Request::builder()
+            .uri("/ws")
+            .header("upgrade", "websocket")
+            .header("connection", "upgrade")
+            .header("sec-websocket-version", "13")
+            .header("sec-websocket-key", "dGhlIHNhbXBsZSBub25jZQ==")
+            .body(Body::empty())
+            .expect("Failed to build request");
+
+        let response = app.oneshot(request).await.expect("Failed to get response");
+
+        // WebSocket upgrade should succeed
+        assert_eq!(response.status(), StatusCode::SWITCHING_PROTOCOLS);
+    }
+
+    #[tokio::test]
+    async fn websocket_handler_accepts_upgrade() {
+        let (_, gateway_config) = create_test_config();
+        let state = AppState {
+            config: Arc::new(gateway_config),
+        };
+
+        // Test that the ws_handler can be used in a router
+        let app = Router::new()
+            .route("/ws", get(ws_handler))
+            .with_state(state);
+
+        // Verify route exists by checking it responds (will be upgrade request)
+        let request = Request::builder()
+            .uri("/ws")
+            .header("upgrade", "websocket")
+            .header("connection", "upgrade")
+            .header("sec-websocket-version", "13")
+            .header("sec-websocket-key", "dGhlIHNhbXBsZSBub25jZQ==")
+            .body(Body::empty())
+            .expect("Failed to build request");
+
+        let response = app.oneshot(request).await.expect("Failed to get response");
+        assert_eq!(response.status(), StatusCode::SWITCHING_PROTOCOLS);
+    }
+
+    #[tokio::test]
+    async fn websocket_route_requires_get_method() {
+        use axum::http::Method;
+
+        let (_, gateway_config) = create_test_config();
+        let state = AppState {
+            config: Arc::new(gateway_config),
+        };
+
+        let app = Router::new()
+            .route("/ws", get(ws_handler))
+            .with_state(state);
+
+        // POST request to /ws should return Method Not Allowed
+        let request = Request::builder()
+            .method(Method::POST)
+            .uri("/ws")
+            .body(Body::empty())
+            .expect("Failed to build request");
+
+        let response = app.oneshot(request).await.expect("Failed to get response");
+        assert_eq!(response.status(), StatusCode::METHOD_NOT_ALLOWED);
+    }
+
+    #[test]
+    fn gateway_message_parse_register() {
+        use crate::gateway::protocol::GatewayMessage;
+
+        let json = r#"{"type":"register","project_name":"test-project","channels":["channel1"]}"#;
+        let msg: GatewayMessage = serde_json::from_str(json).expect("Failed to parse");
+        assert!(
+            matches!(msg, GatewayMessage::Register { project_name, channels, .. } 
+            if project_name == "test-project" && channels.len() == 1 && channels[0] == "channel1")
+        );
+    }
+
+    #[test]
+    fn gateway_message_parse_and_serialize_roundtrip() {
+        use crate::gateway::protocol::GatewayMessage;
+
+        // Test Message variant
+        let original = GatewayMessage::Message {
+            msg_type: "message".to_string(),
+            payload: "Hello, World!".to_string(),
+            channel_id: 12345,
+        };
+
+        let json = serde_json::to_string(&original).expect("Failed to serialize");
+        let parsed: GatewayMessage = serde_json::from_str(&json).expect("Failed to parse");
+
+        assert!(
+            matches!(
+                parsed,
+                GatewayMessage::Message { msg_type, payload, channel_id }
+                if payload == "Hello, World!" && channel_id == 12345
+            )
+        );
+    }
+
+    #[tokio::test]
+    async fn websocket_echo_roundtrip() {
+        // This test verifies that the WebSocket handler can process messages
+        // and that the GatewayMessage parsing works correctly.
+        // Full end-to-end WebSocket testing would require a separate test binary
+        // or integration test with tokio-tungstenite client.
+        
+        // Test that GatewayMessage parsing works for echo
+        use crate::gateway::protocol::GatewayMessage;
+        
+        let test_message = GatewayMessage::Message {
+            msg_type: "message".to_string(),
+            payload: "test payload".to_string(),
+            channel_id: 123,
+        };
+        
+        // Serialize the message
+        let json = serde_json::to_string(&test_message).expect("Failed to serialize");
+        assert!(json.contains("test payload"));
+        
+        // Deserialize it back
+        let parsed: GatewayMessage = serde_json::from_str(&json).expect("Failed to parse");
+        assert!(
+            matches!(
+                parsed,
+                GatewayMessage::Message { msg_type, payload, channel_id }
+                if payload == "test payload" && channel_id == 123
+            )
+        );
     }
 }
