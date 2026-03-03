@@ -1,35 +1,40 @@
 # DEV_TODO2 — Development Agent 2
 
-> Sprint: 8
-> Focus Area: Gateway Routing and Rate Limiting
-> Last Updated: 2026-03-03
-> Total Points: 5
+> Sprint: 9
+> Focus Area: Epic 06 - Multi-Project Gateway
+> Total Points: 2
+> ⚠️ Rebalanced by Sprint Planner on 2026-03-03 (moved from dev-1)
 
 ## Orientation
 
 Before starting any stories, read these files:
-
 - `.switchboard/planning/project-context.md`
-- `.switchboard/planning/architecture.md` (Discord Gateway section)
+- `.switchboard/planning/architecture.md`
 
 ## Stories
 
-- [x] **story-005-03**: Route Messages by Channel (3 pts)
-  - 📄 Story: `.switchboard/state/stories/story-005-03-route-by-channel.md`
-  - 🔍 Review: See REVIEW_QUEUE.md — CHANGES_REQUESTED (scope violation)
-  - ⚡ Pre-check: Build + tests pass
-  - ✅ Post-check: Revert changes to .switchboard/knowledge/journals/sprint-planner.md
-  - 📝 Commit: `fix(dev2): [005-03] revert out-of-scope changes`
-
-- [ ] **story-006-06**: Rate Limiting (2 pts)
-  - 📄 Story: `.switchboard/state/stories/story-006-06-rate-limiting.md`
-  - 📚 Skills: `./skills/rust-engineer/SKILL.md`, `./skills/rust-engineer/references/async.md`
+- [x] **story-007-03**: PID file management (1 pt) ✅ queued for review
+  - 📄 Story: `.switchboard/state/stories/story-007-03-pid-file.md`
+  - 📚 Skills: `./skills/rust-best-practices/SKILL.md`
   - ⚡ Pre-check: Build + tests pass
   - ✅ Post-check: Build + tests pass, acceptance criteria met
-  - 🔒 Risk: Medium
-  - 📝 Commit: `feat(dev2): [006-06] Rate limiting`
+  - 🔒 Risk: Low
+  - 📝 Commit: `feat(dev2): [007-03] PID file management`
 
-- [ ] AGENT QA: Run full build and test suite. If green, create
-  `.switchboard/state/.dev_done_2` with date. If ALL `.dev_done_*`
-  files exist for all agents with work, also create
-  `.switchboard/state/.sprint_complete`.
+- [x] **story-007-04**: Gateway logging (2 pts) ✅ queued for review
+  - 📄 Story: `.switchboard/state/stories/story-007-04-gateway-logging.md`
+  - 📚 Skills: `./skills/rust-best-practices/SKILL.md`, `./skills/rust-engineer/SKILL.md`
+  - ⚡ Pre-check: Build + tests pass
+  - ✅ Post-check: Build + tests pass, acceptance criteria met
+  - 🔒 Risk: Low
+  - 📝 Commit: `feat(dev2): [007-04] Gateway logging`
+
+- [ ] **story-006-05**: Fan-out message delivery (2 pts)
+  - 📄 Story: `.switchboard/state/stories/story-006-05-fan-out-messages.md`
+  - 📚 Skills: `./skills/rust-best-practices/SKILL.md`
+  - ⚡ Pre-check: Build + tests pass
+  - ✅ Post-check: Build + tests pass, acceptance criteria met
+  - 🔒 Risk: Low
+  - 📝 Commit: `feat(dev2): [006-05] Fan-out message delivery`
+
+- [ ] AGENT QA: Run full build and test suite. If green, create `.switchboard/state/.dev_done_2` with date.
