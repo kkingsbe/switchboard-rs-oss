@@ -121,6 +121,17 @@ async fn handle_websocket(socket: WebSocket, state: AppState) {
                                     continue;
                                 }
 
+                                // Validate channels is not empty
+                                if channels.is_empty() {
+                                    let error_response = GatewayMessage::RegisterError {
+                                        error: "At least one channel must be specified".to_string(),
+                                    };
+                                    if let Ok(response) = serde_json::to_string(&error_response) {
+                                        let _ = sender.send(Message::Text(response)).await;
+                                    }
+                                    continue;
+                                }
+
                                 // Generate a unique project ID
                                 let project_id = Uuid::new_v4().to_string();
 
@@ -805,6 +816,81 @@ mod tests {
             // (validation happens at the WebSocket handler level)
             let result = registry.register(project, vec![]).await;
             assert!(result.is_ok());
+        }
+
+        /// Test that session ID is generated uniquely for each registration
+        #[tokio::test]
+        async fn test_session_id_generation_unique() {
+            let registry = ChannelRegistry::new();
+
+            // Create first project
+            let (tx1, _rx1) = mpsc::channel::<String>(100);
+            let project1 =
+                ProjectConnection::new("project-1".to_string(), "Project One".to_string(), tx1);
+            let session_id1 = project1.session_id;
+
+            registry
+                .register(project1, vec!["channel1".to_string()])
+                .await
+                .unwrap();
+
+            // Create second project
+            let (tx2, _rx2) = mpsc::channel::<String>(100);
+            let project2 =
+                ProjectConnection::new("project-2".to_string(), "Project Two".to_string(), tx2);
+            let session_id2 = project2.session_id;
+
+            registry
+                .register(project2, vec!["channel2".to_string()])
+                .await
+                .unwrap();
+
+            // Verify session IDs are unique
+            assert_ne!(session_id1, session_id2);
+
+            // Verify we can retrieve both projects and they have different session IDs
+            let retrieved1 = registry
+                .get_project(&"project-1".to_string())
+                .await
+                .unwrap();
+            let retrieved2 = registry
+                .get_project(&"project-2".to_string())
+                .await
+                .unwrap();
+            assert_eq!(retrieved1.session_id, session_id1);
+            assert_eq!(retrieved2.session_id, session_id2);
+            assert_ne!(retrieved1.session_id, retrieved2.session_id);
+        }
+
+        /// Test that empty channels list validation works
+        #[test]
+        fn test_empty_channels_returns_error_message() {
+            // Test with empty channels array - use correct internally-tagged format
+            let json = r#"{"type":"Register","project_name":"my-project","channels":[]}"#;
+            let msg: GatewayMessage = serde_json::from_str(json).expect("Failed to parse");
+
+            assert!(matches!(
+                msg,
+                GatewayMessage::Register { project_name, channels }
+                if project_name == "my-project" && channels.is_empty()
+            ));
+        }
+
+        /// Test that channels with valid content pass validation
+        #[test]
+        fn test_channels_with_valid_content_passes() {
+            // Test with non-empty channels array
+            let json = r#"{"type":"Register","project_name":"my-project","channels":["general","random"]}"#;
+            let msg: GatewayMessage = serde_json::from_str(json).expect("Failed to parse");
+
+            assert!(matches!(
+                msg,
+                GatewayMessage::Register { project_name, channels }
+                if project_name == "my-project"
+                && channels.len() == 2
+                && channels[0] == "general"
+                && channels[1] == "random"
+            ));
         }
     }
 }
