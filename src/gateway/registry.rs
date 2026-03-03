@@ -516,4 +516,85 @@ mod tests {
         let result = registry.get_project(&"nonexistent".to_string()).await;
         assert!(result.is_err());
     }
+
+    // === Required tests for ChannelRegistry routing ===
+
+    #[tokio::test]
+    async fn should_return_projects_for_subscribed_channel() {
+        let registry = ChannelRegistry::new();
+        let (project, _sender) = create_test_project("project-1");
+        let channels = vec!["channel-x".to_string()];
+
+        registry.register(project, channels).await.unwrap();
+
+        let projects = registry.projects_for_channel("channel-x").await;
+        assert_eq!(projects, vec!["project-1".to_string()]);
+    }
+
+    #[tokio::test]
+    async fn should_return_empty_for_unsubscribed_channel() {
+        let registry = ChannelRegistry::new();
+        let (project, _sender) = create_test_project("project-1");
+        let channels = vec!["channel-a".to_string()];
+
+        registry.register(project, channels).await.unwrap();
+
+        let projects = registry.projects_for_channel("channel-b").await;
+        assert!(projects.is_empty());
+    }
+
+    #[tokio::test]
+    async fn should_return_multiple_projects_for_same_channel() {
+        let registry = ChannelRegistry::new();
+
+        let (project1, _sender1) = create_test_project("project-1");
+        let (project2, _sender2) = create_test_project("project-2");
+        let (project3, _sender3) = create_test_project("project-3");
+
+        registry
+            .register(project1, vec!["shared-channel".to_string()])
+            .await
+            .unwrap();
+        registry
+            .register(project2, vec!["shared-channel".to_string()])
+            .await
+            .unwrap();
+        registry
+            .register(project3, vec!["shared-channel".to_string()])
+            .await
+            .unwrap();
+
+        let projects = registry.projects_for_channel("shared-channel").await;
+        assert_eq!(projects.len(), 3);
+        assert!(projects.contains(&"project-1".to_string()));
+        assert!(projects.contains(&"project-2".to_string()));
+        assert!(projects.contains(&"project-3".to_string()));
+    }
+
+    #[tokio::test]
+    async fn should_not_return_project_after_unsubscribing() {
+        let registry = ChannelRegistry::new();
+        let (project, _sender) = create_test_project("project-1");
+        let channels = vec!["channel-1".to_string(), "channel-2".to_string()];
+
+        registry.register(project, channels).await.unwrap();
+
+        // Verify project is in both channels
+        assert!(!registry.projects_for_channel("channel-1").await.is_empty());
+        assert!(!registry.projects_for_channel("channel-2").await.is_empty());
+
+        // Remove subscription to channel-1
+        registry
+            .remove_channel_subscription(&"project-1".to_string(), "channel-1")
+            .await
+            .unwrap();
+
+        // channel-1 should no longer have the project
+        let projects = registry.projects_for_channel("channel-1").await;
+        assert!(projects.is_empty());
+
+        // channel-2 should still have the project
+        let projects = registry.projects_for_channel("channel-2").await;
+        assert_eq!(projects, vec!["project-1".to_string()]);
+    }
 }
