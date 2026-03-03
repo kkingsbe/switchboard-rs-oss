@@ -216,3 +216,71 @@
   - SHOULD FIX: None
   - NICE TO HAVE: None
 - **Summary:** Implementation is complete with comprehensive validation covering all acceptance criteria. 28 config validation tests pass. Uses thiserror for error types as per project conventions. Build and clippy checks pass.
+
+---
+
+## Sprint 8
+
+### story-005-03: Route Messages by Channel
+
+- **Re-submitted by:** dev-2
+- **Sprint:** 8
+- **Commits:** 555984f..9dea96b
+- **Story file:** `.switchboard/state/stories/story-005-03-route-by-channel.md`
+- **Files changed:** src/gateway/mod.rs, src/gateway/registry.rs, src/gateway/routing.rs
+- **Status:** ❌ CHANGES_REQUESTED (RE-REVIEW)
+- **Reviewed by:** code-reviewer
+- **Review date:** 2026-03-03
+
+#### Acceptance Criteria:
+- [x] Channel ID extraction from MessageCreate events — MET (verified by: test_extract_channel_id_valid, test_extract_channel_id_small_number, test_extract_channel_id_invalid, test_extract_channel_id_with_leading_zeros)
+- [x] Project lookup for channel — MET (verified by: should_return_projects_for_subscribed_channel, test_route_message_channel_not_subscribed)
+- [x] Message forwarding to subscribed projects — MET (verified by: test_route_message_with_live_receiver, test_route_message_multiple_projects_partial_failure)
+
+#### Must Fix:
+1. **Scope violation NOT FIXED:** `.switchboard/knowledge/journals/sprint-planner.md` was still modified but is NOT in the story's "Files in Scope" list
+   - Current: 33 lines added (Sprint 8 planning notes)
+   - Expected: Revert changes to sprint-planner.md - only files in scope should be modified
+   - Why: Story scope is sacred per code reviewer protocol - changes outside scope risk breaking other agents' work
+
+#### Should Fix:
+- None
+
+#### Requeue Instructions:
+1. Revert changes to `.switchboard/knowledge/journals/sprint-planner.md`
+2. Run build and tests to ensure still passing
+3. Commit: `fix(dev2): [005-03] revert out-of-scope changes`
+4. Re-submit for review
+
+---
+
+### story-005-03: Route Messages by Channel (original)
+
+- **Implemented by:** dev-2
+- **Sprint:** 8
+- **Commits:** 555984f..9dea96b
+- **Story file:** `.switchboard/state/stories/story-005-03-route-by-channel.md`
+- **Files changed:** src/gateway/mod.rs, src/gateway/registry.rs, src/gateway/routing.rs
+- **Status:** ❌ CHANGES_REQUESTED
+- **Reviewed by:** code-reviewer
+- **Review date:** 2026-03-03
+
+#### Acceptance Criteria:
+- [x] Channel ID extraction from MessageCreate events — MET (verified by: test_extract_channel_id_valid, test_extract_channel_id_small_number, test_extract_channel_id_invalid, test_extract_channel_id_with_leading_zeros)
+- [x] Project lookup for channel — MET (verified by: should_return_projects_for_subscribed_channel, test_route_message_channel_not_subscribed)
+- [x] Message forwarding to subscribed projects — MET (verified by: test_route_message_with_live_receiver, test_route_message_multiple_projects_partial_failure)
+
+#### Must Fix:
+1. **Scope violation:** `.switchboard/knowledge/journals/sprint-planner.md` was modified but is NOT in the story's "Files in Scope" list
+   - Current: Added 33 lines of Sprint 8 planning notes to sprint-planner.md
+   - Expected: Revert changes to sprint-planner.md - only files in scope should be modified
+   - Why: Story scope is sacred per code reviewer protocol - changes outside scope risk breaking other agents' work
+
+#### Should Fix:
+- None
+
+#### Requeue Instructions:
+1. Revert changes to `.switchboard/knowledge/journals/sprint-planner.md`
+2. Run build and tests to ensure still passing
+3. Commit: `fix(dev2): [005-03] revert out-of-scope changes`
+4. Re-submit for review
