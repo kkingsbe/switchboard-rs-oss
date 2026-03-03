@@ -2,62 +2,65 @@
 
 ## Current Sprint
 
-**Sprint**: 4  
-**Start Date**: 2026-03-02  
-**End Date**: 2026-03-16
+**Sprint**: 5  
+**Start Date**: 2026-03-03  
+**End Date**: 2026-03-17
 
 ---
 
-## Sprint 4 Stories
+## Sprint 5 Stories
 
 ### In Progress
 
 | Story | Points | Status | Assigned To |
 |-------|--------|--------|-------------|
-| story-004-02 (gateway config loading) | 2 | In Review | dev-1 |
+| (None yet) | | | |
 
-**Sprint 4 Total**: 2 points
+**Sprint 5 Total**: 0 points
 
 ---
 
-## Sprint 4 Stories (Complete)
+## Sprint 4 Stories (Archived)
+
+### Completed
 
 | Story | Points | Status | Assigned To |
 |-------|--------|--------|-------------|
+| story-004-02 (gateway config loading) | 2 | Complete | dev-1 |
 | story-005-01 (channel registry) | 3 | Complete | dev-2 |
+
+**Sprint 4 Total**: 5 points
 
 ---
 
-## Sprint 3 Stories (Complete)
+## Sprint 3 Stories (Archived)
 
 ---
 
 ## Sprint 2 Stories (Archived)
 
-### In Progress
+### Completed
 
 | Story | Points | Status | Assigned To |
-|-------------|--------|--------|-------------|
-| story-004-01 (gateway module structure) | 1 | In Progress | dev-1 |
-| story-004-02 (gateway config loading) | 2 | In Progress | dev-1 |
-| story-004-03 (HTTP server health check) | 3 | In Progress | dev-1 |
-| story-004-05 (message protocol types) | 2 | In Progress | dev-2 |
-
-**Sprint 2 Total**: 8 points
+|-------|--------|--------|-------------|
+| (All stories moved to Sprint 4) | | | |
 
 ---
 
 ## Sprint 1 Stories (Archived)
 
-### In Progress
+### Completed
+
+| Story | Points | Status | Assigned To |
+|-------|--------|--------|-------------|
+| story-002-process-executor-trait | 2 | Complete | dev-2 |
+
+### Not Started (Deferred)
 
 | Story | Points | Status | Assigned To |
 |-------|--------|--------|-------------|
 | story-001-docker-connection-trait | 3 | Not Started | dev-1 |
-| story-002-process-executor-trait | 2 | Complete | dev-2 |
 | story-003-refactor-docker-mod | 5 | Not Started | dev-1 |
-
-**Sprint 1 Total**: 10 points (2 pts complete, 8 pts remaining)
 
 ---
 
