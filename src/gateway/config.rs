@@ -24,6 +24,10 @@ pub enum GatewayConfigError {
     /// Missing required environment variable.
     #[error("Missing required environment variable: {0}")]
     EnvVarError(String),
+
+    /// Configuration validation error.
+    #[error("Configuration validation error: {0}")]
+    ValidationError(String),
 }
 
 /// Server configuration for the gateway HTTP/WS servers.
@@ -152,6 +156,9 @@ impl GatewayConfig {
         // Resolve environment variables in the config
         config.resolve_env_vars();
 
+        // Validate the configuration
+        config.validate()?;
+
         Ok(config)
     }
 
@@ -225,6 +232,56 @@ impl GatewayConfig {
         for channel in &mut self.channels {
             channel.endpoint = resolve_env_value(&channel.endpoint, env_vars);
         }
+    }
+
+    /// Validate the configuration.
+    ///
+    /// Checks that:
+    /// - discord_token is not empty
+    /// - http_port is in range 1024-65535
+    /// - ws_port is in range 1024-65535
+    /// - Each channel has non-empty channel_id and project_name
+    fn validate(&self) -> Result<(), GatewayConfigError> {
+        // Validate discord_token is not empty
+        if self.discord_token.is_empty() {
+            return Err(GatewayConfigError::ValidationError(
+                "discord_token cannot be empty".to_string(),
+            ));
+        }
+
+        // Validate http_port is in range 1024-65535
+        if self.server.http_port < 1024 || self.server.http_port > 65535 {
+            return Err(GatewayConfigError::ValidationError(format!(
+                "http_port must be in range 1024-65535, got {}",
+                self.server.http_port
+            )));
+        }
+
+        // Validate ws_port is in range 1024-65535
+        if self.server.ws_port < 1024 || self.server.ws_port > 65535 {
+            return Err(GatewayConfigError::ValidationError(format!(
+                "ws_port must be in range 1024-65535, got {}",
+                self.server.ws_port
+            )));
+        }
+
+        // Validate each channel has non-empty channel_id and project_name
+        for (idx, channel) in self.channels.iter().enumerate() {
+            if channel.channel_id.is_empty() {
+                return Err(GatewayConfigError::ValidationError(format!(
+                    "channel at index {} has empty channel_id",
+                    idx
+                )));
+            }
+            if channel.project_name.is_empty() {
+                return Err(GatewayConfigError::ValidationError(format!(
+                    "channel at index {} has empty project_name",
+                    idx
+                )));
+            }
+        }
+
+        Ok(())
     }
 }
 
@@ -540,5 +597,187 @@ endpoint = "${PROJECT_ENDPOINT}"
         assert_eq!(config.channels[0].endpoint, "ws://my-project.example.com");
 
         env::remove_var("PROJECT_ENDPOINT");
+    }
+
+    // ============== Validation Tests ==============
+
+    #[test]
+    fn validate_should_return_error_when_token_empty() {
+        let temp_dir = TempDir::new().unwrap();
+        let config_file = temp_dir.path().join("gateway.toml");
+
+        let toml_content = r#"
+discord_token = ""
+"#;
+
+        fs::write(&config_file, toml_content).unwrap();
+
+        let result = GatewayConfig::load(Some(config_file.to_str().unwrap()));
+        assert!(result.is_err());
+        match result {
+            Err(GatewayConfigError::ValidationError(msg)) => {
+                assert!(msg.contains("discord_token cannot be empty"));
+            }
+            _ => panic!("Expected ValidationError for empty token"),
+        }
+    }
+
+    #[test]
+    fn validate_should_return_error_when_http_port_too_low() {
+        let temp_dir = TempDir::new().unwrap();
+        let config_file = temp_dir.path().join("gateway.toml");
+
+        let toml_content = r#"
+discord_token = "test_token"
+
+[server]
+http_port = 80
+"#;
+
+        fs::write(&config_file, toml_content).unwrap();
+
+        let result = GatewayConfig::load(Some(config_file.to_str().unwrap()));
+        assert!(result.is_err());
+        match result {
+            Err(GatewayConfigError::ValidationError(msg)) => {
+                assert!(msg.contains("http_port must be >= 1024"));
+            }
+            _ => panic!("Expected ValidationError for http_port too low"),
+        }
+    }
+
+    #[test]
+    fn validate_should_return_error_when_http_port_too_high() {
+        let temp_dir = TempDir::new().unwrap();
+        let config_file = temp_dir.path().join("gateway.toml");
+
+        let toml_content = r#"
+discord_token = "test_token"
+
+[server]
+http_port = 70000
+"#;
+
+        fs::write(&config_file, toml_content).unwrap();
+
+        let result = GatewayConfig::load(Some(config_file.to_str().unwrap()));
+        assert!(result.is_err());
+        match result {
+            Err(GatewayConfigError::ValidationError(msg)) => {
+                assert!(msg.contains("http_port must be >= 1024"));
+            }
+            _ => panic!("Expected ValidationError for http_port too high"),
+        }
+    }
+
+    #[test]
+    fn validate_should_return_error_when_ws_port_too_low() {
+        let temp_dir = TempDir::new().unwrap();
+        let config_file = temp_dir.path().join("gateway.toml");
+
+        let toml_content = r#"
+discord_token = "test_token"
+
+[server]
+ws_port = 80
+"#;
+
+        fs::write(&config_file, toml_content).unwrap();
+
+        let result = GatewayConfig::load(Some(config_file.to_str().unwrap()));
+        assert!(result.is_err());
+        match result {
+            Err(GatewayConfigError::ValidationError(msg)) => {
+                assert!(msg.contains("ws_port must be >= 1024"));
+            }
+            _ => panic!("Expected ValidationError for ws_port too low"),
+        }
+    }
+
+    #[test]
+    fn validate_should_return_error_when_channel_missing_channel_id() {
+        let temp_dir = TempDir::new().unwrap();
+        let config_file = temp_dir.path().join("gateway.toml");
+
+        let toml_content = r#"
+discord_token = "test_token"
+
+[[channels]]
+channel_id = ""
+project_name = "test-project"
+endpoint = "ws://localhost:8080"
+"#;
+
+        fs::write(&config_file, toml_content).unwrap();
+
+        let result = GatewayConfig::load(Some(config_file.to_str().unwrap()));
+        assert!(result.is_err());
+        match result {
+            Err(GatewayConfigError::ValidationError(msg)) => {
+                assert!(msg.contains("empty channel_id"));
+            }
+            _ => panic!("Expected ValidationError for missing channel_id"),
+        }
+    }
+
+    #[test]
+    fn validate_should_return_error_when_channel_missing_project_name() {
+        let temp_dir = TempDir::new().unwrap();
+        let config_file = temp_dir.path().join("gateway.toml");
+
+        let toml_content = r#"
+discord_token = "test_token"
+
+[[channels]]
+channel_id = "123456789"
+project_name = ""
+endpoint = "ws://localhost:8080"
+"#;
+
+        fs::write(&config_file, toml_content).unwrap();
+
+        let result = GatewayConfig::load(Some(config_file.to_str().unwrap()));
+        assert!(result.is_err());
+        match result {
+            Err(GatewayConfigError::ValidationError(msg)) => {
+                assert!(msg.contains("empty project_name"));
+            }
+            _ => panic!("Expected ValidationError for missing project_name"),
+        }
+    }
+
+    #[test]
+    fn validate_should_pass_with_valid_config() {
+        let temp_dir = TempDir::new().unwrap();
+        let config_file = temp_dir.path().join("gateway.toml");
+
+        let toml_content = r#"
+discord_token = "valid_token_123"
+
+[server]
+host = "127.0.0.1"
+http_port = 8080
+ws_port = 9000
+
+[logging]
+level = "debug"
+
+[[channels]]
+channel_id = "123456789"
+project_name = "test-project"
+endpoint = "ws://localhost:8080"
+"#;
+
+        fs::write(&config_file, toml_content).unwrap();
+
+        let result = GatewayConfig::load(Some(config_file.to_str().unwrap()));
+        assert!(result.is_ok());
+        let config = result.unwrap();
+        assert_eq!(config.discord_token, "valid_token_123");
+        assert_eq!(config.server.http_port, 8080);
+        assert_eq!(config.server.ws_port, 9000);
+        assert_eq!(config.channels.len(), 1);
+        assert_eq!(config.channels[0].channel_id, "123456789");
+        assert_eq!(config.channels[0].project_name, "test-project");
     }
 }
