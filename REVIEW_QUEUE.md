@@ -37,4 +37,14 @@
 
 ## APPROVED
 
-*(None)*
+### story-005-03
+- **Status**: ✅ APPROVED
+- **Reviewed by**: code-reviewer
+- **Review date**: 2026-03-03T22:57:00Z
+- **Acceptance Criteria**:
+  - [x] Extract channel_id from MessageCreate events — MET: server.rs process_discord_events extracts channel_id
+  - [x] Look up projects subscribed to that channel — MET: registry.projects_for_channel() called
+  - [x] Forward message to those projects via WebSocket — MET: Iterates projects and sends via ws_sender
+- **Findings**:
+  - SHOULD FIX: Consider reusing Router::route_message() from routing.rs instead of inline implementation in process_discord_events (code duplication)
+- **Summary**: All acceptance criteria met. Build, tests (133 gateway tests), and clippy all pass. Implementation correctly routes Discord messages to subscribed projects via WebSocket.
