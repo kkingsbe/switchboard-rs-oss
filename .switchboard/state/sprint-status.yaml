@@ -2,22 +2,33 @@
 
 ## Current Sprint
 
-**Sprint**: 3  
+**Sprint**: 4  
 **Start Date**: 2026-03-02  
 **End Date**: 2026-03-16
 
 ---
 
-## Sprint 3 Stories
+## Sprint 4 Stories
 
 ### In Progress
 
 | Story | Points | Status | Assigned To |
 |-------|--------|--------|-------------|
-| story-004-01 (gateway module structure) | 1 | In Progress | dev-1 |
-| story-004-05 (message protocol types) | 2 | In Progress | dev-2 |
+| story-004-02 (gateway config loading) | 2 | In Review | dev-1 |
 
-**Sprint 3 Total**: 3 points
+**Sprint 4 Total**: 2 points
+
+---
+
+## Sprint 4 Stories (Complete)
+
+| Story | Points | Status | Assigned To |
+|-------|--------|--------|-------------|
+| story-005-01 (channel registry) | 3 | Complete | dev-2 |
+
+---
+
+## Sprint 3 Stories (Complete)
 
 ---
 
