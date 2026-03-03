@@ -3,6 +3,7 @@
 //! Provides an HTTP server for the gateway with health check endpoint
 //! and graceful shutdown support.
 
+use crate::discord::gateway::{DiscordEvent, DiscordGateway};
 use crate::gateway::config::{GatewayConfig, ServerConfig};
 use crate::gateway::protocol::GatewayMessage;
 use crate::gateway::registry::{ChannelRegistry, ProjectConnection};
@@ -20,7 +21,7 @@ use thiserror::Error;
 use tokio::signal;
 use tokio::sync::mpsc;
 use tower_http::trace::TraceLayer;
-use tracing::{error, info, warn};
+use tracing::{debug, error, info, warn};
 use uuid::Uuid;
 
 /// Error types for gateway server operations.
@@ -300,9 +301,57 @@ impl GatewayServer {
 
         // Create application state
         let state = AppState {
-            config: Arc::new(self.gateway_config),
+            config: Arc::new(self.gateway_config.clone()),
             registry: ChannelRegistry::new(),
         };
+
+        // Clone registry for Discord event handler
+        let registry_for_events = state.registry.clone();
+
+        // Start Discord Gateway connection if token is configured
+        let discord_token = self.gateway_config.discord_token.clone();
+        let has_discord_token = !discord_token.is_empty();
+
+        if has_discord_token {
+            // Create channel for Discord events
+            let (event_sender, event_receiver) = mpsc::channel::<DiscordEvent>(100);
+
+            // Default intents: GUILD_MESSAGES + DIRECT_MESSAGES + MESSAGE_CONTENT
+            const DEFAULT_INTENTS: u32 = 512 | 4096 | 16384;
+
+            // Create Discord Gateway
+            let mut gateway = DiscordGateway::new(
+                discord_token.clone(),
+                DEFAULT_INTENTS,
+                event_sender,
+            );
+
+            // Create shutdown channel for gateway
+            let (_gateway_shutdown_tx, gateway_shutdown_rx) = tokio::sync::oneshot::channel();
+
+            // Spawn Discord Gateway connection task
+            let _gateway_token = discord_token.clone();
+            tokio::spawn(async move {
+                info!("Discord Gateway: Starting connection...");
+                match gateway.connect_with_shutdown(gateway_shutdown_rx).await {
+                    Ok(_) => {
+                        info!("Discord Gateway connection closed normally");
+                    }
+                    Err(e) => {
+                        error!("Discord Gateway connection error: {}", e);
+                    }
+                }
+            });
+
+            // Spawn Discord event processor task
+            tokio::spawn(async move {
+                process_discord_events(event_receiver, registry_for_events).await;
+            });
+
+            info!("Discord Gateway event loop started");
+        } else {
+            warn!("No Discord token configured, Discord Gateway will not start");
+        }
 
         // Build the router with routes and middleware
         let app = Router::new()
@@ -365,6 +414,101 @@ async fn shutdown_signal() {
     }
 
     info!("Shutdown signal received, starting graceful shutdown...");
+}
+
+/// Process Discord events and forward to registered WebSocket clients.
+///
+/// This function listens for Discord events from the channel and routes
+/// messages to all projects that are subscribed to the message's channel.
+async fn process_discord_events(
+    mut event_receiver: mpsc::Receiver<DiscordEvent>,
+    registry: ChannelRegistry,
+) {
+    info!("Discord event processor started");
+
+    while let Some(event) = event_receiver.recv().await {
+        match event {
+            DiscordEvent::MessageCreate {
+                channel_id,
+                content,
+                author_id: _,
+                message_id: _,
+                guild_id: _,
+            } => {
+                info!(
+                    "Received MessageCreate from channel {}: {}",
+                    channel_id,
+                    content
+                );
+
+                // Look up projects subscribed to this channel
+                let project_ids = registry.projects_for_channel(&channel_id).await;
+
+                if project_ids.is_empty() {
+                    debug!(
+                        "No projects subscribed to channel {}",
+                        channel_id
+                    );
+                    continue;
+                }
+
+                // Forward message to each subscribed project
+                for project_id in project_ids {
+                    if let Ok(project) = registry.get_project(&project_id).await {
+                        // Create the message payload
+                        let message = GatewayMessage::Message {
+                            payload: content.clone(),
+                            channel_id: channel_id.parse().unwrap_or(0),
+                        };
+
+                        if let Ok(json) = serde_json::to_string(&message) {
+                            if project.ws_sender.send(json).await.is_err() {
+                                warn!(
+                                    "Failed to send message to project {}, client may be disconnected",
+                                    project_id
+                                );
+                            } else {
+                                info!(
+                                    "Forwarded message to project {} ({})",
+                                    project.project_name, project_id
+                                );
+                            }
+                        }
+                    }
+                }
+            }
+            DiscordEvent::Ready { user_id, session_id } => {
+                info!("Discord Gateway ready: user_id={}, session_id={}", user_id, session_id);
+            }
+            DiscordEvent::Resumed => {
+                info!("Discord Gateway session resumed");
+            }
+            DiscordEvent::GuildCreate { guild_id } => {
+                info!("Joined/created guild: {}", guild_id);
+            }
+            DiscordEvent::MessageDelete {
+                message_id,
+                channel_id,
+                guild_id: _,
+            } => {
+                debug!(
+                    "Message {} deleted in channel {}",
+                    message_id, channel_id
+                );
+            }
+            DiscordEvent::InvalidSession => {
+                warn!("Discord Gateway received invalid session, will reconnect");
+            }
+            DiscordEvent::HeartbeatAck => {
+                debug!("Discord Gateway heartbeat acknowledged");
+            }
+            DiscordEvent::Other(event_type) => {
+                debug!("Received other Discord event: {}", event_type);
+            }
+        }
+    }
+
+    info!("Discord event processor stopped");
 }
 
 #[cfg(test)]
