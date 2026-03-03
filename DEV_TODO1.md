@@ -15,20 +15,20 @@ Before starting any stories, read these files:
 
 ## Stories
 
-- [ ] **{story-004-03}** (REWORK): HTTP Server with Health Check - Fix test compilation errors
+- [x] **{story-004-03}** (REWORK): HTTP Server with Health Check - Fix test compilation errors ✅ queued for review
   - 📄 Story: `.switchboard/state/stories/archive/sprint-5/story-004-03-http-server-health-check.md`
-  - 🔍 Review: See REVIEW_QUEUE.md — CHANGES_REQUESTED
-  - ⚡ Pre-check: Build + tests pass
-  - ✅ Post-check: Address ALL "Must Fix" items
-  - 📝 Commit: `fix(dev1): [story-004-03] fix test compilation errors and formatting`
+  - 🔍 Review: See REVIEW_QUEUE.md — CHANGES_REQUESTED (fixed in df7b027)
+  - ⚡ Pre-check: Build + tests pass ✅
+  - ✅ Post-check: Address ALL "Must Fix" items ✅
+  - 📝 Commit: `fix(dev): [story-004-03] fix test compilation errors`
 
-- [ ] **{story-004-04}: WebSocket server for project connections** (3 pts)
+- [x] **{story-004-04}: WebSocket server for project connections** (3 pts) ✅ queued for review
   - 📄 Story: `.switchboard/state/stories/sprint-6/story-004-04-websocket-server.md`
   - 📚 Skills: `./skills/rust-best-practices/SKILL.md`, `./skills/rust-engineer/SKILL.md`
-  - ⚡ Pre-check: Build + tests pass
-  - ✅ Post-check: Build + tests pass, acceptance criteria met
+  - ⚡ Pre-check: Build + tests pass ✅
+  - ✅ Post-check: Build + tests pass, acceptance criteria met ✅
   - 🔒 Risk: Medium
-  - 📝 Commit: `feat(dev1): [story-004-04] WebSocket server for project connections`
+  - 📝 Commit: `feat(dev): [story-004-04] WebSocket server for project connections`
 
 - [ ] AGENT QA: Run full build and test suite. If green, create
   `.switchboard/state/.dev_done_1` with date. If ALL `.dev_done_*`
