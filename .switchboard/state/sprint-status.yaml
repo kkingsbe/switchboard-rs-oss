@@ -8,6 +8,21 @@
 
 ---
 
+## Sprint 8 Stories
+
+### In Progress
+
+| Story | Points | Status | Assigned To |
+|-------|--------|--------|-------------|
+| story-004-08 (CLI gateway up) | 3 | In Progress | dev-1 |
+| story-005-03 (Route by channel) | 3 | In Progress | dev-2 |
+| story-006-06 (Rate limiting) | 2 | In Progress | dev-2 |
+| story-007-04 (Gateway logging) | 2 | In Progress | dev-1 |
+
+**Sprint 8 Total**: 10 points (dev-1: 5 pts, dev-2: 5 pts)
+
+---
+
 ## Sprint 7 Stories
 
 ### Completed
