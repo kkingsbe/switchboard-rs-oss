@@ -8,7 +8,7 @@
 ## Stories
 
 - [x] **story-005-03**: Route Messages by Channel (3 pts) ✅ queued for review
-- [ ] **story-006-06**: Rate Limiting (2 pts)
+- [x] **story-006-06**: Rate Limiting (2 pts) ✅ queued for review
 
 ## Rework Queue
 

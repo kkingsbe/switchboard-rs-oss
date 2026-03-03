@@ -284,3 +284,17 @@
 2. Run build and tests to ensure still passing
 3. Commit: `fix(dev2): [005-03] revert out-of-scope changes`
 4. Re-submit for review
+
+### story-006-06: Rate Limiting
+
+- **Implemented by:** dev-2
+- **Sprint:** 8
+- **Commits:** 9dea96b..bb37be6
+- **Story file:** `.switchboard/state/stories/story-006-06-rate-limiting.md`
+- **Files changed:** src/gateway/ratelimit.rs
+- **Status:** PENDING_REVIEW
+- **Acceptance Criteria:**
+  - [x] Track requests per channel — verified by: test_rate_limit_counter_increments, test_rate_limit_resets_after_window
+  - [x] Handle 429 responses with Retry-After header — verified by: test_handle_429_with_retry_after
+  - [x] Implement exponential backoff — verified by: test_exponential_backoff_increases, test_backoff_capped_at_max
+- **Notes:** Fixed handle_429() to use Retry-After value when provided by Discord, added retry_after_secs field to ChannelState
