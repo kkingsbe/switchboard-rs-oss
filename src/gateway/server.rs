@@ -91,7 +91,7 @@ async fn ws_handler(
     ws: WebSocketUpgrade,
     State(state): State<AppState>,
 ) -> impl axum::response::IntoResponse {
-    info!("WebSocket upgrade request received");
+    info!(target: "gateway::server", "WebSocket upgrade request received");
 
     ws.on_upgrade(move |socket| handle_websocket(socket, state))
 }
@@ -107,7 +107,7 @@ async fn handle_websocket(socket: WebSocket, state: AppState) {
     while let Some(msg_result) = receiver.next().await {
         match msg_result {
             Ok(Message::Text(text)) => {
-                info!("Received WebSocket text message: {}", text);
+                info!(target: "gateway::server", "Received WebSocket text message: {}", text);
 
                 // Parse the incoming JSON message
                 match serde_json::from_str::<GatewayMessage>(&text) {
@@ -165,11 +165,11 @@ async fn handle_websocket(socket: WebSocket, state: AppState) {
                                         };
                                         if let Ok(response) = serde_json::to_string(&ack) {
                                             if sender.send(Message::Text(response)).await.is_err() {
-                                                warn!("Failed to send ack, client disconnected");
+                                                warn!(target: "gateway::server", "Failed to send ack, client disconnected");
                                                 break;
                                             }
                                         }
-                                        info!("Project registered successfully: {}", session_id);
+                                        info!(target: "gateway::server", "Project registered successfully: {}", session_id);
                                     }
                                     Err(e) => {
                                         // Send error response
@@ -180,7 +180,7 @@ async fn handle_websocket(socket: WebSocket, state: AppState) {
                                         {
                                             let _ = sender.send(Message::Text(response)).await;
                                         }
-                                        warn!("Registration failed: {}", e);
+                                        warn!(target: "gateway::server", "Registration failed: {}", e);
                                     }
                                 }
                             }
@@ -188,13 +188,13 @@ async fn handle_websocket(socket: WebSocket, state: AppState) {
                             _ => match serde_json::to_string(&gateway_msg) {
                                 Ok(response) => {
                                     if sender.send(Message::Text(response)).await.is_err() {
-                                        warn!("Failed to send response, client disconnected");
+                                        warn!(target: "gateway::server", "Failed to send response, client disconnected");
                                         break;
                                     }
-                                    info!("Echoed message back to client");
+                                    info!(target: "gateway::server", "Echoed message back to client");
                                 }
                                 Err(e) => {
-                                    error!("Failed to serialize message: {}", e);
+                                    error!(target: "gateway::server", "Failed to serialize message: {}", e);
                                     let error_msg = GatewayMessage::Message {
                                         payload: format!("Serialization error: {}", e),
                                         channel_id: 0,
@@ -209,7 +209,7 @@ async fn handle_websocket(socket: WebSocket, state: AppState) {
                         }
                     }
                     Err(e) => {
-                        error!("Failed to parse message: {}", e);
+                        error!(target: "gateway::server", "Failed to parse message: {}", e);
                         // Send error response
                         let error_msg = GatewayMessage::Message {
                             payload: format!("Parse error: {}", e),
@@ -222,18 +222,18 @@ async fn handle_websocket(socket: WebSocket, state: AppState) {
                 }
             }
             Ok(Message::Close(_)) => {
-                info!("Client sent close message");
+                info!(target: "gateway::server", "Client sent close message");
                 break;
             }
             Ok(Message::Ping(data)) => {
-                info!("Received ping, sending pong");
+                info!(target: "gateway::server", "Received ping, sending pong");
                 let _ = sender.send(Message::Pong(data)).await;
             }
             Ok(Message::Pong(_)) => {
                 // Pong received, nothing to do
             }
             Err(e) => {
-                error!("WebSocket error: {}", e);
+                error!(target: "gateway::server", "WebSocket error: {}", e);
                 break;
             }
             _ => {
@@ -242,7 +242,7 @@ async fn handle_websocket(socket: WebSocket, state: AppState) {
         }
     }
 
-    info!("WebSocket connection closed");
+    info!(target: "gateway::server", "WebSocket connection closed");
 }
 
 /// The gateway HTTP server.
@@ -302,18 +302,37 @@ impl GatewayServer {
     pub async fn run(self) -> Result<(), GatewayServerError> {
         let pid_path = self.pid_path.clone();
 
+        // Log gateway startup with configuration values
+        info!(
+            target: "gateway::server",
+            message = "=== Gateway Server Starting ===",
+            host = %self.config.host,
+            http_port = self.config.http_port,
+            ws_port = self.config.ws_port,
+            pid_file = %pid_path.display(),
+            discord_configured = !self.gateway_config.discord_token.is_empty()
+        );
+
         // Check if another gateway is already running
         if let Err(e) = PidFile::check_existing(&pid_path) {
             match e {
                 PidFileError::AlreadyRunning(pid) => {
-                    error!("Gateway is already running with PID {}. Exiting.", pid);
+                    error!(
+                        target: "gateway::server",
+                        "Gateway is already running with PID {}. Exiting.",
+                        pid
+                    );
                     return Err(GatewayServerError::PidFileError(
                         PidFileError::AlreadyRunning(pid),
                     ));
                 }
                 _ => {
                     // For other errors (like parse errors on stale files), log and continue
-                    warn!("PID file check warning: {}, proceeding anyway", e);
+                    warn!(
+                        target: "gateway::server",
+                        "PID file check warning: {}, proceeding anyway",
+                        e
+                    );
                 }
             }
         }
@@ -325,7 +344,12 @@ impl GatewayServer {
             .unwrap_or(IpAddr::V4(Ipv4Addr::UNSPECIFIED));
         let addr = SocketAddr::from((ip, self.config.http_port as u16));
 
-        info!("Starting gateway HTTP server on {}", addr);
+        info!(
+            target: "gateway::server",
+            "Binding to address: {}:{}",
+            self.config.host,
+            self.config.http_port
+        );
 
         // Create application state
         let state = AppState {
@@ -342,6 +366,10 @@ impl GatewayServer {
         let has_discord_token = !discord_token.is_empty();
 
         if has_discord_token {
+            info!(
+                target: "gateway::server",
+                "Discord Gateway enabled, starting connection..."
+            );
             // Spawn Discord Gateway connection task with auto-reconnection
             let discord_gateway_for_state = state.discord_gateway.clone();
             let discord_token_for_reconnect = discord_token.clone();
@@ -356,7 +384,7 @@ impl GatewayServer {
                 let mut backoff_secs = INITIAL_BACKOFF_SECS;
 
                 loop {
-                    info!("Discord Gateway: Starting connection...");
+                    info!(target: "gateway::discord", "Starting Discord Gateway connection...");
 
                     // Create a new gateway for this connection attempt
                     let (event_sender, event_receiver) = mpsc::channel::<DiscordEvent>(100);
@@ -393,7 +421,7 @@ impl GatewayServer {
 
                     // Check if shutdown was requested
                     if gateway.is_shutdown_requested() {
-                        info!("Discord Gateway: shutdown requested, stopping reconnection loop");
+                        info!(target: "gateway::discord", "Shutdown requested, stopping reconnection loop");
                         // Clear the gateway from AppState
                         let mut guard = discord_gateway_for_state.lock().await;
                         *guard = None;
@@ -402,14 +430,14 @@ impl GatewayServer {
 
                     match result {
                         Ok(_) => {
-                            info!("Discord Gateway connection closed normally");
+                            info!(target: "gateway::discord", "Connection closed normally");
                             // Normal close - exit the loop
                             let mut guard = discord_gateway_for_state.lock().await;
                             *guard = None;
                             break;
                         }
                         Err(e) => {
-                            warn!("Discord Gateway connection error: {}, attempting reconnection in {}s", e, backoff_secs);
+                            warn!(target: "gateway::discord", "Connection error: {}, attempting reconnection in {}s", e, backoff_secs);
 
                             // Wait with exponential backoff before reconnecting
                             tokio::time::sleep(tokio::time::Duration::from_secs(backoff_secs))
@@ -419,19 +447,20 @@ impl GatewayServer {
                             backoff_secs = (backoff_secs * 2).min(MAX_BACKOFF_SECS);
 
                             info!(
-                                "Discord Gateway: reconnection attempt, backoff now {}s",
+                                target: "gateway::discord",
+                                "Reconnection attempt, backoff now {}s",
                                 backoff_secs
                             );
                         }
                     }
                 }
 
-                info!("Discord Gateway: event loop ended");
+                info!(target: "gateway::discord", "Discord Gateway event loop ended");
             });
 
-            info!("Discord Gateway event loop started");
+            info!(target: "gateway::server", "Discord Gateway event loop started");
         } else {
-            warn!("No Discord token configured, Discord Gateway will not start");
+            warn!(target: "gateway::server", "No Discord token configured, Discord Gateway will not start");
         }
 
         // Build the router with routes and middleware
@@ -449,11 +478,25 @@ impl GatewayServer {
                 source,
             })?;
 
-        info!("Gateway HTTP server listening on {}", addr);
+        info!(
+            target: "gateway::server",
+            "Gateway HTTP server listening on {}",
+            addr
+        );
 
         // Create PID file after successfully binding to the port
         if let Err(e) = PidFile::write_pid(&pid_path) {
-            error!("Failed to create PID file: {}. Server will continue without PID file.", e);
+            error!(
+                target: "gateway::server",
+                "Failed to create PID file: {}. Server will continue without PID file.",
+                e
+            );
+        } else {
+            info!(
+                target: "gateway::server",
+                "PID file created at: {}",
+                pid_path.display()
+            );
         }
 
         // Run the server with graceful shutdown
@@ -462,12 +505,29 @@ impl GatewayServer {
             .await
             .map_err(|e| GatewayServerError::RuntimeError(format!("{:?}", e)))?;
 
-        info!("Gateway HTTP server shutdown complete");
+        info!(
+            target: "gateway::server",
+            "Gateway HTTP server shutdown complete"
+        );
 
         // Clean up PID file on shutdown
         if let Err(e) = PidFile::cleanup(&pid_path) {
-            warn!("Failed to clean up PID file: {}", e);
+            warn!(
+                target: "gateway::server",
+                "Failed to clean up PID file: {}",
+                e
+            );
+        } else {
+            info!(
+                target: "gateway::server",
+                "PID file cleaned up successfully"
+            );
         }
+
+        info!(
+            target: "gateway::server",
+            "=== Gateway Server Stopped ==="
+        );
 
         Ok(())
     }
@@ -491,8 +551,8 @@ async fn shutdown_signal() {
         let mut sigterm =
             signal(SignalKind::terminate()).expect("Failed to install SIGTERM handler");
         tokio::select! {
-            _ = sigint.recv() => info!("Received SIGINT"),
-            _ = sigterm.recv() => info!("Received SIGTERM"),
+            _ = sigint.recv() => tracing::info!(target: "gateway::server", "Received SIGINT, initiating graceful shutdown..."),
+            _ = sigterm.recv() => tracing::info!(target: "gateway::server", "Received SIGTERM, initiating graceful shutdown..."),
         }
     };
 

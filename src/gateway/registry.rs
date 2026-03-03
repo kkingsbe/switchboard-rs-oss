@@ -120,6 +120,7 @@ impl ChannelRegistry {
 
             if is_update {
                 warn!(
+                    target: "gateway::registry",
                     project_id = %project_id,
                     "Updating existing project registration"
                 );
@@ -138,8 +139,10 @@ impl ChannelRegistry {
                 }
             } else {
                 info!(
+                    target: "gateway::registry",
                     project_id = %project_id,
                     project_name = %project.project_name,
+                    session_id = %project.session_id,
                     "Registering new project"
                 );
             }
@@ -160,8 +163,10 @@ impl ChannelRegistry {
         }
 
         debug!(
+            target: "gateway::registry",
             project_id = %project_id,
             channel_count = channels.len(),
+            channels = ?channels,
             "Project registered successfully"
         );
 
@@ -172,11 +177,17 @@ impl ChannelRegistry {
     ///
     /// Removes the project from all channel subscriptions.
     pub async fn unregister(&self, project_id: &ProjectId) -> RegistryResult<()> {
+        let project_id_str = project_id.clone();
+        
         let mut inner = self.inner.write().await;
 
         // Check if project exists
         let Some(project) = inner.projects.remove(project_id) else {
-            warn!(project_id = %project_id, "Attempted to unregister non-existent project");
+            warn!(
+                target: "gateway::registry",
+                project_id = %project_id,
+                "Attempted to unregister non-existent project"
+            );
             return Err(RegistryError::ProjectNotFound(project_id.clone()));
         };
 
@@ -194,7 +205,11 @@ impl ChannelRegistry {
         }
 
         info!(
-            project_id = %project_id,
+            target: "gateway::registry",
+            project_id = %project_id_str,
+            project_name = %project.project_name,
+            session_id = %project.session_id,
+            channels = ?project.subscribed_channels,
             "Project unregistered successfully"
         );
 

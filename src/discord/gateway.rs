@@ -5,7 +5,7 @@
 
 use std::sync::Arc;
 use tokio::sync::mpsc;
-use tracing::{info, warn};
+use tracing::{debug, info, error};
 use twilight_gateway::{Event, EventTypeFlags, Intents, Shard, ShardId, StreamExt};
 
 /// Discord events that can be sent to the event handler
@@ -123,6 +123,7 @@ impl DiscordGateway {
         let shard = Shard::new(ShardId::ONE, token.clone(), twilight_intents);
 
         info!(
+            target: "gateway::discord",
             "Created twilight-gateway Discord Gateway with intents: {:?}",
             twilight_intents
         );
@@ -157,7 +158,10 @@ impl DiscordGateway {
             | EventTypeFlags::MESSAGE_DELETE
             | EventTypeFlags::GUILD_CREATE;
 
-        info!("Starting Discord Gateway event loop...");
+        info!(
+            target: "gateway::discord",
+            "Starting Discord Gateway event loop..."
+        );
         self.state = ConnectionState::Connecting;
 
         // Process events from the shard
@@ -177,7 +181,11 @@ impl DiscordGateway {
             let event = match item {
                 Ok(event) => event,
                 Err(source) => {
-                    warn!("Error receiving event: {:?}", source);
+                    error!(
+                        target: "gateway::discord",
+                        "Error receiving event: {:?}",
+                        source
+                    );
                     continue;
                 }
             };
@@ -188,7 +196,7 @@ impl DiscordGateway {
             }
         }
 
-        info!("Gateway event loop ended");
+        info!(target: "gateway::discord", "Gateway event loop ended");
         self.state = ConnectionState::Disconnected;
         Ok(())
     }
@@ -200,7 +208,7 @@ impl DiscordGateway {
                 // Filter: ignore messages from bot itself
                 if let Some(bot_id) = self.bot_user_id {
                     if msg.author.id.get() == bot_id {
-                        info!("Discord Gateway: ignoring message from bot self");
+                        info!(target: "gateway::discord", "Ignoring message from bot self");
                         return None;
                     }
                 }
@@ -209,15 +217,17 @@ impl DiscordGateway {
                 if let Some(target) = &self.target_channel_id {
                     if msg.channel_id.get().to_string() != *target {
                         info!(
-                            "Discord Gateway: ignoring message from wrong channel {}",
+                            target: "gateway::discord",
+                            "Ignoring message from wrong channel {}",
                             msg.channel_id
                         );
                         return None;
                     }
                 }
 
-                info!(
-                    "Discord Gateway: message from {} in channel {}",
+                debug!(
+                    target: "gateway::discord",
+                    "Message from {} in channel {}",
                     msg.author.name, msg.channel_id
                 );
 
@@ -234,7 +244,12 @@ impl DiscordGateway {
             Event::Ready(ready) => {
                 self.bot_user_id = Some(ready.user.id.get());
                 self.state = ConnectionState::Connected;
-                info!("Discord Gateway: ready - user_id: {}", ready.user.id);
+                info!(
+                    target: "gateway::discord",
+                    "Gateway connected - user_id: {}, session_id: {}",
+                    ready.user.id,
+                    ready.session_id
+                );
 
                 Some(DiscordEvent::Ready {
                     user_id: ready.user.id.get().to_string(),
@@ -243,7 +258,7 @@ impl DiscordGateway {
             }
             Event::Resumed => {
                 self.state = ConnectionState::Connected;
-                info!("Discord Gateway: session resumed");
+                info!(target: "gateway::discord", "Gateway session resumed successfully");
                 Some(DiscordEvent::Resumed)
             }
             Event::MessageDelete(msg) => Some(DiscordEvent::MessageDelete {
