@@ -14,9 +14,16 @@
 
 | Story | Points | Status | Assigned To |
 |-------|--------|--------|-------------|
-| story-004-04 (WebSocket server) | 3 | In Progress | dev-1 |
+| story-004-04 (WebSocket server) | 3 | Not Started | dev-1 |
+| story-004-06 (Registration Protocol) | 3 | Not Started | dev-2 |
 
-**Sprint 6 Total**: 3 points
+### Already Implemented
+
+| Story | Points | Status |
+|-------|--------|--------|
+| story-004-05 (Message Protocol Types) | 2 | Already Implemented |
+
+**Sprint 6 Total**: 8 points (6 not started + 2 already implemented)
 
 ---
 

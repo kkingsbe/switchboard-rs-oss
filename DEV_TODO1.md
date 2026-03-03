@@ -3,6 +3,7 @@
 > Sprint: 6
 > Focus Area: Gateway WebSocket Server
 > Last Updated: 2026-03-03T06:22:32Z
+> ⚠️ Rebalanced by Sprint Planner on 2026-03-03
 > Total Points: 3
 
 ## Orientation
