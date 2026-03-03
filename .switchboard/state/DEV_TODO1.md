@@ -13,12 +13,9 @@ Before starting any stories, read these files:
 
 ## Stories
 
-- [ ] **story-006-01**: Project connection management (3 pts)
+- [x] **story-006-01**: Project connection management (3 pts) ✅ re-queued for review
   - 📄 Story: `.switchboard/state/stories/story-006-01-project-connections.md`
-  - 📚 Skills: `./skills/rust-best-practices/SKILL.md`, `./skills/rust-engineer/SKILL.md`
-  - ⚡ Pre-check: Build + tests pass
-  - ✅ Post-check: Build + tests pass, acceptance criteria met
-  - 🔒 Risk: Medium
-  - 📝 Commit: `feat(dev1): [006-01] Project connection management`
+  - 🔍 Review: See REVIEW_QUEUE.md — PENDING_REVIEW
+  - 📝 Commit: `chore(dev1): [story-006-01] re-queue for review after feedback fixes`
 
 - [ ] AGENT QA: Run full build and test suite. If green, create `.switchboard/state/.dev_done_1` with date.

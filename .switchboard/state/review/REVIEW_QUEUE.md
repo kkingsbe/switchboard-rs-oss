@@ -441,3 +441,18 @@ Implementation is complete and follows all Rust best practices. Uses thiserror f
 
 #### Summary:
 Implementation is complete with comprehensive tracing throughout gateway modules. Uses proper tracing targets (gateway::server, gateway::registry, gateway::discord) for log filtering. Creates separate gateway.log file via Tee writer. All tests pass. Build and clippy pass.
+
+---
+
+## PENDING_REVIEW
+
+### story-006-01: Project Connection Management
+
+- **Implemented by:** dev-1
+- **Sprint:** 9
+- **Story file:** `.switchboard/state/stories/story-006-01-project-connections.md`
+- **Files changed:** 
+  - `src/gateway/connections.rs` (new file)
+  - `src/gateway/mod.rs` (modified - added connections module)
+- **Status:** ✅ PENDING_REVIEW
+- **Notes:** Re-queued for review after addressing feedback on scope violations and formatting issues.
