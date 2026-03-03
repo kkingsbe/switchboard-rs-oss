@@ -35,18 +35,13 @@ pub enum ConnectionError {
 pub type ConnectionResult<T> = Result<T, ConnectionError>;
 
 /// State of a connection
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub enum ConnectionState {
-    /// Connection is active and healthy
-    Connected,
+    #[default]
     /// Connection has been disconnected
     Disconnected,
-}
-
-impl Default for ConnectionState {
-    fn default() -> Self {
-        Self::Disconnected
-    }
+    /// Connection is active and healthy
+    Connected,
 }
 
 impl std::fmt::Display for ConnectionState {
