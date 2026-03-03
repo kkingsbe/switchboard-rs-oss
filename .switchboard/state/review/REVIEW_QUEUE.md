@@ -292,9 +292,50 @@
 - **Commits:** 9dea96b..bb37be6
 - **Story file:** `.switchboard/state/stories/story-006-06-rate-limiting.md`
 - **Files changed:** src/gateway/ratelimit.rs
+- **Status:** ✅ APPROVED
+- **Reviewed by:** code-reviewer
+- **Review date:** 2026-03-03
+- **Acceptance Criteria:**
+  - [x] Track requests per channel — MET (verified by: test_rate_limit_counter_increments, test_rate_limit_resets_after_window)
+  - [x] Handle 429 responses with Retry-After header — MET (verified by: test_handle_429_with_retry_after)
+  - [x] Implement exponential backoff — MET (verified by: test_exponential_backoff_increases, test_backoff_capped_at_max)
+- **Findings:**
+  - SHOULD FIX: None
+  - NICE TO HAVE: None
+- **Summary:** Implementation is complete and follows all Rust best practices. Uses thiserror for error types as per project conventions. 7 comprehensive unit tests cover all acceptance criteria plus edge cases. Proper async patterns with tokio::sync::RwLock. No unwrap() in production code.
+
+---
+
+### Previously Reviewed
+
+#### story-005-03: Route Messages by Channel
+
+### story-004-08: CLI `gateway up` Command
+
+- **Implemented by:** dev-1
+- **Sprint:** 8
+- **Commits:** 71ee0dae (existing implementation)
+- **Story file:** `.switchboard/state/stories/story-004-08-gateway-up-cli.md`
+- **Files changed:** src/cli/commands/gateway.rs (created), src/cli/mod.rs (modified)
 - **Status:** PENDING_REVIEW
 - **Acceptance Criteria:**
-  - [x] Track requests per channel — verified by: test_rate_limit_counter_increments, test_rate_limit_resets_after_window
-  - [x] Handle 429 responses with Retry-After header — verified by: test_handle_429_with_retry_after
-  - [x] Implement exponential backoff — verified by: test_exponential_backoff_increases, test_backoff_capped_at_max
-- **Notes:** Fixed handle_429() to use Retry-After value when provided by Discord, added retry_after_secs field to ChannelState
+  - [x] CLI has `gateway` subcommand with `up` action — verified by: `cargo run -- gateway up --help`
+  - [x] Command starts gateway with config from `gateway.toml` — verified by: code review, config loading at gateway.rs:187
+  - [x] Support `--config` flag for custom config path — verified by: `cargo run -- gateway up --help` shows -c, --config option
+  - [x] Support `--detach` flag (future, not required for MVP) — placeholder exists
+- **Notes:** Implementation already complete when session started. Gateway CLI is fully functional with startup logging, file logging to .switchboard/gateway.log, and Discord event logging.
+
+### story-007-04: Proper Logging
+
+- **Implemented by:** dev-1
+- **Sprint:** 8
+- **Commits:** 71ee0dae (existing implementation)
+- **Story file:** `.switchboard/state/stories/story-007-04-gateway-logging.md`
+- **Files changed:** src/cli/commands/gateway.rs, src/gateway/server.rs, src/gateway/registry.rs
+- **Status:** PENDING_REVIEW
+- **Acceptance Criteria:**
+  - [x] Log gateway startup with configuration — verified by: tracing statements in gateway.rs:186-205 and server.rs:302
+  - [x] Log project connections/disconnections — verified by: tracing in server.rs:89-240 and registry.rs:140-199
+  - [x] Log Discord events (connection, reconnection, errors) — verified by: extensive tracing in server.rs:333-563
+  - [x] Log to file in addition to stdout — verified by: init_file_logging() at gateway.rs:85-147 outputs to .switchboard/gateway.log
+- **Notes:** All logging requirements implemented. Tracing used throughout gateway modules. File and stdout logging both configured.

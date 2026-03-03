@@ -7,7 +7,7 @@
 
 ## Stories
 
-- [ ] **story-004-08**: CLI `gateway up` Command (3 pts)
-- [ ] **story-007-04**: Proper Logging (2 pts)
+- [x] **story-004-08**: CLI `gateway up` Command (3 pts) ✅ queued for review
+- [x] **story-007-04**: Proper Logging (2 pts) ✅ queued for review
 
 **Total: 5 points**
