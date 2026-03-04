@@ -3,8 +3,8 @@
 > Sprint: 12
 > Focus Area: PID File Management
 > Last Updated: 2026-03-04
-> Total Points: 1 (rebalanced from dev-1)
-> ⚠️ Rebalanced by Sprint Planner on 2026-03-04
+> Total Points: 12 (5 done, 7 remaining) → 7 (2 done, 5 remaining before rebalancing)
+> ⚠️ Rebalanced by Sprint Planner on 2026-03-04: moved story-005-04 (2pts) and story-006-04 (2pts) to dev-1
 
 ## Orientation
 
@@ -13,14 +13,44 @@ Before starting any stories, read these files:
 - `skills/rust-best-practices/SKILL.md`
 - `skills/rust-engineer/SKILL.md`
 
-## Stories
+## Stories (Sprint 12: 2026-03-04 to 2026-03-18)
 
-- [ ] **story-007-03**: PID File Management (1 pt) [REBALANCED from dev-1]
+### Completed Stories
+
+- [x] **story-006-01**: Project Connections (3 pts) ✅ DONE
+  - 📄 Story: `.switchboard/state/stories/story-006-01-project-connections.md`
+  - 📚 Skills: `skills/rust-best-practices/SKILL.md`, `skills/rust-engineer/SKILL.md`
+  - ⚡ Pre-check: Build + tests pass
+  - ✅ Post-check: Build + tests pass, acceptance criteria met
+  - 🔒 Risk: Low
+  - 📝 Commit: `feat(dev2): [story-006-01] project connections`
+
+- [x] **story-006-02**: Heartbeat Protocol (2 pts) ✅ DONE
+  - 📄 Story: `.switchboard/state/stories/story-006-02-heartbeat-protocol.md`
+  - 📚 Skills: `skills/rust-engineer/SKILL.md`, `skills/rust-engineer/references/async.md`
+  - ⚡ Pre-check: Build + tests pass
+  - ✅ Post-check: Build + tests pass, acceptance criteria met
+  - 🔒 Risk: Low
+  - 📝 Commit: `feat(dev2): [story-006-02] heartbeat protocol`
+
+### Remaining Stories
+
+- [ ] **story-007-02**: Gateway Down CLI (2 pts)
+  - 📄 Story: `.switchboard/state/stories/story-007-02-gateway-down-cli.md`
+  - 📚 Skills: `skills/rust-engineer/SKILL.md`, `skills/rust-engineer/references/async.md`
+  - ⚡ Pre-check: Build + tests pass
+  - ✅ Post-check: Build + tests pass, acceptance criteria met
+  - 🔒 Risk: Low
+  - 📝 Commit: `feat(dev2): [story-007-02] gateway down CLI`
+
+- [ ] **story-007-03**: PID File Management (1 pt)
   - 📄 Story: `.switchboard/state/stories/story-007-03-pid-file.md`
   - 📚 Skills: `skills/rust-best-practices/SKILL.md`
   - ⚡ Pre-check: Build + tests pass
   - ✅ Post-check: Build + tests pass, acceptance criteria met
   - 🔒 Risk: Low
   - 📝 Commit: `feat(dev2): [story-007-03] PID file management`
+
+---
 
 - [ ] AGENT QA: Run full build and test suite. If green, create `.switchboard/state/.dev_done_2` with date. If ALL `.dev_done_*` files exist for all agents with work, also create `.switchboard/state/.sprint_complete`.

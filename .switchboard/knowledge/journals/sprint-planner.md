@@ -167,3 +167,44 @@ When .dev_done_* files appear:
   
 - **State sync issue**: Previous sprint had stories in sprint-status.yaml that weren't in DEV_TODO files
   - Fixed by properly rolling over the correct 6 stories
+
+---
+
+### 2026-03-04T06:24:00Z — Sprint 12 Rebalancing
+
+**Session Type:** Sprint In Progress (Phase 1 Rebalancing)
+
+**Gate Checks:**
+- ✅ `.solutioning_done` exists - Solution Architect completed
+- ✅ `.project_complete` does NOT exist - Project not finished
+
+**Phase Detection:**
+- ✅ `.stories_ready` exists - Sprint 12 was planned
+- ✅ No `.dev_done_*` signals - Agents haven't completed work
+- ⚠️ DEV_TODO files were stale (showing Sprint 10 vs Sprint 12)
+
+**Issue Found:**
+- DEV_TODO files in `.switchboard/state/` were severely out of sync
+- DEV_TODO1 showed: 2 stories (5pts)
+- DEV_TODO2 showed: 1 story (1pt)  
+- But sprint-status.yaml showed: dev-1 had 4 stories, dev-2 had 6 stories
+- Load was severely unbalanced: dev-2 had 7 remaining pts, dev-1 had 5 remaining pts
+
+**Actions Taken:**
+- Synchronized DEV_TODO files with sprint-status.yaml
+- Added missing stories to each agent's queue
+- Rebalanced: Moved story-005-04 (2pts) and story-006-04 (2pts) from dev-2 to dev-1
+- After rebalancing: dev-1 = 7pts remaining, dev-2 = 3pts remaining
+
+**Skills Reviewed:**
+- rust-engineer/SKILL.md - Core patterns, async, error handling
+- rust-best-practices/SKILL.md - Idiomatic Rust, borrowing vs cloning, type state pattern
+- DISCLI.md - Discord outbox pattern
+
+**Next Steps:**
+- Agents should now resume work on their updated queues
+- Wait for `.dev_done_*` signals before further rebalancing or sprint completion
+
+**Sprint Capacity (2 agents):**
+- Target: 6-10 stories, 16 points max
+- Current Sprint 12: 10 in-progress stories, 22 points total
