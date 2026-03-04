@@ -17,7 +17,7 @@
   - 🔒 Risk: Medium
   - 📝 Commit: `feat(dev2): [005-03] implement channel-based message routing`
 
-- [ ] **story-005-04**: Runtime Channel Subscribe/Unsubscribe (2 pts)
+- [x] **story-005-04**: Runtime Channel Subscribe/Unsubscribe (2 pts) ✅ queued for review
   - 📄 Story: `.switchboard/state/stories/story-005-04-runtime-channel-subscribe.md`
   - 📚 Skills: `./skills/rust-engineer/SKILL.md`, `./skills/rust-best-practices/SKILL.md`
   - ⚡ Pre-check: Build + tests pass
@@ -25,7 +25,7 @@
   - 🔒 Risk: Low
   - 📝 Commit: `feat(dev2): [005-04] implement runtime channel subscribe/unsubscribe`
 
-- [ ] **story-006-02**: Heartbeat Protocol (2 pts)
+- [x] **story-006-02**: Heartbeat Protocol (2 pts) ✅ Queued for review
   - 📄 Story: `.switchboard/state/stories/story-006-02-heartbeat-protocol.md`
   - 📚 Skills: `./skills/rust-engineer/SKILL.md`, `./skills/rust-best-practices/SKILL.md`
   - ⚡ Pre-check: Build + tests pass

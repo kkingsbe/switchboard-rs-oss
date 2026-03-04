@@ -30,6 +30,20 @@
   - [x] Command exists and is functional
 - **Notes:** CLI gateway status command already exists in codebase, verified functional
 
+### story-005-04: Runtime Channel Subscribe/Unsubscribe
+
+- **Implemented by:** dev-2
+- **Sprint:** 10 (carried to 11)
+- **Commits:** 4aee987
+- **Story file:** `.switchboard/state/stories/story-005-04-runtime-channel-subscribe.md`
+- **Files changed:** src/gateway/protocol.rs, src/gateway/server.rs, src/gateway/connections.rs
+- **Status:** PENDING_REVIEW
+- **Acceptance Criteria:**
+  - [x] Project can send `channel_subscribe` message — verified by: GatewayMessage::ChannelSubscribe exists with handler at server.rs:244
+  - [x] Project can send `channel_unsubscribe` message — verified by: GatewayMessage::ChannelUnsubscribe exists with handler at server.rs:294
+  - [x] Changes take effect immediately — verified by: handlers call registry.add_channel_subscription() / remove_channel_subscription() which update state synchronously
+- **Notes:** Implementation complete with message types, handlers, and serialization tests. Gap: no integration tests verifying "immediate effect" end-to-end.
+
 ---
 
 ## CHANGES_REQUESTED

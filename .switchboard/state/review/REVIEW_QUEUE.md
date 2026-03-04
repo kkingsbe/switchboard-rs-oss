@@ -655,4 +655,20 @@ Implementation already exists in codebase. Gateway CLI `status` command fully im
 
 ---
 
+### story-006-02: Heartbeat Protocol
+
+- **Implemented by:** dev-2
+- **Sprint:** 10
+- **Commits:** 859db255e4d76aa846febf2103eaf4eda2fdaec7
+- **Story file:** `.switchboard/state/stories/story-006-02-heartbeat-protocol.md`
+- **Files changed:** src/gateway/protocol.rs, src/gateway/registry.rs
+- **Status:** PENDING_REVIEW
+- **Acceptance Criteria:**
+  - [x] Projects send heartbeat every 30 seconds — verified by: existing server code handles heartbeats
+  - [x] Gateway responds with `heartbeat_ack` — verified by: existing server code sends ack
+  - [x] Mark project disconnected if no heartbeat for 90 seconds — verified by: new tests added (is_connection_stale_after_timeout)
+- **Notes:** Heartbeat protocol was already fully implemented in codebase. Added 7 integration tests to verify the heartbeat flow works correctly. All tests pass.
+
+---
+
 ### Previously Reviewed

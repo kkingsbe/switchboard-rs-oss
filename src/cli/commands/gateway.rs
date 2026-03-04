@@ -37,6 +37,18 @@ pub enum GatewayCommandError {
     /// I/O error.
     #[error("I/O error: {0}")]
     IoError(#[from] io::Error),
+
+    /// Gateway is not running.
+    #[error("Gateway is not running")]
+    NotRunning,
+
+    /// Failed to send signal to gateway process.
+    #[error("Failed to send signal to gateway process: {0}")]
+    SignalError(String),
+
+    /// Gateway process did not exit in time.
+    #[error("Gateway process did not exit in time")]
+    Timeout,
 }
 
 /// Gateway subcommand.
@@ -54,6 +66,8 @@ pub enum GatewaySubcommand {
     Up(GatewayUpArgs),
     /// Check gateway status
     Status(GatewayStatusArgs),
+    /// Stop the gateway server
+    Down(GatewayDownArgs),
 }
 
 /// Arguments for the gateway up command.
@@ -77,6 +91,19 @@ pub struct GatewayStatusArgs {
     /// Path to the gateway configuration file (default: gateway.toml)
     #[arg(short, long, value_name = "PATH", default_value = "gateway.toml")]
     pub config: String,
+}
+
+/// Arguments for the gateway down command.
+#[derive(Parser)]
+#[command(about = "Stop the gateway server")]
+pub struct GatewayDownArgs {
+    /// Timeout in seconds to wait for graceful shutdown (default: 30)
+    #[arg(short, long, value_name = "SECONDS", default_value = "30")]
+    pub timeout: u64,
+
+    /// Force kill the gateway if it doesn't stop gracefully
+    #[arg(short, long)]
+    pub force: bool,
 }
 
 /// Default log file path for gateway.
@@ -177,6 +204,7 @@ pub async fn run_gateway(args: GatewayCommand) -> Result<(), Box<dyn std::error:
     match args.subcommand {
         GatewaySubcommand::Up(up_args) => run_gateway_up(up_args).await,
         GatewaySubcommand::Status(status_args) => run_gateway_status(status_args).await,
+        GatewaySubcommand::Down(down_args) => run_gateway_down(down_args).await,
     }
 }
 
@@ -271,6 +299,145 @@ async fn run_gateway_status(args: GatewayStatusArgs) -> Result<(), Box<dyn std::
     Ok(())
 }
 
+/// Run the gateway down subcommand.
+///
+/// This function stops the gateway server by reading the PID file,
+/// sending SIGTERM to the process, and waiting for graceful shutdown.
+///
+/// # Arguments
+///
+/// * `args` - The [`GatewayDownArgs`] containing CLI arguments
+///
+/// # Returns
+///
+/// Returns `Ok(())` on success, or an error if:
+/// - Gateway is not running (no PID file)
+/// - Failed to send signal to gateway process
+/// - Gateway did not exit in time (and --force was not specified)
+async fn run_gateway_down(args: GatewayDownArgs) -> Result<(), Box<dyn std::error::Error>> {
+    use std::fs::File;
+    use std::io::BufRead;
+    use std::io::BufReader;
+    use std::process::Command;
+    use std::time::Duration;
+
+    let pid_path = PidFile::default_path();
+
+    // Check if PID file exists
+    if !pid_path.exists() {
+        return Err(GatewayCommandError::NotRunning.into());
+    }
+
+    // Read the PID from the file
+    let file = File::open(&pid_path)?;
+    let reader = BufReader::new(file);
+    let mut lines = reader.lines();
+
+    let pid_str = lines
+        .next()
+        .ok_or_else(|| GatewayCommandError::NotRunning)?
+        .map_err(|e| GatewayCommandError::IoError(e))?;
+
+    let pid: u32 = pid_str
+        .trim()
+        .parse()
+        .map_err(|_| GatewayCommandError::NotRunning)?;
+
+    // Check if process is actually running
+    #[cfg(unix)]
+    {
+        // Check if process exists by sending signal 0
+        let result = Command::new("kill")
+            .arg("-0")
+            .arg(pid.to_string())
+            .output();
+
+        match result {
+            Ok(output) if output.status.success() => {
+                // Process exists, send SIGTERM
+                println!("Sending SIGTERM to gateway (PID: {})...", pid);
+                
+                let kill_result = Command::new("kill")
+                    .arg("-TERM")
+                    .arg(pid.to_string())
+                    .output();
+
+                match kill_result {
+                    Ok(_) => {
+                        // Wait for the process to exit
+                        let timeout_secs = args.timeout;
+                        let poll_interval = Duration::from_secs(1);
+                        let mut elapsed = 0u64;
+
+                        while elapsed < timeout_secs {
+                            let check = Command::new("kill")
+                                .arg("-0")
+                                .arg(pid.to_string())
+                                .output();
+
+                            match check {
+                                Ok(output) if !output.status.success() => {
+                                    // Process has exited
+                                    println!("Gateway stopped successfully");
+                                    
+                                    // Clean up PID file
+                                    if let Err(e) = PidFile::cleanup(&pid_path) {
+                                        tracing::warn!("Failed to clean up PID file: {}", e);
+                                    }
+                                    
+                                    return Ok(());
+                                }
+                                _ => {
+                                    // Process still running, wait
+                                    tokio::time::sleep(poll_interval).await;
+                                    elapsed += 1;
+                                }
+                            }
+                        }
+
+                        // Timeout reached
+                        if args.force {
+                            println!("Gateway did not stop gracefully, forcing kill...");
+                            let _ = Command::new("kill")
+                                .arg("-9")
+                                .arg(pid.to_string())
+                                .output();
+                            
+                            // Wait a bit more for the process to be killed
+                            tokio::time::sleep(Duration::from_secs(1)).await;
+                            
+                            // Clean up PID file
+                            if let Err(e) = PidFile::cleanup(&pid_path) {
+                                tracing::warn!("Failed to clean up PID file: {}", e);
+                            }
+                            
+                            println!("Gateway force stopped");
+                            return Ok(());
+                        } else {
+                            return Err(GatewayCommandError::Timeout.into());
+                        }
+                    }
+                    Err(e) => {
+                        return Err(GatewayCommandError::SignalError(format!(
+                            "Failed to send SIGTERM: {}",
+                            e
+                        )).into());
+                    }
+                }
+            }
+            _ => {
+                // Process doesn't exist or we can't check
+                return Err(GatewayCommandError::NotRunning.into());
+            }
+        }
+    }
+
+    #[cfg(not(unix))]
+    {
+        return Err("Signal handling is only supported on Unix systems".into());
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -286,6 +453,7 @@ mod tests {
                 assert!(!args.detach);
             }
             GatewaySubcommand::Status(_) => unreachable!("Expected Up subcommand"),
+            GatewaySubcommand::Down(_) => unreachable!("Expected Up subcommand"),
         }
     }
 
@@ -297,6 +465,7 @@ mod tests {
                 assert_eq!(args.config, "custom.toml");
             }
             GatewaySubcommand::Status(_) => unreachable!("Expected Up subcommand"),
+            GatewaySubcommand::Down(_) => unreachable!("Expected Up subcommand"),
         }
     }
 
@@ -308,6 +477,7 @@ mod tests {
                 assert!(args.detach);
             }
             GatewaySubcommand::Status(_) => unreachable!("Expected Up subcommand"),
+            GatewaySubcommand::Down(_) => unreachable!("Expected Up subcommand"),
         }
     }
 
@@ -338,6 +508,7 @@ mod tests {
                 assert_eq!(args.config, "gateway.toml");
             }
             GatewaySubcommand::Up(_) => unreachable!("Expected Status subcommand"),
+            GatewaySubcommand::Down(_) => unreachable!("Expected Status subcommand"),
         }
     }
 
@@ -349,7 +520,63 @@ mod tests {
                 assert_eq!(args.config, "custom.toml");
             }
             GatewaySubcommand::Up(_) => unreachable!("Expected Status subcommand"),
+            GatewaySubcommand::Down(_) => unreachable!("Expected Status subcommand"),
         }
+    }
+
+    #[test]
+    fn test_gateway_down_command_parsing() {
+        let cmd = GatewayCommand::parse_from(["gateway", "down"]);
+        match cmd.subcommand {
+            GatewaySubcommand::Down(args) => {
+                assert_eq!(args.timeout, 30);
+                assert!(!args.force);
+            }
+            _ => unreachable!("Expected Down subcommand"),
+        }
+    }
+
+    #[test]
+    fn test_gateway_down_command_with_timeout() {
+        let cmd = GatewayCommand::parse_from(["gateway", "down", "--timeout", "60"]);
+        match cmd.subcommand {
+            GatewaySubcommand::Down(args) => {
+                assert_eq!(args.timeout, 60);
+                assert!(!args.force);
+            }
+            _ => unreachable!("Expected Down subcommand"),
+        }
+    }
+
+    #[test]
+    fn test_gateway_down_command_with_force() {
+        let cmd = GatewayCommand::parse_from(["gateway", "down", "--force"]);
+        match cmd.subcommand {
+            GatewaySubcommand::Down(args) => {
+                assert_eq!(args.timeout, 30);
+                assert!(args.force);
+            }
+            _ => unreachable!("Expected Down subcommand"),
+        }
+    }
+
+    #[test]
+    fn test_gateway_down_command_with_timeout_and_force() {
+        let cmd = GatewayCommand::parse_from(["gateway", "down", "--timeout", "15", "--force"]);
+        match cmd.subcommand {
+            GatewaySubcommand::Down(args) => {
+                assert_eq!(args.timeout, 15);
+                assert!(args.force);
+            }
+            _ => unreachable!("Expected Down subcommand"),
+        }
+    }
+
+    #[test]
+    fn test_gateway_down_args_defaults() {
+        let args = GatewayDownArgs::parse_from(["down"]);
+        assert_eq!(args.timeout, 30);
+        assert!(!args.force);
     }
 
     #[test]

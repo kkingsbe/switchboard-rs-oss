@@ -16,6 +16,7 @@ use axum::{
     routing::get,
     Router,
 };
+use chrono::Duration;
 use futures_util::{SinkExt, StreamExt};
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 use std::sync::Arc;
@@ -340,6 +341,33 @@ async fn handle_websocket(socket: WebSocket, state: AppState) {
                                 info!(target: "gateway::server", "Channel unsubscribe processed for project {}", pid);
                             }
 
+                            // Handle heartbeat messages
+                            GatewayMessage::Heartbeat { timestamp } => {
+                                // Check if project is registered
+                                let Some(ref pid) = project_id else {
+                                    warn!(target: "gateway::server", "Heartbeat received but project not registered");
+                                    continue;
+                                };
+
+                                // Update the connection's last heartbeat time
+                                let registry = state.registry.clone();
+                                if let Err(e) = registry.update_heartbeat(pid).await {
+                                    warn!(target: "gateway::server", "Failed to update heartbeat: {}", e);
+                                } else {
+                                    debug!(target: "gateway::server", "Heartbeat updated for project {}", pid);
+                                }
+
+                                // Send HeartbeatAck back with the timestamp
+                                let ack = GatewayMessage::HeartbeatAck { timestamp };
+                                if let Ok(response) = serde_json::to_string(&ack) {
+                                    if sender.send(Message::Text(response)).await.is_err() {
+                                        warn!(target: "gateway::server", "Failed to send heartbeat ack, client disconnected");
+                                        break;
+                                    }
+                                }
+                                info!(target: "gateway::server", "Sent heartbeat ack for project {}", pid);
+                            }
+
                             // Echo other message types back to the client
                             _ => match serde_json::to_string(&gateway_msg) {
                                 Ok(response) => {
@@ -379,6 +407,15 @@ async fn handle_websocket(socket: WebSocket, state: AppState) {
             }
             Ok(Message::Close(_)) => {
                 info!(target: "gateway::server", "Client sent close message");
+                // Clean up registration if project was registered
+                if let Some(ref pid) = project_id {
+                    let registry = state.registry.clone();
+                    if let Err(e) = registry.unregister(pid).await {
+                        error!(target: "gateway::server", "Failed to unregister project {}: {}", pid, e);
+                    } else {
+                        info!(target: "gateway::server", "Project {} unregistered successfully", pid);
+                    }
+                }
                 break;
             }
             Ok(Message::Ping(data)) => {
@@ -390,6 +427,15 @@ async fn handle_websocket(socket: WebSocket, state: AppState) {
             }
             Err(e) => {
                 error!(target: "gateway::server", "WebSocket error: {}", e);
+                // Clean up registration if project was registered
+                if let Some(ref pid) = project_id {
+                    let registry = state.registry.clone();
+                    if let Err(unreg_err) = registry.unregister(pid).await {
+                        error!(target: "gateway::server", "Failed to unregister project {} on error: {}", pid, unreg_err);
+                    } else {
+                        info!(target: "gateway::server", "Project {} unregistered after WebSocket error", pid);
+                    }
+                }
                 break;
             }
             _ => {
@@ -513,6 +559,69 @@ impl GatewayServer {
             registry: ChannelRegistry::new(),
             discord_gateway: Arc::new(tokio::sync::Mutex::new(None)),
         };
+
+        // Start stale connection detector
+        // This background task monitors connections and removes those that haven't
+        // sent a heartbeat within the timeout period (90 seconds)
+        let registry_for_detector = state.registry.clone();
+        let _stale_detector_handle = tokio::spawn(async move {
+            // Timeout after which a connection is considered stale (90 seconds)
+            let stale_timeout = Duration::seconds(90);
+            // Check interval (1/4 of the timeout = 22.5 seconds)
+            let check_interval = Duration::seconds(22);
+            let check_interval_ms = check_interval.num_milliseconds().max(1000) as u64;
+
+            info!(
+                target: "gateway::server",
+                check_interval_ms = check_interval_ms,
+                timeout_secs = stale_timeout.num_seconds(),
+                "Stale connection detector started"
+            );
+
+            loop {
+                // Wait for the check interval
+                tokio::time::sleep(tokio::time::Duration::from_millis(check_interval_ms)).await;
+
+                // Find stale connections
+                let all_projects = registry_for_detector.all_projects().await;
+                let mut stale_project_ids = Vec::new();
+
+                for project in all_projects {
+                    if registry_for_detector
+                        .is_connection_stale(&project.project_id, stale_timeout)
+                        .await
+                    {
+                        stale_project_ids.push(project.project_id);
+                    }
+                }
+
+                if !stale_project_ids.is_empty() {
+                    info!(
+                        target: "gateway::server",
+                        stale_count = stale_project_ids.len(),
+                        "Detected stale connections, removing them"
+                    );
+
+                    // Unregister stale projects
+                    for project_id in stale_project_ids {
+                        if let Err(e) = registry_for_detector.unregister(&project_id).await {
+                            warn!(
+                                target: "gateway::server",
+                                project_id = %project_id,
+                                error = %e,
+                                "Failed to remove stale connection"
+                            );
+                        } else {
+                            info!(
+                                target: "gateway::server",
+                                project_id = %project_id,
+                                "Removed stale connection"
+                            );
+                        }
+                    }
+                }
+            }
+        });
 
         // Clone registry for Discord event handler
         let registry_for_events = state.registry.clone();
@@ -1466,6 +1575,105 @@ mod tests {
                 .expect("Project not found");
             assert!(!project.subscribed_channels.contains(&"channel1".to_string()));
             assert!(project.subscribed_channels.contains(&"channel2".to_string()));
+        }
+
+        /// Tests for disconnection handling behavior
+        /// These verify that the registry cleanup works correctly when called on disconnect
+
+        #[tokio::test]
+        async fn disconnection_should_unregister_project_when_registered() {
+            // Create a registry
+            let registry = ChannelRegistry::new();
+
+            // Create and register a project
+            let project_id = "test-project-123".to_string();
+            let project = ProjectConnection::new(
+                project_id.clone(),
+                "Test Project".to_string(),
+                tokio::sync::mpsc::channel::<String>(10).0,
+            );
+            registry
+                .register(
+                    project,
+                    vec!["channel1".to_string(), "channel2".to_string()],
+                )
+                .await
+                .expect("Failed to register project");
+
+            // Verify project is registered
+            assert!(registry.get_project(&project_id).await.is_ok());
+
+            // Simulate disconnection: call unregister (as WebSocket handler would do)
+            registry
+                .unregister(&project_id)
+                .await
+                .expect("Unregister should succeed");
+
+            // Verify project is no longer in registry
+            assert!(registry.get_project(&project_id).await.is_err());
+        }
+
+        #[tokio::test]
+        async fn disconnection_should_handle_unregister_nonexistent_project() {
+            // Create a registry
+            let registry = ChannelRegistry::new();
+
+            // Attempt to unregister a project that was never registered
+            // This should not panic - it should handle gracefully
+            let nonexistent = "nonexistent-project".to_string();
+            let result = registry.unregister(&nonexistent).await;
+
+            // The result should be an error since project doesn't exist
+            assert!(result.is_err());
+        }
+
+        #[tokio::test]
+        async fn disconnection_should_cleanup_channel_subscriptions() {
+            // Create a registry
+            let registry = ChannelRegistry::new();
+
+            // Create and register two projects on the same channel
+            let project_id_1 = "project-1".to_string();
+            let project_id_2 = "project-2".to_string();
+
+            let project1 = ProjectConnection::new(
+                project_id_1.clone(),
+                "Project 1".to_string(),
+                tokio::sync::mpsc::channel::<String>(10).0,
+            );
+            let project2 = ProjectConnection::new(
+                project_id_2.clone(),
+                "Project 2".to_string(),
+                tokio::sync::mpsc::channel::<String>(10).0,
+            );
+
+            registry
+                .register(project1, vec!["shared-channel".to_string()])
+                .await
+                .expect("Failed to register project1");
+            registry
+                .register(project2, vec!["shared-channel".to_string()])
+                .await
+                .expect("Failed to register project2");
+
+            // Verify both projects are registered
+            assert!(registry.get_project(&project_id_1).await.is_ok());
+            assert!(registry.get_project(&project_id_2).await.is_ok());
+
+            // Unregister project1 (simulating disconnect)
+            registry
+                .unregister(&project_id_1)
+                .await
+                .expect("Unregister should succeed");
+
+            // Verify project1 is gone but project2 still exists
+            assert!(registry.get_project(&project_id_1).await.is_err());
+            assert!(registry.get_project(&project_id_2).await.is_ok());
+
+            // Verify project2 still receives messages for the shared channel
+            let subscribers = registry.projects_for_channel("shared-channel").await;
+            assert_eq!(subscribers.len(), 1);
+            assert!(subscribers.contains(&project_id_2));
         }
     }
 }

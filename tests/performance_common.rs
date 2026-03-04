@@ -511,7 +511,7 @@ where
     F: Fn() -> Fut,
     Fut: Future<Output = ()>,
 {
-    let mut timer = Timer::new(name);
+    let timer = Timer::new(name);
     f().await;
     timer.elapsed()
 }
