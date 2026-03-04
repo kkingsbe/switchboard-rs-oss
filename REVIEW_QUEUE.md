@@ -4,7 +4,19 @@
 
 ## PENDING_REVIEW
 
-*(None)*
+### story-006-05: Fan-out Message Delivery
+
+- **Implemented by:** dev-2
+- **Sprint:** 15
+- **Commits:** adf1156bcd1a33775ca0d67b341bea50158de1cf..eb923babb2c4f02ba97fba3cd6e0b433d5cfa0d9
+- **Story file:** `.switchboard/state/stories/story-006-05-fanout-message-delivery.md`
+- **Files changed:** src/gateway/routing.rs
+- **Status:** PENDING_REVIEW
+- **Acceptance Criteria:**
+  - [x] All subscribed projects receive the message — verified by: test_fan_out_all_subscribed_projects_receive_message
+  - [x] Failure to one project doesn't affect others — verified by: test_fan_out_failure_isolation_one_project_disconnected
+  - [x] Messages delivered in Discord event order — verified by: test_fan_out_message_ordering_preserved_per_subscriber
+- **Notes:** Fan-out logic already implemented in Router::route_message(). Uses sequential delivery to preserve order, continues on individual failures for isolation.
 
 ---
 
