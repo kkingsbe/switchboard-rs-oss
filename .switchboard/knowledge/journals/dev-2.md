@@ -96,12 +96,12 @@
 - Test failures are in: docker::run::run::tests (skill install logs), docker::build::tests (kilocode), docker::skills::tests
 - AGENT QA completed - creating .dev_done_2 signal
 
-### 2026-03-04 — Sprint 10, Stories: [005-03]
+### 2026-03-04T07:00:00Z — Sprint 10, Stories: [story-005-03, story-005-04, story-006-02, story-006-04, story-007-02]
 
-- Story 005-03 (Route Messages by Channel) completed and queued for review
-- Build passes successfully with `cargo build --features "discord gateway"`
-- Test suite: 698 tests run, 693 passed, 5 failed (pre-existing Docker module failures)
-- Pre-existing test failures documented in BLOCKERS.md - unrelated to current story
-- AGENT QA: Unable to get fully green tests due to pre-existing Docker module failures
-- Dev-1 still has pending work (story-006-01 rework + 2 stories), so sprint won't complete yet
-- Story involved integrating MessageRouter with Discord events in src/gateway/server.rs
+- Completed rework for story-007-02: Fixed 6 clippy errors in src/cli/commands/gateway.rs
+- Fixed issues: unnecessary return statements, ok_or_else vs ok_or, tuple variant direct usage
+- Build and clippy now pass after rework fixes
+- Pre-existing Docker test failures (5 tests) remain - documented in DEV_TODO1 as known issues
+- Story re-queued for review after clippy fixes
+- Created .dev_done_2 to signal sprint completion for dev-2
+
