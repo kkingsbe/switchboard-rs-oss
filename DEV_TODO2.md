@@ -10,4 +10,4 @@
 ## Stories
 
 - [x] story-006-05 (Fan-out Message Delivery) — 2 pts ✅ queued for review
-- [ ] story-007-05 (Gateway Client Library) — 3 points
+- [x] story-007-05 (Gateway Client Library) — 3 points ✅ queued for review
