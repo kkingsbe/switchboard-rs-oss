@@ -34,3 +34,9 @@ pub use client::{
 
 // Re-export all public items from build module for backward compatibility
 pub use build::{add_directory_to_tar, create_build_context_tarball};
+
+// Re-export all public items from connection module for trait abstraction
+pub use connection::{
+    DockerCommand, DockerResponse, DockerConnectionTrait, MockDockerConnection,
+    MockDockerConnectionBuilder, RealDockerConnection,
+};

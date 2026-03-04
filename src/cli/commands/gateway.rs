@@ -407,8 +407,8 @@ async fn run_gateway_down(args: GatewayDownArgs) -> Result<(), Box<dyn std::erro
 
     let pid_str = lines
         .next()
-        .ok_or_else(|| GatewayCommandError::NotRunning)?
-        .map_err(|e| GatewayCommandError::IoError(e))?;
+        .ok_or(GatewayCommandError::NotRunning)?
+        .map_err(GatewayCommandError::IoError)?;
 
     let pid: u32 = pid_str
         .trim()
@@ -484,22 +484,22 @@ async fn run_gateway_down(args: GatewayDownArgs) -> Result<(), Box<dyn std::erro
                             }
                             
                             println!("Gateway force stopped");
-                            return Ok(());
+                            Ok(())
                         } else {
-                            return Err(GatewayCommandError::Timeout.into());
+                            Err(GatewayCommandError::Timeout.into())
                         }
                     }
                     Err(e) => {
-                        return Err(GatewayCommandError::SignalError(format!(
+                        Err(GatewayCommandError::SignalError(format!(
                             "Failed to send SIGTERM: {}",
                             e
-                        )).into());
+                        )).into())
                     }
                 }
             }
             _ => {
                 // Process doesn't exist or we can't check
-                return Err(GatewayCommandError::NotRunning.into());
+                Err(GatewayCommandError::NotRunning.into())
             }
         }
     }
