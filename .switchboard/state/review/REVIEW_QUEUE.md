@@ -250,9 +250,30 @@ Implementation is complete with Connection struct tracking project_id, session_i
 - **Commits:** c30818d
 - **Story file:** `.switchboard/state/stories/story-006-01.md`
 - **Files changed:** src/gateway/connections.rs, src/gateway/mod.rs
-- **Status:** PENDING_REVIEW
-- **Acceptance Criteria:**
-  - [x] Track active connections — verified by: test_connection_list_accurate
-  - [x] Handle multiple simultaneous connections — verified by: test_multiple_concurrent_connections
-  - [x] Detect and clean up stale connections — verified by: test_dead_connections_removed_after_timeout
-- **Notes:** Connection management with Connection struct, ConnectionManager with HashMap, and StaleConnectionDetector background task already implemented. 18 tests in gateway::connections module all pass.
+- **Build Result:** ✅ PASSED (`cargo build --features "discord gateway"`)
+- **Test Result:** ✅ PASSED (733 tests, 18 connection tests)
+- **Status:** ❌ CHANGES_REQUESTED
+- **Review date:** 2026-03-04T23:02:00Z
+
+#### Acceptance Criteria:
+- [x] Track active connections with project_id, session_id, subscription info — MET: Connection struct (src/gateway/connections.rs:61-72), verified by test_connection_list_accurate
+- [x] Handle multiple simultaneous project connections — MET: ConnectionManager with HashMap (src/gateway/connections.rs:147), verified by test_multiple_concurrent_connections
+- [x] Detect and clean up stale connections — MET: StaleConnectionDetector background task (src/gateway/connections.rs:362-483), verified by test_dead_connections_removed_after_timeout
+
+#### Findings:
+- **MUST FIX (SCOPE VIOLATION):** Commit c30818d includes changes to files OUTSIDE story scope:
+  - `src/docker/build.rs` — NOT in scope
+  - `src/docker/run/run.rs` — NOT in scope
+  - `src/docker/skills.rs` — NOT in scope
+  - **Required action:** Revert docker file changes, keep only gateway/connections.rs and gateway/mod.rs modifications
+- **SHOULD FIX:** None
+- **NICE TO HAVE:** Removed code (instrumentation attributes, reconnection integration) was cleaned up appropriately.
+
+#### Summary:
+Implementation satisfies all three acceptance criteria. Connection struct properly tracks project_id, session_id, subscriptions, and last_heartbeat. ConnectionManager uses HashMap with Arc<RwLock> for thread-safe concurrent access. StaleConnectionDetector runs as background task with configurable timeout. All 18 tests in gateway::connections pass. Build, clippy, and tests all pass. Uses thiserror and tracing per skill conventions.
+
+**BLOCKER:** Scope violation - docker files must be reverted.
+
+---
+
+#### COMPLETED_REVIEW
