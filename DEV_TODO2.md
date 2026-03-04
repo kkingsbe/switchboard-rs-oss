@@ -49,7 +49,7 @@
   - 🔒 Risk: Low
   - 📝 Commit: `feat(dev2): [007-02] implement gateway down CLI command`
 
-- [ ] **story-007-02** (REWORK): Gateway Down CLI - Fix clippy errors
+- [x] **story-007-02** (REWORK): Gateway Down CLI - Fix clippy errors ✅ fix applied, re-queued for review
   - 📄 Story: `.switchboard/state/stories/story-007-02-gateway-down-cli.md`
   - 🔍 Review: See REVIEW_QUEUE.md — CHANGES_REQUESTED
   - ⚡ Pre-check: Build + tests pass
