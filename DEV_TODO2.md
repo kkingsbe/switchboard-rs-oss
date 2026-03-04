@@ -41,7 +41,7 @@
   - 🔒 Risk: Low
   - 📝 Commit: `feat(dev2): [006-04] handle disconnections`
 
-- [ ] **story-007-02**: Gateway Down CLI (2 pts)
+- [x] **story-007-02**: Gateway Down CLI (2 pts) ✅ queued for review
   - 📄 Story: `.switchboard/state/stories/story-007-02-gateway-down-cli.md`
   - 📚 Skills: `./skills/rust-engineer/SKILL.md`, `./skills/rust-best-practices/SKILL.md`
   - ⚡ Pre-check: Build + tests pass

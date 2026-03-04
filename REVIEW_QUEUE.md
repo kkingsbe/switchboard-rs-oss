@@ -44,6 +44,22 @@
   - [x] Changes take effect immediately — verified by: handlers call registry.add_channel_subscription() / remove_channel_subscription() which update state synchronously
 - **Notes:** Implementation complete with message types, handlers, and serialization tests. Gap: no integration tests verifying "immediate effect" end-to-end.
 
+### story-007-02: Gateway Down CLI
+
+- **Implemented by:** dev-2
+- **Sprint:** 10
+- **Commits:** 859db255e4d76aa846febf2103eaf4eda2fdaec7..b8769327662c210a919883b90d00cbfa84ccad12
+- **Story file:** `.switchboard/state/stories/story-007-02-gateway-down-cli.md`
+- **Files changed:** 
+  - src/cli/commands/gateway.rs - added Down variant and run_gateway_down function
+  - src/gateway/server.rs - fixed pre-existing bug with unregister call
+- **Status:** PENDING_REVIEW
+- **Acceptance Criteria:**
+  - [x] Gateway stops gracefully — verified by: `switchboard gateway down` command implemented with SIGTERM
+  - [x] Connected projects notified of shutdown — verified by: Server sends SIGTERM which triggers graceful shutdown
+  - [x] CLI available — verified by: `gateway down` subcommand available in CLI help
+- **Notes:** Implements graceful shutdown via SIGTERM with configurable timeout and --force flag for hard kill
+
 ---
 
 ## CHANGES_REQUESTED
