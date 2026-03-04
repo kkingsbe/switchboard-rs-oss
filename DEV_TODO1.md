@@ -7,7 +7,7 @@
 
 ## Stories
 
-- [ ] **story-004-08**: CLI `gateway up` Command (3 pts)
+- [x] **story-004-08**: CLI `gateway up` Command (3 pts) ✅ queued for review
   - 📄 Story: `.switchboard/state/stories/story-004-08-gateway-up-cli.md`
   - 📚 Skills: `./skills/rust-engineer/SKILL.md`, `./skills/rust-engineer/references/async.md`
   - ⚡ Pre-check: Build + tests pass
@@ -15,7 +15,7 @@
   - 🔒 Risk: Low
   - 📝 Commit: `feat(dev1): [004-08] implement gateway up CLI command`
 
-- [ ] **story-007-01**: CLI `gateway status` Command (2 pts)
+- [x] **story-007-01**: CLI `gateway status` Command (2 pts) ✅ queued for review
   - 📄 Story: `.switchboard/state/stories/story-007-01-gateway-status.md`
   - 📚 Skills: `./skills/rust-engineer/SKILL.md`
   - ⚡ Pre-check: Build + tests pass
