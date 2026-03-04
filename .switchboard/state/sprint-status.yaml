@@ -10,13 +10,13 @@
 
 ## Sprint 16 Stories (Current)
 
-### In Progress
+### Completed
 
 | Story | Points | Status | Assigned To |
 |-------|--------|--------|-------------|
-| story-004-03 (HTTP Server Health Check) | 3 | IN PROGRESS | dev-1 |
-| story-004-06 (Registration Protocol) | 3 | IN PROGRESS | dev-1 |
-| story-006-01 (Project Connection Management) | 3 | IN PROGRESS | dev-2 |
+| story-004-03 (HTTP Server Health Check) | 3 | COMPLETE (APPROVED) | dev-1 |
+| story-004-06 (Registration Protocol) | 3 | COMPLETE (APPROVED) | dev-1 |
+| story-006-01 (Project Connection Management) | 3 | COMPLETE (APPROVED 2026-03-04) | dev-2 |
 
 ---
 
