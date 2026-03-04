@@ -126,8 +126,7 @@ pub fn init_gateway_logging(log_dir: PathBuf) -> Result<(WorkerGuard, WorkerGuar
     // Use Tee to combine file writer with stdout (calling stdout() to get the Stdout instance)
     let gateway_file = tracing_appender::rolling::never(&log_dir, "gateway.log");
     let gateway_combined = Tee::new(gateway_file, std::io::stdout());
-    let (gateway_non_blocking, gateway_guard) =
-        tracing_appender::non_blocking(gateway_combined);
+    let (gateway_non_blocking, gateway_guard) = tracing_appender::non_blocking(gateway_combined);
 
     // Build the subscriber using a Tee writer that splits to both appenders
     let env_filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info"));

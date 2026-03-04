@@ -16,7 +16,7 @@ Before starting any stories, read these files:
 
 ## Stories
 
-- [ ] **{story-006-01}**: Project Connection Management (3 pts)
+- [x] **{story-006-01}**: Project Connection Management (3 pts) ✅ queued for review
   - 📄 Story: `.switchboard/state/stories/story-006-01.md`
   - 📚 Skills: `./skills/rust-best-practices/SKILL.md`, `./skills/rust-engineer/SKILL.md`
   - ⚡ Pre-check: Build + tests pass

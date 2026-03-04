@@ -214,3 +214,19 @@
 
 #### Summary:
 Implementation is complete with Connection struct tracking project_id, session_id, subscriptions, and heartbeat. ConnectionManager uses HashMap for O(1) lookups with Arc<RwLock> for thread safety. StaleConnectionDetector runs as background task with configurable timeout. 18 comprehensive unit tests cover all acceptance criteria plus edge cases. Build, clippy, and format checks all pass.
+
+---
+
+### story-006-01: Project Connection Management
+
+- **Implemented by:** dev-2
+- **Sprint:** 16
+- **Commits:** c30818d
+- **Story file:** `.switchboard/state/stories/story-006-01.md`
+- **Files changed:** src/gateway/connections.rs, src/gateway/mod.rs
+- **Status:** PENDING_REVIEW
+- **Acceptance Criteria:**
+  - [x] Track active connections — verified by: test_connection_list_accurate
+  - [x] Handle multiple simultaneous connections — verified by: test_multiple_concurrent_connections
+  - [x] Detect and clean up stale connections — verified by: test_dead_connections_removed_after_timeout
+- **Notes:** Connection management with Connection struct, ConnectionManager with HashMap, and StaleConnectionDetector background task already implemented. 18 tests in gateway::connections module all pass.

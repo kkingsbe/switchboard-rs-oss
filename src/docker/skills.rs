@@ -210,11 +210,17 @@ pub fn generate_entrypoint_script(
                 has_skill_install = true;
             }
             // Log skill installation start with distinguishable prefix
-            script.push_str(&format!("echo '[SKILL INSTALL] Installing skill: {}'\n", skill));
+            script.push_str(&format!(
+                "echo '[SKILL INSTALL] Installing skill: {}'\n",
+                skill
+            ));
             // Capture and prefix stderr line by line
             script.push_str(&format!("npx skills add {} -a kilo -y 2>&1 | while IFS= read -r line; do echo \"[SKILL INSTALL STDERR] $line\"; done\n", skill));
             // Log skill installation completion
-            script.push_str(&format!("echo '[SKILL INSTALL] Installing skill: {} completed'\n", skill));
+            script.push_str(&format!(
+                "echo '[SKILL INSTALL] Installing skill: {} completed'\n",
+                skill
+            ));
         }
     }
 

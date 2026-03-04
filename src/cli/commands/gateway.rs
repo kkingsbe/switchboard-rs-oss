@@ -139,18 +139,18 @@ const DEFAULT_LOG_DIR: &str = ".switchboard/logs";
 /// # Arguments
 ///
 /// * `log_file` - Optional custom log file path from configuration (ignored for now,
-///                logs always go to .switchboard/logs/)
+///   logs always go to .switchboard/logs/)
 ///
 /// # Returns
 ///
 /// A tuple of `WorkerGuard`s (main guard, gateway guard) that must be kept alive, or an error.
-fn init_file_logging(_log_file: &Option<String>) -> Result<(WorkerGuard, WorkerGuard), GatewayCommandError> {
+fn init_file_logging(
+    _log_file: &Option<String>,
+) -> Result<(WorkerGuard, WorkerGuard), GatewayCommandError> {
     // Use the centralized logging in .switchboard/logs/
     let log_dir = PathBuf::from(DEFAULT_LOG_DIR);
 
-    init_gateway_logging(log_dir).map_err(|e| {
-        GatewayCommandError::LoggingError(e.to_string())
-    })
+    init_gateway_logging(log_dir).map_err(|e| GatewayCommandError::LoggingError(e.to_string()))
 }
 
 /// Run the gateway command.
@@ -598,7 +598,7 @@ mod tests {
     fn test_default_log_directory() {
         // The new implementation uses .switchboard/logs/ by default
         let expected_dir = PathBuf::from(DEFAULT_LOG_DIR);
-        
+
         // Verify the default log directory constant is correct
         assert_eq!(expected_dir, PathBuf::from(".switchboard/logs"));
     }
@@ -607,7 +607,7 @@ mod tests {
     #[test]
     fn test_log_directory_path() {
         let log_dir = PathBuf::from(DEFAULT_LOG_DIR);
-        
+
         // Verify the log directory path
         assert_eq!(log_dir, PathBuf::from(".switchboard/logs"));
     }

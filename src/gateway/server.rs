@@ -1753,11 +1753,8 @@ mod tests {
 
             // Attempt WebSocket connection
             let url = format!("ws://127.0.0.1:{}/ws", port);
-            let result = tokio::time::timeout(
-                std::time::Duration::from_secs(5),
-                connect_async(&url),
-            )
-            .await;
+            let result =
+                tokio::time::timeout(std::time::Duration::from_secs(5), connect_async(&url)).await;
 
             // Clean up server
             server_handle.abort();
@@ -1810,28 +1807,27 @@ mod tests {
 
             // Connect WebSocket client
             let url = format!("ws://127.0.0.1:{}/ws", port);
-            let (ws_stream, _) = tokio::time::timeout(
-                std::time::Duration::from_secs(5),
-                connect_async(&url),
-            )
-            .await
-            .expect("Connection should not timeout")
-            .expect("Connection should succeed");
+            let (ws_stream, _) =
+                tokio::time::timeout(std::time::Duration::from_secs(5), connect_async(&url))
+                    .await
+                    .expect("Connection should not timeout")
+                    .expect("Connection should succeed");
 
             let (mut write, mut read) = ws_stream.split();
 
             // Send a register message
-            let register_json = r#"{"type":"register","project_name":"test-project","channels":["channel1"]}"#;
-            write.send(Message::Text(register_json.to_string())).await.unwrap();
+            let register_json =
+                r#"{"type":"register","project_name":"test-project","channels":["channel1"]}"#;
+            write
+                .send(Message::Text(register_json.to_string()))
+                .await
+                .unwrap();
 
             // Receive the echo/ack response
-            let response = tokio::time::timeout(
-                std::time::Duration::from_secs(5),
-                read.next(),
-            )
-            .await
-            .expect("Should receive response")
-            .expect("Stream should not error");
+            let response = tokio::time::timeout(std::time::Duration::from_secs(5), read.next())
+                .await
+                .expect("Should receive response")
+                .expect("Stream should not error");
 
             // Clean up server
             server_handle.abort();
@@ -1885,28 +1881,26 @@ mod tests {
 
             // Connect WebSocket client
             let url = format!("ws://127.0.0.1:{}/ws", port);
-            let (ws_stream, _) = tokio::time::timeout(
-                std::time::Duration::from_secs(5),
-                connect_async(&url),
-            )
-            .await
-            .expect("Connection should not timeout")
-            .expect("Connection should succeed");
+            let (ws_stream, _) =
+                tokio::time::timeout(std::time::Duration::from_secs(5), connect_async(&url))
+                    .await
+                    .expect("Connection should not timeout")
+                    .expect("Connection should succeed");
 
             let (mut write, mut read) = ws_stream.split();
 
             // Send a Message (not register - just echo test)
             let message_json = r#"{"type":"message","payload":"hello world","channel_id":12345}"#;
-            write.send(Message::Text(message_json.to_string())).await.unwrap();
+            write
+                .send(Message::Text(message_json.to_string()))
+                .await
+                .unwrap();
 
             // Receive the echo response
-            let response = tokio::time::timeout(
-                std::time::Duration::from_secs(5),
-                read.next(),
-            )
-            .await
-            .expect("Should receive response")
-            .expect("Stream should not error");
+            let response = tokio::time::timeout(std::time::Duration::from_secs(5), read.next())
+                .await
+                .expect("Should receive response")
+                .expect("Stream should not error");
 
             // Clean up server
             server_handle.abort();
@@ -1959,35 +1953,37 @@ mod tests {
 
             // Connect WebSocket client
             let url = format!("ws://127.0.0.1:{}/ws", port);
-            let (ws_stream, _) = tokio::time::timeout(
-                std::time::Duration::from_secs(5),
-                connect_async(&url),
-            )
-            .await
-            .expect("Connection should not timeout")
-            .expect("Connection should succeed");
+            let (ws_stream, _) =
+                tokio::time::timeout(std::time::Duration::from_secs(5), connect_async(&url))
+                    .await
+                    .expect("Connection should not timeout")
+                    .expect("Connection should succeed");
 
             let (mut write, mut read) = ws_stream.split();
 
             // First register a project (required before heartbeat)
-            let register_json = r#"{"type":"register","project_name":"heartbeat-test","channels":["test"]}"#;
-            write.send(Message::Text(register_json.to_string())).await.unwrap();
+            let register_json =
+                r#"{"type":"register","project_name":"heartbeat-test","channels":["test"]}"#;
+            write
+                .send(Message::Text(register_json.to_string()))
+                .await
+                .unwrap();
 
             // Wait for registration ack
             let _ = read.next().await;
 
             // Send a heartbeat message
             let heartbeat_json = r#"{"type":"heartbeat","timestamp":1234567890}"#;
-            write.send(Message::Text(heartbeat_json.to_string())).await.unwrap();
+            write
+                .send(Message::Text(heartbeat_json.to_string()))
+                .await
+                .unwrap();
 
             // Receive the heartbeat ack
-            let response = tokio::time::timeout(
-                std::time::Duration::from_secs(5),
-                read.next(),
-            )
-            .await
-            .expect("Should receive response")
-            .expect("Stream should not error");
+            let response = tokio::time::timeout(std::time::Duration::from_secs(5), read.next())
+                .await
+                .expect("Should receive response")
+                .expect("Stream should not error");
 
             // Clean up server
             server_handle.abort();
