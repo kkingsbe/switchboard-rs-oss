@@ -1,6 +1,6 @@
 {
   "pid": 46632,
-  "last_heartbeat": "2026-03-04T06:57:27.623661900+00:00",
+  "last_heartbeat": "2026-03-04T07:01:27.659621100+00:00",
   "state": "running",
   "agents": [
     {
@@ -11,7 +11,7 @@
     {
       "name": "sb-dev-1",
       "schedule": "*/30 * * * *",
-      "current_run": "starting"
+      "current_run": null
     },
     {
       "name": "sb-dev-2",
@@ -21,12 +21,12 @@
     {
       "name": "sb-code-reviewer",
       "schedule": "20,50 * * * *",
-      "current_run": "starting"
+      "current_run": null
     },
     {
       "name": "sb-scrum-master",
       "schedule": "0 * * * *",
-      "current_run": null
+      "current_run": "starting"
     }
   ]
 }

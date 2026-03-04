@@ -603,7 +603,9 @@ Implementation is complete with comprehensive connection tracking, heartbeat mon
 - **Files changed:** src/cli/commands/gateway.rs, src/cli/mod.rs
 - **Build Result:** ✅ PASSED (`cargo build --features "discord gateway"`)
 - **Test Result:** ✅ PASSED (693 passed; 5 failed - pre-existing docker tests)
-- **Status:** PENDING_REVIEW
+- **Status:** ✅ APPROVED
+- **Reviewed by:** code-reviewer
+- **Review date:** 2026-03-04
 
 #### Acceptance Criteria:
 - [x] CLI has `gateway` subcommand with `up` action — MET (verified by: gateway_command_has_up_subcommand test)
@@ -651,12 +653,19 @@ All 162 gateway tests pass. Code follows Rust best practices with proper async/a
 - **Commits:** 859db255e4d76aa846febf2103eaf4eda2fdaec7
 - **Story file:** `.switchboard/state/stories/story-006-02-heartbeat-protocol.md`
 - **Files changed:** src/gateway/protocol.rs, src/gateway/registry.rs
-- **Status:** PENDING_REVIEW
-- **Acceptance Criteria:**
-  - [x] Projects send heartbeat every 30 seconds — verified by: existing server code handles heartbeats
-  - [x] Gateway responds with `heartbeat_ack` — verified by: existing server code sends ack
-  - [x] Mark project disconnected if no heartbeat for 90 seconds — verified by: new tests added (is_connection_stale_after_timeout)
-- **Notes:** Heartbeat protocol was already fully implemented in codebase. Added 7 integration tests to verify the heartbeat flow works correctly. All tests pass.
+- **Build Result:** ✅ PASSED (`cargo build --features "discord gateway"`)
+- **Test Result:** ✅ PASSED (162 gateway tests passed)
+- **Status:** ✅ APPROVED
+- **Reviewed by:** code-reviewer
+- **Review date:** 2026-03-04
+
+#### Acceptance Criteria:
+- [x] Projects send heartbeat every 30 seconds — MET (verified by: existing server code handles heartbeats)
+- [x] Gateway responds with `heartbeat_ack` — MET (verified by: existing server code sends ack, heartbeat serialization tests pass)
+- [x] Mark project disconnected if no heartbeat for 90 seconds — MET (verified by: stale connection detection tests pass)
+
+#### Summary:
+Heartbeat protocol was already fully implemented in codebase. Added 8 tests in protocol.rs and registry.rs to verify the heartbeat flow works correctly. All 162 gateway tests pass. Code follows Rust best practices with proper thiserror usage.
 
 ---
 
