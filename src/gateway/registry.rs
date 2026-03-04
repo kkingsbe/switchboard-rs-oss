@@ -59,6 +59,8 @@ pub struct ProjectConnection {
     pub subscribed_channels: Vec<String>,
     /// When this project was registered
     pub registered_at: DateTime<Utc>,
+    /// Last heartbeat received from this project
+    pub last_heartbeat: DateTime<Utc>,
 }
 
 impl ProjectConnection {
@@ -75,6 +77,7 @@ impl ProjectConnection {
             session_id: Uuid::new_v4(),
             subscribed_channels: Vec::new(),
             registered_at: Utc::now(),
+            last_heartbeat: Utc::now(),
         }
     }
 }
@@ -330,6 +333,38 @@ impl ChannelRegistry {
     pub async fn all_channels(&self) -> Vec<String> {
         let inner = self.inner.read().await;
         inner.channel_to_projects.keys().cloned().collect()
+    }
+
+    /// Update the heartbeat time for a project
+    pub async fn update_heartbeat(&self, project_id: &ProjectId) -> RegistryResult<()> {
+        let mut inner = self.inner.write().await;
+
+        let Some(project) = inner.projects.get_mut(project_id) else {
+            return Err(RegistryError::ProjectNotFound(project_id.clone()));
+        };
+
+        project.last_heartbeat = Utc::now();
+
+        debug!(
+            target: "gateway::registry",
+            project_id = %project_id,
+            "Heartbeat updated"
+        );
+
+        Ok(())
+    }
+
+    /// Check if a project's connection is stale based on timeout duration
+    pub async fn is_connection_stale(&self, project_id: &ProjectId, timeout: chrono::Duration) -> bool {
+        let inner = self.inner.read().await;
+
+        if let Some(project) = inner.projects.get(project_id) {
+            let now = Utc::now();
+            return now - project.last_heartbeat > timeout;
+        }
+
+        // If project not found, consider it stale
+        true
     }
 }
 
@@ -611,5 +646,125 @@ mod tests {
         // channel-2 should still have the project
         let projects = registry.projects_for_channel("channel-2").await;
         assert_eq!(projects, vec!["project-1".to_string()]);
+    }
+
+    // === Heartbeat Protocol Tests ===
+
+    /// Test that update_heartbeat updates the timestamp
+    #[tokio::test]
+    async fn should_update_heartbeat_timestamp() {
+        let registry = ChannelRegistry::new();
+        let (project, _sender) = create_test_project("project-1");
+        let channels = vec!["channel-1".to_string()];
+
+        registry.register(project, channels).await.unwrap();
+
+        // Get initial project state
+        let project_before = registry.get_project(&"project-1".to_string()).await.unwrap();
+        let initial_heartbeat = project_before.last_heartbeat;
+
+        // Wait a small amount to ensure time difference
+        tokio::time::sleep(tokio::time::Duration::from_millis(10)).await;
+
+        // Update heartbeat
+        registry
+            .update_heartbeat(&"project-1".to_string())
+            .await
+            .unwrap();
+
+        // Verify heartbeat was updated
+        let project_after = registry.get_project(&"project-1".to_string()).await.unwrap();
+        assert!(
+            project_after.last_heartbeat > initial_heartbeat,
+            "Heartbeat should be updated to a newer timestamp"
+        );
+    }
+
+    /// Test that is_connection_stale returns false for fresh connections
+    #[tokio::test]
+    async fn should_return_not_stale_for_fresh_connection() {
+        let registry = ChannelRegistry::new();
+        let (project, _sender) = create_test_project("project-1");
+        let channels = vec!["channel-1".to_string()];
+
+        registry.register(project, channels).await.unwrap();
+
+        // Check immediately - should not be stale
+        let is_stale = registry
+            .is_connection_stale(&"project-1".to_string(), chrono::Duration::seconds(90))
+            .await;
+        assert!(!is_stale, "Fresh connection should not be stale");
+    }
+
+    /// Test that is_connection_stale returns true after timeout
+    #[tokio::test]
+    async fn should_return_stale_after_timeout() {
+        // Create a registry with a manually manipulated timestamp
+        let registry = ChannelRegistry::new();
+        let (project, _sender) = create_test_project("project-1");
+        let channels = vec!["channel-1".to_string()];
+
+        registry.register(project, channels).await.unwrap();
+
+        // Manually set the last heartbeat to 100 seconds ago (beyond 90s timeout)
+        {
+            let mut inner = registry.inner.write().await;
+            if let Some(p) = inner.projects.get_mut("project-1") {
+                p.last_heartbeat = Utc::now() - chrono::Duration::seconds(100);
+            }
+        }
+
+        // Check with 90 second timeout - should be stale
+        let is_stale = registry
+            .is_connection_stale(&"project-1".to_string(), chrono::Duration::seconds(90))
+            .await;
+        assert!(is_stale, "Connection should be stale after timeout");
+    }
+
+    /// Test that is_connection_stale returns true for non-existent project
+    #[tokio::test]
+    async fn should_return_stale_for_nonexistent_project() {
+        let registry = ChannelRegistry::new();
+
+        // Non-existent project should be considered stale
+        let is_stale = registry
+            .is_connection_stale(&"nonexistent".to_string(), chrono::Duration::seconds(90))
+            .await;
+        assert!(is_stale, "Non-existent project should be considered stale");
+    }
+
+    /// Test complete heartbeat flow: register -> heartbeat -> unregister
+    #[tokio::test]
+    async fn should_handle_complete_heartbeat_flow() {
+        let registry = ChannelRegistry::new();
+        let (project, _sender) = create_test_project("heartbeat-project");
+        let channels = vec!["heartbeat-channel".to_string()];
+
+        // 1. Register project
+        registry.register(project, channels.clone()).await.unwrap();
+        assert!(registry.is_registered(&"heartbeat-project".to_string()).await);
+
+        // 2. Update heartbeat
+        registry
+            .update_heartbeat(&"heartbeat-project".to_string())
+            .await
+            .unwrap();
+
+        // Verify not stale immediately after heartbeat
+        let is_stale = registry
+            .is_connection_stale(&"heartbeat-project".to_string(), chrono::Duration::seconds(90))
+            .await;
+        assert!(!is_stale, "Connection should not be stale after heartbeat");
+
+        // 3. Unregister project
+        registry
+            .unregister(&"heartbeat-project".to_string())
+            .await
+            .unwrap();
+        assert!(!registry.is_registered(&"heartbeat-project".to_string()).await);
+
+        // 4. Verify removed from channel
+        let projects = registry.projects_for_channel("heartbeat-channel").await;
+        assert!(projects.is_empty(), "Project should be removed from channel");
     }
 }

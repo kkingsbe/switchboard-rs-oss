@@ -216,6 +216,28 @@ mod tests {
         );
     }
 
+    /// Test that heartbeat message is properly deserialized from JSON string
+    #[test]
+    fn should_deserialize_heartbeat_from_json_string() {
+        let json = r#"{"type":"heartbeat","timestamp":1699999999}"#;
+        let deserialized: GatewayMessage =
+            serde_json::from_str(json).expect("Failed to deserialize Heartbeat from JSON");
+        assert!(
+            matches!(deserialized, GatewayMessage::Heartbeat { timestamp, .. } if timestamp == 1699999999)
+        );
+    }
+
+    /// Test that HeartbeatAck is correctly serialized to JSON
+    #[test]
+    fn should_serialize_heartbeat_ack_to_json() {
+        let msg = GatewayMessage::HeartbeatAck {
+            timestamp: 1700000000,
+        };
+        let json = serde_json::to_string(&msg).expect("Failed to serialize HeartbeatAck");
+        assert!(json.contains("\"type\":\"heartbeat_ack\""));
+        assert!(json.contains("1700000000"));
+    }
+
     /// Test ChannelSubscribe serialization and deserialization roundtrip
     #[test]
     fn should_serialize_and_deserialize_channel_subscribe() {
