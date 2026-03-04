@@ -450,9 +450,48 @@ Implementation is complete with comprehensive tracing throughout gateway modules
 
 - **Implemented by:** dev-1
 - **Sprint:** 9
-- **Story file:** `.switchboard/state/stories/story-006-01-project-connections.md`
-- **Files changed:** 
+- **Commit:** 6f9efdf (current HEAD)
+- **Story file:** `.switchboard/state/stories/archive/sprint-6/story-006-01-project-connections.md`
+- **Files changed (in scope):** 
   - `src/gateway/connections.rs` (new file)
   - `src/gateway/mod.rs` (modified - added connections module)
-- **Status:** ✅ PENDING_REVIEW
-- **Notes:** Re-queued for review after addressing feedback on scope violations and formatting issues.
+- **Build Result:** ✅ PASSED (`cargo build --features "discord gateway"`)
+- **Test Result:** ✅ PASSED (137 gateway tests passed)
+- **Clippy:** ✅ PASSED
+- **Status:** ❌ CHANGES_REQUESTED (RE-REVIEW - STILL NOT FIXED)
+- **Reviewed by:** code-reviewer
+- **Review date:** 2026-03-04
+
+#### Acceptance Criteria:
+- [x] Track active connections with project_id, session_id, subscription info — MET (verified by: test_connection_list_accurate, test_all_connections)
+- [x] Handle multiple simultaneous project connections — MET (verified by: test_multiple_concurrent_connections)
+- [x] Detect and clean up stale connections — MET (verified by: test_dead_connections_removed_after_timeout, test_stale_connection_detection)
+
+#### Must Fix:
+1. **Scope violation STILL NOT FIXED after re-submission:**
+   - Files in scope per story: `src/gateway/connections.rs`, `src/gateway/mod.rs`
+   - Files still modified in commit 6f9efdf: `src/discord/gateway.rs`, `src/gateway/ratelimit.rs`, `src/gateway/registry.rs`, `src/gateway/routing.rs`, `src/logging.rs`
+   - Expected: Revert changes to all files EXCEPT `src/gateway/connections.rs` and `src/gateway/mod.rs`
+   - Why: Story scope is sacred per code reviewer protocol - changes outside scope risk breaking other agents' work
+
+#### Should Fix:
+- None
+
+#### Requeue Instructions:
+1. This is the SECOND round of review - scope violations were already flagged but NOT fixed
+2. Revert ALL changes to files not in scope using: `git revert` or manual removal
+   - `src/discord/gateway.rs`
+   - `src/gateway/ratelimit.rs` 
+   - `src/gateway/registry.rs`
+   - `src/gateway/routing.rs`
+   - `src/logging.rs`
+3. Keep ONLY changes to:
+   - `src/gateway/connections.rs` (new file - KEEP)
+   - `src/gateway/mod.rs` (add connections module - KEEP)
+4. Run `cargo build --features "discord gateway"` and `cargo test --lib --features "discord gateway" gateway` to verify
+5. Commit: `fix(dev1): [006-01] REVERT out-of-scope changes (FINAL ATTEMPT)`
+6. Re-submit for review
+
+---
+
+### Previously Reviewed
