@@ -8,6 +8,7 @@ use crate::gateway::config::{GatewayConfig, ServerConfig};
 use crate::gateway::pid::{PidFile, PidFileError};
 use crate::gateway::protocol::GatewayMessage;
 use crate::gateway::registry::{ChannelRegistry, ProjectConnection};
+use crate::gateway::routing::Router as MessageRouter;
 use axum::{
     extract::ws::{Message, WebSocket, WebSocketUpgrade},
     extract::State,
@@ -625,6 +626,9 @@ async fn process_discord_events(
 ) {
     info!("Discord event processor started");
 
+    // Create MessageRouter for message routing
+    let router = MessageRouter::new(registry.clone());
+
     while let Some(event) = event_receiver.recv().await {
         match event {
             DiscordEvent::MessageCreate {
@@ -639,45 +643,23 @@ async fn process_discord_events(
                     channel_id, content
                 );
 
-                // Look up projects subscribed to this channel
-                let project_ids = registry.projects_for_channel(&channel_id).await;
+                // Log channel_id extraction for verification (AC1)
+                debug!("Extracted channel_id: {} from MessageCreate event", channel_id);
 
-                if project_ids.is_empty() {
-                    debug!("No projects subscribed to channel {}", channel_id);
-                    continue;
-                }
-
-                // Forward message to each subscribed project
-                for project_id in project_ids {
-                    if let Ok(project) = registry.get_project(&project_id).await {
-                        // Parse channel_id - skip if invalid
-                        let parsed_channel_id = match channel_id.parse::<u64>() {
-                            Ok(id) => id,
-                            Err(e) => {
-                                warn!("Failed to parse channel_id '{}': {}", channel_id, e);
-                                continue;
-                            }
-                        };
-
-                        // Create the message payload
-                        let message = GatewayMessage::Message {
-                            payload: content.clone(),
-                            channel_id: parsed_channel_id,
-                        };
-
-                        if let Ok(json) = serde_json::to_string(&message) {
-                            if project.ws_sender.send(json).await.is_err() {
-                                warn!(
-                                    "Failed to send message to project {}, client may be disconnected",
-                                    project_id
-                                );
-                            } else {
-                                info!(
-                                    "Forwarded message to project {} ({})",
-                                    project.project_name, project_id
-                                );
-                            }
+                // Use MessageRouter to route message to subscribed projects
+                match router.route_message(&channel_id, &content).await {
+                    Ok(sent_count) => {
+                        if sent_count > 0 {
+                            info!(
+                                "Routed message from channel {} to {} project(s)",
+                                channel_id, sent_count
+                            );
+                        } else {
+                            debug!("No projects subscribed to channel {}", channel_id);
                         }
+                    }
+                    Err(e) => {
+                        warn!("Failed to route message from channel {}: {}", channel_id, e);
                     }
                 }
             }
