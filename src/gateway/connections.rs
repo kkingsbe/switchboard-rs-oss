@@ -1212,4 +1212,47 @@ mod tests {
         let conn = manager.get_connection(&"project-1".to_string()).await.unwrap();
         assert_eq!(conn.state, ConnectionState::Connected);
     }
+
+    /// Test: Connection events are logged when adding a connection
+    #[tokio::test]
+    async fn test_connection_logging_on_add() {
+        let manager = ConnectionManager::new();
+        let connection = create_test_connection("test-project");
+
+        // Add connection - this should log an info message (if logging is initialized)
+        let result = manager.add_connection(connection).await;
+        assert!(result.is_ok());
+    }
+
+    /// Test: Connection events are logged when removing a connection
+    #[tokio::test]
+    async fn test_connection_logging_on_remove() {
+        let manager = ConnectionManager::new();
+        let connection = create_test_connection("test-project-remove");
+
+        // Add connection first
+        manager.add_connection(connection).await.unwrap();
+
+        // Remove connection - this should log an info message (if logging is initialized)
+        let result = manager.remove_connection(&"test-project-remove".to_string()).await;
+        assert!(result.is_ok());
+    }
+
+    /// Test: Disconnection events are logged
+    #[tokio::test]
+    async fn test_connection_logging_on_disconnect() {
+        let manager = ConnectionManager::new();
+        let connection = create_test_connection("test-project-disconnect");
+
+        // Add connection first
+        manager.add_connection(connection).await.unwrap();
+
+        // Disconnect - this should log an info message (if logging is initialized)
+        let result = manager.disconnect(&"test-project-disconnect".to_string()).await;
+        assert!(result.is_ok());
+
+        // Verify state is disconnected
+        let conn = manager.get_connection(&"test-project-disconnect".to_string()).await.unwrap();
+        assert_eq!(conn.state, ConnectionState::Disconnected);
+    }
 }

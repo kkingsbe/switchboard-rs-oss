@@ -2,13 +2,29 @@
 
 ## Current Sprint
 
-**Sprint**: 12  
+**Sprint**: 14  
 **Start Date**: 2026-03-04  
 **End Date**: 2026-03-18
 
 ---
 
-## Sprint 12 Stories (Current)
+## Sprint 14 Stories (Current)
+
+### In Progress
+
+| Story | Points | Status | Assigned To |
+|-------|--------|--------|-------------|
+| story-004-01 (gateway module structure) | 1 | In Progress | dev-1 |
+| story-004-02 (gateway config loading) | 2 | In Progress | dev-1 |
+| story-001-docker-connection-trait (Docker Connection Trait) | 3 | In Progress | dev-1 |
+| story-006-03 (Reconnection Logic) | 3 | COMPLETE (APPROVED 2026-03-04) | dev-2 |
+| story-007-02 (Gateway Down CLI) | 2 | In Progress | dev-2 |
+| story-007-03 (PID File Management) | 1 | In Progress | dev-2 |
+| story-007-04 (Gateway Logging) | 2 | In Progress | dev-2 |
+
+---
+
+## Sprint 13 Stories (Archived)
 
 ### In Progress
 

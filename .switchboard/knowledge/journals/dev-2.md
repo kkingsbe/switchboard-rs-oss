@@ -105,3 +105,13 @@
 - Story re-queued for review after clippy fixes
 - Created .dev_done_2 to signal sprint completion for dev-2
 
+### 2026-03-04T09:15:00Z — Sprint 10, Stories: [story-005-03, story-005-04, story-006-02, story-006-04, story-007-02]
+
+- **Verification Phase:** All stories complete and queued for review
+- **Build:** Passes with `cargo build --features "discord gateway"`
+- **Tests:** 746/753 pass (7 pre-existing Docker-related failures unrelated to implemented gateway stories)
+- **Test Failures Analysis:** All failures are in docker module (docker::build, docker::connection, docker::run::run, docker::skills) - not related to gateway CLI work
+- **Stories Implemented:** Route Messages by Channel, Runtime Channel Subscribe/Unsubscribe, Heartbeat Protocol, Handle Disconnections, Gateway Down CLI
+- **Created:** `.switchboard/state/.dev_done_2` to signal completion
+- **Note:** Waiting for dev-1 to complete their verification before `.sprint_complete` can be created
+

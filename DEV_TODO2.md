@@ -41,6 +41,14 @@
   - 🔒 Risk: Low
   - 📝 Commit: `feat(dev2): [006-04] handle disconnections`
 
+- [x] **{story-006-03}**: Reconnection Logic (3 pts) ✅ queued for review
+  - 📄 Story: `.switchboard/state/stories/story-006-03-reconnection-logic.md`
+  - 📚 Skills: `./skills/rust-engineer/SKILL.md`, `./skills/rust-best-practices/SKILL.md`
+  - ⚡ Pre-check: Build + tests pass
+  - ✅ Post-check: Build + tests pass, acceptance criteria met
+  - 🔒 Risk: Medium
+  - 📝 Commit: `feat(dev2): [006-03] implement reconnection logic`
+
 - [x] **story-007-02**: Gateway Down CLI (2 pts) ✅ queued for review
   - 📄 Story: `.switchboard/state/stories/story-007-02-gateway-down-cli.md`
   - 📚 Skills: `./skills/rust-engineer/SKILL.md`, `./skills/rust-best-practices/SKILL.md`

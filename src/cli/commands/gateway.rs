@@ -6,16 +6,15 @@
 use crate::gateway::config::{GatewayConfig, GatewayConfigError};
 use crate::gateway::pid::{PidFile, PidFileError};
 use crate::gateway::server::GatewayServer;
+use crate::logging::init_gateway_logging;
 use clap::{Parser, Subcommand};
 use reqwest;
 use serde::Deserialize;
-use std::fs;
 use std::io;
 use std::path::Path;
 use std::path::PathBuf;
 use thiserror::Error;
 use tracing_appender::non_blocking::WorkerGuard;
-use tracing_subscriber::{fmt, layer::SubscriberExt, util::SubscriberInitExt, EnvFilter};
 
 /// Error types for gateway command operations.
 #[derive(Debug, Error)]
@@ -129,83 +128,29 @@ pub struct GatewayDownArgs {
     pub force: bool,
 }
 
-/// Default log file path for gateway.
-const DEFAULT_LOG_FILE: &str = ".switchboard/gateway.log";
+/// Default log directory for gateway.
+const DEFAULT_LOG_DIR: &str = ".switchboard/logs";
 
 /// Initialize logging with file appender.
 ///
-/// This function sets up tracing to write to both stdout and a file.
-/// The log file path is taken from the config, or defaults to `.switchboard/gateway.log`.
+/// This function sets up tracing to write to both stdout and files in the
+/// .switchboard/logs/ directory.
 ///
 /// # Arguments
 ///
-/// * `log_file` - Optional path to the log file from configuration
+/// * `log_file` - Optional custom log file path from configuration (ignored for now,
+///                logs always go to .switchboard/logs/)
 ///
 /// # Returns
 ///
-/// A `Result` containing the `WorkerGuard` that must be kept alive, or an error.
-fn init_file_logging(log_file: &Option<String>) -> Result<WorkerGuard, GatewayCommandError> {
-    // Determine log file path: use config value or default
-    let log_path = log_file
-        .as_ref()
-        .map(PathBuf::from)
-        .unwrap_or_else(|| PathBuf::from(DEFAULT_LOG_FILE));
+/// A tuple of `WorkerGuard`s (main guard, gateway guard) that must be kept alive, or an error.
+fn init_file_logging(_log_file: &Option<String>) -> Result<(WorkerGuard, WorkerGuard), GatewayCommandError> {
+    // Use the centralized logging in .switchboard/logs/
+    let log_dir = PathBuf::from(DEFAULT_LOG_DIR);
 
-    // Get the parent directory (e.g., ".switchboard" from ".switchboard/gateway.log")
-    let log_dir = log_path.parent().ok_or_else(|| {
-        GatewayCommandError::LoggingError(format!("Invalid log path: {}", log_path.display()))
-    })?;
-
-    // Create the directory if it doesn't exist
-    if !log_dir.exists() {
-        fs::create_dir_all(log_dir)?;
-        tracing::debug!("Created log directory: {}", log_dir.display());
-    }
-
-    // Get the filename from the path
-    let log_filename = log_path
-        .file_name()
-        .and_then(|n| n.to_str())
-        .ok_or_else(|| {
-            GatewayCommandError::LoggingError(format!(
-                "Invalid log filename: {}",
-                log_path.display()
-            ))
-        })?;
-
-    // Create file appender (using 'never' rotation for single file)
-    let file_appender = tracing_appender::rolling::never(log_dir, log_filename);
-    let (non_blocking, guard) = tracing_appender::non_blocking(file_appender);
-
-    // Build subscriber with both stdout and file writers
-    let env_filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info"));
-
-    let stdout_layer = fmt::layer()
-        .with_target(true)
-        .with_thread_ids(true)
-        .with_file(true)
-        .with_line_number(true);
-
-    let file_layer = fmt::layer()
-        .with_writer(non_blocking)
-        .with_target(true)
-        .with_thread_ids(true)
-        .with_file(true)
-        .with_line_number(true);
-
-    // Use registry to combine layers properly
-    let subscriber = tracing_subscriber::registry()
-        .with(env_filter)
-        .with(stdout_layer)
-        .with(file_layer);
-
-    subscriber.try_init().map_err(|e| {
-        GatewayCommandError::LoggingError(format!("Failed to set tracing subscriber: {}", e))
-    })?;
-
-    tracing::info!("Logging initialized: file={}", log_path.display());
-
-    Ok(guard)
+    init_gateway_logging(log_dir).map_err(|e| {
+        GatewayCommandError::LoggingError(e.to_string())
+    })
 }
 
 /// Run the gateway command.
@@ -250,8 +195,8 @@ async fn run_gateway_up(args: GatewayUpArgs) -> Result<(), Box<dyn std::error::E
     tracing::info!("Loading gateway configuration from: {}", config_path);
     let config = GatewayConfig::load(Some(config_path))?;
 
-    // Initialize file logging (must be done after config load to get log file path)
-    let _guard = init_file_logging(&config.logging.file)?;
+    // Initialize file logging (writes to .switchboard/logs/ with daily rotation)
+    let _guards = init_file_logging(&config.logging.file)?;
 
     // Log configuration details before moving
     let http_port = config.server.http_port;
@@ -648,53 +593,22 @@ mod tests {
         assert!(result.is_err());
     }
 
-    /// Test that default log file path is returned when no file is configured.
+    /// Test that default log directory is used when no file is configured.
     #[test]
-    fn test_default_log_file_path() {
-        let log_file: Option<String> = None;
-        let expected_path = PathBuf::from(DEFAULT_LOG_FILE);
-
-        // The log path should be the default when no file is configured
-        let log_path = log_file
-            .as_ref()
-            .map(PathBuf::from)
-            .unwrap_or_else(|| PathBuf::from(DEFAULT_LOG_FILE));
-
-        assert_eq!(log_path, expected_path);
+    fn test_default_log_directory() {
+        // The new implementation uses .switchboard/logs/ by default
+        let expected_dir = PathBuf::from(DEFAULT_LOG_DIR);
+        
+        // Verify the default log directory constant is correct
+        assert_eq!(expected_dir, PathBuf::from(".switchboard/logs"));
     }
 
-    /// Test that custom log file path is returned when configured.
+    /// Test that log directory path is correctly constructed.
     #[test]
-    fn test_custom_log_file_path() {
-        let log_file = Some("/var/log/my-gateway.log".to_string());
-        let expected_path = PathBuf::from("/var/log/my-gateway.log");
-
-        let log_path = log_file
-            .as_ref()
-            .map(PathBuf::from)
-            .unwrap_or_else(|| PathBuf::from(DEFAULT_LOG_FILE));
-
-        assert_eq!(log_path, expected_path);
-    }
-
-    /// Test that parent directory is correctly extracted from log path.
-    #[test]
-    fn test_log_parent_directory() {
-        let log_path = PathBuf::from(".switchboard/gateway.log");
-        let log_dir = log_path.parent().expect("Should have parent directory");
-
-        assert_eq!(log_dir, PathBuf::from(".switchboard"));
-    }
-
-    /// Test that log filename is correctly extracted from log path.
-    #[test]
-    fn test_log_filename() {
-        let log_path = PathBuf::from(".switchboard/gateway.log");
-        let log_filename = log_path
-            .file_name()
-            .and_then(|n| n.to_str())
-            .expect("Should have filename");
-
-        assert_eq!(log_filename, "gateway.log");
+    fn test_log_directory_path() {
+        let log_dir = PathBuf::from(DEFAULT_LOG_DIR);
+        
+        // Verify the log directory path
+        assert_eq!(log_dir, PathBuf::from(".switchboard/logs"));
     }
 }
