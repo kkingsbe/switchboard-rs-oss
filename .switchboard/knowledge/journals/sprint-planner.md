@@ -93,3 +93,16 @@ When .dev_done_* files appear:
 - **Agent distribution:** Dev-1 received story-004-04 (3 pts, medium risk) - the only eligible story.
 - **Data cleanup:** Fixed sprint-status.yaml which had duplicate entries (same stories appearing as both "Complete" in Sprint 5 and "Not Started" in Sprint 6).
 - **Insight:** Many stories were already marked "already-implemented" in prior sprints, suggesting significant progress made before formal sprint planning began.
+
+---
+
+### 2026-03-04 — Sprint 14 Rebalancing
+
+- **Issue detected**: Sprint 14 had premature `.sprint_complete` marker created while 4 stories remained in progress
+- **Rebalancing action**: Moved 2 stories (PID File Management + Gateway Logging, 3 pts total) from Dev-2 to Dev-1
+- **Reason**: Dev-1 was idle (all 3 stories complete) while Dev-2 had 4 unchecked stories
+- **Result**: Dev-1 now has 6 pts remaining (story-007-03, story-007-04), Dev-2 has 5 pts remaining (story-006-03, story-007-02)
+- **Files updated**: DEV_TODO1.md, DEV_TODO2.md, sprint-status.yaml
+- **Marker removed**: .sprint_complete (premature), .dev_done_1 (to reactivate Dev-1)
+
+The sprint continues with balanced workload across both agents.

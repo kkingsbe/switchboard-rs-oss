@@ -1,2 +1,5 @@
-Stories ready for Sprint 14 development
-Created: 2026-03-04T11:24:26Z
+Sprint 15 stories ready for development - 2026-03-04
+3 new stories added (8 points total)
+- story-004-04: WebSocket server (3 pts) - dev-1
+- story-006-05: Fan-out delivery (2 pts) - dev-2  
+- story-007-05: Client library (3 pts) - dev-1
