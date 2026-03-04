@@ -115,3 +115,13 @@
 - **Created:** `.switchboard/state/.dev_done_2` to signal completion
 - **Note:** Waiting for dev-1 to complete their verification before `.sprint_complete` can be created
 
+### 2026-03-04T12:45:00Z — Sprint 14, Stories: [story-006-03, story-007-02, story-007-03, story-007-04]
+
+- All gateway stories (down CLI, PID file management, logging) implemented and approved
+- Build passes with cargo build --features "discord gateway"
+- Tests: 755/760 pass (5 pre-existing docker module failures unrelated to dev-2)
+- Stories marked as "in progress" in sprint-status.yaml but actually complete/approved
+- DEV_TODO2.md out of sync - shows "not started" but all approved in REVIEW_QUEUE.md
+- No blockers encountered during this sprint
+
+

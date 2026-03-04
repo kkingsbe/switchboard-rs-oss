@@ -1,5 +1,52 @@
 # Sprint Report
 
+## Sprint 14 — 2026-03-04
+
+### ⚠️ WARNING: Stale Sprint Detected
+
+The `.sprint_complete` marker exists but Sprint 14 is NOT actually complete:
+- 1 story APPROVED (story-006-03: 3 pts)
+- 3 stories PENDING_REVIEW  
+- 4 stories still In Progress
+- Only 3 of 14 points completed (21%)
+
+### Metrics
+
+| Metric | Value |
+|--------|-------|
+| Stories planned | 7 |
+| Stories completed | 1 |
+| Stories in progress | 6 |
+| Stories pending review | 3 |
+| Points completed | 3 |
+| Points planned | 14 |
+| First-pass approval rate | 25% |
+| Agent utilization | 2/2 |
+
+### Velocity Trend
+
+| Sprint | Points | Stories | Approval Rate |
+|--------|--------|---------|---------------|
+| 12 | 14 | 6 | 86% |
+| 13 | 22 | 6 | - (in progress) |
+| 14 | 3 | 1 | 25% |
+
+### Observations
+
+- **Premature sprint completion:** The `.sprint_complete` marker was triggered but sprint work is ongoing
+- **Story completion:** Only 1 of 7 stories approved (story-006-03 reconnection logic)
+- **Review backlog:** 3 stories awaiting first review (dev-1: gateway module, config loading, Docker trait)
+- **Dev-2 blocked:** Stories 007-02, 007-03, 007-04 remain in progress
+- **Blockers persist:** Pre-existing Docker test failures (5 tests) continue to block QA verification
+
+### Recommendations
+
+- **For Sprint Planner:** Do NOT clean up sprint state - investigate why `.sprint_complete` was triggered prematurely
+- **For Dev Team:** Complete remaining stories before marking sprint complete
+- **Blocker resolution:** Pre-existing Docker test failures need attention from testability epic owners
+
+---
+
 ### Progress — 2026-03-04T08:06:13Z
 
 | Agent | Assigned | Complete | In Review | Remaining |

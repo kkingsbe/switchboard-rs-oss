@@ -29,7 +29,7 @@
 
 ## Stories
 
-### [ ] story-004-01: Create Gateway Module Structure
+### [x] story-004-01: Create Gateway Module Structure ✅ queued for review
 - **Points**: 1
 - **Story File**: [`.switchboard/state/stories/story-004-01-create-gateway-module-structure.md`](.switchboard/state/stories/story-004-01-create-gateway-module-structure.md)
 - **Risk**: Low
@@ -40,7 +40,7 @@
 - **Post-Check**: All gateway submodules compile without errors
 - **Commit Message**: `feat(gateway): create gateway module structure`
 
-### [ ] story-004-02: Implement Gateway Configuration Loading
+### [x] story-004-02: Implement Gateway Configuration Loading ✅ queued for review
 - **Points**: 2
 - **Story File**: [`.switchboard/state/stories/story-004-02-gateway-configuration-loading.md`](.switchboard/state/stories/story-004-02-gateway-configuration-loading.md)
 - **Risk**: Low
@@ -55,7 +55,7 @@
   - Configuration validation returns appropriate errors
 - **Commit Message**: `feat(gateway): implement gateway configuration loading`
 
-### [ ] story-001-docker-connection-trait: Docker Connection Trait
+### [x] story-001-docker-connection-trait: Docker Connection Trait ✅ queued for review
 - **Points**: 3
 - **Story File**: [`.switchboard/state/stories/story-001-docker-connection-trait.md`](.switchboard/state/stories/story-001-docker-connection-trait.md)
 - **Risk**: Medium
