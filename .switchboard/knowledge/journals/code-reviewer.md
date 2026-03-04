@@ -96,3 +96,40 @@
 - story-005-03 (Route Messages by Channel): Re-review requested out-of-scope changes be reverted. Developer did NOT revert the changes to `.switchboard/knowledge/journals/sprint-planner.md` - still 33 lines of Sprint 8 planning notes in the commit. Implementation is correct (all 3 acceptance criteria MET, tests pass) but scope violation persists.
 - Common violation: Out-of-scope file modifications - this is the second review round for this issue
 - The implementation itself is solid - routing logic, tests, error handling all correct
+
+---
+
+## 2026-03-04T03:29:00Z — Sprint 10 Reviews
+
+### Review Session Notes
+
+Reviewed 3 stories from Sprint 10:
+
+#### story-004-08: CLI `gateway up` Command
+- **Status:** ✅ APPROVED
+- **Implementation quality:** Excellent
+- All 4 acceptance criteria met:
+  - CLI has `gateway` subcommand with `up` action ✅
+  - Command starts gateway with config from `gateway.toml` ✅
+  - Support `--config` flag for custom config path ✅
+  - Support `--detach` flag (placeholder) ✅
+- Build: ✅ PASSED
+- Tests: 703 passed, 5 failed (pre-existing docker tests)
+- Skills compliance: Uses thiserror, tracing, no unwrap() in production
+
+#### story-006-01: Project Connection Management (RE-REVIEW - THIRD ROUND)
+- **Status:** ❌ CHANGES_REQUESTED (THIRD ATTEMPT)
+- **Critical Issue:** Scope violations STILL NOT FIXED after TWO previous reviews
+- Files in scope: `src/gateway/connections.rs`, `src/gateway/mod.rs`
+- Files modified in commit: 12 files (only 2 in scope)
+- Must fix: Revert ALL out-of-scope changes before re-review
+
+#### story-007-01: CLI `gateway status` Command
+- **Status:** ❌ CHANGES_REQUESTED
+- **Critical Issue:** Missing implementation - CLI does NOT call HTTP `/status` endpoint
+- Acceptance criteria status:
+  - Show gateway running/stopped: PARTIAL (only checks PID file)
+  - Show Discord connection status: NOT IMPLEMENTED
+  - Show connected projects/channels: NOT IMPLEMENTED
+- Server has `/status` endpoint that returns all this data, but CLI doesn't call it
+- Must fix: Add HTTP client call to GET `/status` and display results
