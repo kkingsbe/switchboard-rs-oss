@@ -7,6 +7,8 @@ use crate::gateway::config::{GatewayConfig, GatewayConfigError};
 use crate::gateway::pid::{PidFile, PidFileError};
 use crate::gateway::server::GatewayServer;
 use clap::{Parser, Subcommand};
+use reqwest;
+use serde::Deserialize;
 use std::fs;
 use std::io;
 use std::path::Path;
@@ -91,6 +93,27 @@ pub struct GatewayStatusArgs {
     /// Path to the gateway configuration file (default: gateway.toml)
     #[arg(short, long, value_name = "PATH", default_value = "gateway.toml")]
     pub config: String,
+}
+
+/// Status response from the gateway /status endpoint.
+#[derive(Debug, Deserialize)]
+struct StatusResponse {
+    /// Whether the gateway is running.
+    #[allow(dead_code)]
+    gateway_running: bool,
+    /// Whether Discord is connected.
+    discord_connected: bool,
+    /// List of connected projects with their channel subscriptions.
+    connected_projects: Vec<ProjectStatus>,
+}
+
+/// Project status from the gateway /status endpoint.
+#[derive(Debug, Deserialize)]
+struct ProjectStatus {
+    /// Project name.
+    name: String,
+    /// List of channels the project is subscribed to.
+    channels: Vec<String>,
 }
 
 /// Arguments for the gateway down command.
@@ -283,16 +306,65 @@ async fn run_gateway_status(args: GatewayStatusArgs) -> Result<(), Box<dyn std::
 
     match PidFile::check_existing(&pid_path) {
         Ok(()) => {
-            println!("Gateway is not running");
+            println!("Gateway: Stopped");
         }
         Err(PidFileError::AlreadyRunning(pid)) => {
-            println!("Gateway is running (PID: {})", pid);
+            // Gateway is running, try to get additional status from HTTP endpoint
+            let http_port = match GatewayConfig::load(Some(config_path)) {
+                Ok(config) => config.server.http_port,
+                Err(e) => {
+                    tracing::warn!("Failed to load config for port: {}, using default", e);
+                    8080 // default port
+                }
+            };
+
+            let status_url = format!("http://localhost:{}/status", http_port);
+
+            match reqwest::get(&status_url).await {
+                Ok(response) => {
+                    match response.json::<StatusResponse>().await {
+                        Ok(status) => {
+                            println!("Gateway: Running (PID: {})", pid);
+                            println!(
+                                "Discord: {}",
+                                if status.discord_connected {
+                                    "Connected"
+                                } else {
+                                    "Disconnected"
+                                }
+                            );
+
+                            if status.connected_projects.is_empty() {
+                                println!("Connected Projects: None");
+                            } else {
+                                println!("Connected Projects:");
+                                for project in &status.connected_projects {
+                                    let channels = if project.channels.is_empty() {
+                                        "(no channels)".to_string()
+                                    } else {
+                                        project.channels.join(", ")
+                                    };
+                                    println!("  - {}: {}", project.name, channels);
+                                }
+                            }
+                        }
+                        Err(e) => {
+                            tracing::warn!("Failed to parse status response: {}", e);
+                            println!("Gateway: Running (PID: {}) - Status unavailable", pid);
+                        }
+                    }
+                }
+                Err(e) => {
+                    tracing::warn!("Failed to query status endpoint: {}", e);
+                    println!("Gateway: Running (PID: {}) - Status unavailable", pid);
+                }
+            }
         }
         Err(e) => {
             // For other errors (like IO errors), we'll still report not running
             // but log the error
             tracing::debug!("PID file check error: {}, reporting not running", e);
-            println!("Gateway is not running");
+            println!("Gateway: Stopped");
         }
     }
 
