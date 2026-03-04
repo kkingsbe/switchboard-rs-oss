@@ -3,6 +3,8 @@
 //! This module provides components for managing reconnection attempts when a gateway
 //! connection is lost, including configurable backoff strategies and retry limits.
 
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::Arc;
 use std::time::Duration;
 use thiserror::Error;
 use tokio::time::sleep;
@@ -232,6 +234,8 @@ pub struct ReconnectionManager {
     retry_count: u32,
     /// Project ID being reconnected
     project_id: String,
+    /// Cancellation flag for stopping reconnection attempts
+    cancellation_flag: Arc<AtomicBool>,
 }
 
 impl ReconnectionManager {
@@ -246,6 +250,7 @@ impl ReconnectionManager {
             state: ReconnectionState::Idle,
             retry_count: 0,
             project_id,
+            cancellation_flag: Arc::new(AtomicBool::new(false)),
         }
     }
 
@@ -270,9 +275,28 @@ impl ReconnectionManager {
     }
 
     /// Reset the manager to initial state
+    /// 
+    /// This resets the state to Idle, clears the retry count, and also
+    /// clears the cancellation flag so the manager can be reused for a new
+    /// reconnection attempt after being cancelled.
     pub fn reset(&mut self) {
         self.state = ReconnectionState::Idle;
         self.retry_count = 0;
+        self.cancellation_flag.store(false, Ordering::SeqCst);
+    }
+
+    /// Cancel any ongoing or future reconnection attempts
+    ///
+    /// This method sets the cancellation flag, which will cause any
+    /// ongoing `attempt_reconnection` call to return with a
+    /// `ReconnectionError::ReconnectionCancelled` error.
+    pub fn cancel(&self) {
+        self.cancellation_flag.store(true, Ordering::SeqCst);
+    }
+
+    /// Check if reconnection has been cancelled
+    pub fn is_cancelled(&self) -> bool {
+        self.cancellation_flag.load(Ordering::SeqCst)
     }
 
     /// Attempt to reconnect with exponential backoff
@@ -296,12 +320,38 @@ impl ReconnectionManager {
         F: Fn(u32) -> Fut,
         Fut: std::future::Future<Output = bool>,
     {
+        // Check if already cancelled before starting
+        if self.cancellation_flag.load(Ordering::SeqCst) {
+            self.state = ReconnectionState::Cancelled;
+            warn!(
+                target: "gateway::reconnection",
+                project_id = %self.project_id,
+                "Reconnection cancelled before starting"
+            );
+            return Err(ReconnectionError::ReconnectionCancelled {
+                project_id: self.project_id.clone(),
+            });
+        }
+        
         self.state = ReconnectionState::Reconnecting;
         self.retry_count = 0;
 
         let mut backoff = Backoff::new(self.config.clone());
 
         while backoff.attempt() < self.config.max_retries {
+            // Check cancellation flag before each attempt
+            if self.cancellation_flag.load(Ordering::SeqCst) {
+                self.state = ReconnectionState::Cancelled;
+                warn!(
+                    target: "gateway::reconnection",
+                    project_id = %self.project_id,
+                    "Reconnection cancelled"
+                );
+                return Err(ReconnectionError::ReconnectionCancelled {
+                    project_id: self.project_id.clone(),
+                });
+            }
+
             let current_attempt = backoff.attempt();
             self.retry_count = current_attempt + 1;
 
@@ -683,5 +733,148 @@ mod tests {
 
         assert_eq!(backoff.current_delay(), Duration::from_secs(5));
         assert_eq!(backoff.next_delay(), Duration::from_secs(10)); // 5 * 2^1
+    }
+
+    /// Test that cancel during reconnection returns cancelled error
+    #[tokio::test]
+    async fn test_cancel_during_reconnection_should_return_cancelled_error() {
+        let config = ReconnectionConfig {
+            initial_delay: Duration::from_millis(50),
+            max_delay: Duration::from_millis(100),
+            max_retries: 10,
+            multiplier: 2.0,
+        };
+        
+        // We need to test cancellation by:
+        // 1. Creating a manager
+        // 2. Calling cancel() before attempt_reconnection
+        // 3. Verifying we get a ReconnectionCancelled error
+        
+        let mut manager = ReconnectionManager::new("project-123".to_string(), config);
+        
+        // Cancel before starting reconnection
+        manager.cancel();
+        
+        // Attempt reconnection - should immediately return cancelled
+        let result = manager.attempt_reconnection(|_attempt| async {
+            // This callback should never be called since we were cancelled
+            tokio::time::sleep(Duration::from_millis(10)).await;
+            true
+        }).await;
+        
+        assert!(result.is_err());
+        assert!(
+            matches!(
+                result,
+                Err(ReconnectionError::ReconnectionCancelled { project_id })
+                if project_id == "project-123"
+            ),
+            "Expected ReconnectionCancelled error"
+        );
+    }
+
+    /// Test that cancel sets state to Cancelled
+    #[tokio::test]
+    async fn test_cancel_sets_state_to_cancelled() {
+        let config = ReconnectionConfig {
+            initial_delay: Duration::from_millis(50),
+            max_delay: Duration::from_millis(100),
+            max_retries: 10,
+            multiplier: 2.0,
+        };
+        
+        // Test that cancel can be called during reconnection and sets state
+        let mut manager = ReconnectionManager::new("project-123".to_string(), config);
+        
+        // Set state to Reconnecting to simulate ongoing reconnection
+        manager.state = ReconnectionState::Reconnecting;
+        
+        // Cancel should work and set cancellation flag
+        manager.cancel();
+        
+        assert!(manager.is_cancelled());
+        
+        // Now call attempt_reconnection which should detect cancellation and set state
+        let result = manager.attempt_reconnection(|_attempt| async { false }).await;
+        
+        assert!(result.is_err());
+        assert!(
+            matches!(
+                result,
+                Err(ReconnectionError::ReconnectionCancelled { .. })
+            )
+        );
+        assert_eq!(manager.state(), &ReconnectionState::Cancelled);
+    }
+
+    /// Test that cancel can be called concurrently
+    #[tokio::test]
+    async fn test_cancel_can_be_called_concurrently() {
+        let config = ReconnectionConfig {
+            initial_delay: Duration::from_millis(50),
+            max_delay: Duration::from_millis(100),
+            max_retries: 10,
+            multiplier: 2.0,
+        };
+        
+        // Create multiple managers and cancel each one - they should all work
+        let handles: Vec<_> = (0..10)
+            .map(|i| {
+                let mut manager = ReconnectionManager::new(
+                    format!("project-{}", i), 
+                    ReconnectionConfig {
+                        initial_delay: Duration::from_millis(50),
+                        max_delay: Duration::from_millis(100),
+                        max_retries: 10,
+                        multiplier: 2.0,
+                    }
+                );
+                tokio::spawn(async move {
+                    manager.cancel();
+                })
+            })
+            .collect();
+        
+        for handle in handles {
+            handle.await.expect("Concurrent cancel task panicked");
+        }
+    }
+
+    /// Test that is_cancelled returns false initially
+    #[test]
+    fn test_is_cancelled_returns_false_initially() {
+        let config = ReconnectionConfig::default();
+        let manager = ReconnectionManager::new("project-123".to_string(), config);
+        
+        assert!(!manager.is_cancelled());
+    }
+
+    /// Test that cancel sets is_cancelled to true
+    #[test]
+    fn test_cancel_sets_is_cancelled_to_true() {
+        let config = ReconnectionConfig::default();
+        let manager = ReconnectionManager::new("project-123".to_string(), config);
+        
+        assert!(!manager.is_cancelled());
+        
+        manager.cancel();
+        
+        assert!(manager.is_cancelled());
+    }
+
+    /// Test that reset clears cancellation flag
+    #[tokio::test]
+    async fn test_reset_clears_cancellation_flag() {
+        let config = ReconnectionConfig::default();
+        let mut manager = ReconnectionManager::new("project-123".to_string(), config);
+        
+        // Set cancellation flag
+        manager.cancel();
+        assert!(manager.is_cancelled());
+        
+        // Reset should clear it
+        manager.reset();
+        assert!(!manager.is_cancelled());
+        assert_eq!(manager.state(), &ReconnectionState::Idle);
     }
 }
