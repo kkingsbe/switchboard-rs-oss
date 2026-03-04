@@ -1,5 +1,37 @@
 # Sprint Report
 
+### Progress — 2026-03-04T07:00:03Z
+
+| Agent | Assigned | Complete | In Review | Remaining |
+|-------|----------|----------|-----------|-----------|
+| dev-1 | 12 pts (6 stories) | 5 pts (2 stories) | 2 pts (2 stories) | 7 pts (4 stories) |
+| dev-2 | 11 pts (4 stories) | 5 pts (2 stories) | 2 pts (1 story) | 3 pts (2 stories) |
+
+**Blockers:** 2 active
+- Pre-existing Docker test failures (5 tests failing)
+- Sprint 10 pre-existing test failures affecting AGENT QA
+
+**Review queue:** 1 CHANGES_REQUESTED (story-007-02: Gateway Down CLI - 6 clippy errors)
+
+**Sprint health:** At risk — One story requires rework (clippy lint failures). Pre-existing test failures may impact completion verification.
+
+**Skills in use:**
+- rust-best-practices (v1.1.0) — for clippy error fixes and Rust idioms
+- rust-engineer (v1.0.0) — for systems programming work
+
+---
+
+### Sprint 12 Summary (2026-03-04 to 2026-03-18)
+
+| Metric | Value |
+|--------|-------|
+| Total Points | 22 (dev-1: 11, dev-2: 11) |
+| Completed (Approved) | 14 pts (6 stories) |
+| In Progress | 8 pts (4 stories) |
+| First-pass approval rate | 86% (6/7 reviewed) |
+
+---
+
 ## Sprint 11 — 2026-03-03
 
 ### Progress — 2026-03-04T03:00:03Z
