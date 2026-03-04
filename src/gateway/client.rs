@@ -892,4 +892,211 @@ mod tests {
         let msg = ReceivedMessage::Gateway(GatewayMessage::Heartbeat { timestamp: 0 });
         let _ = format!("{:?}", msg);
     }
+
+    // ========== Integration Tests using WebSocket Echo Server ==========
+
+    use tokio::net::TcpListener;
+    use tokio::sync::oneshot;
+
+    /// Start a simple WebSocket echo server for testing.
+    /// Returns the server URL and a shutdown signal sender.
+    async fn start_echo_server() -> (String, oneshot::Sender<()>) {
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let addr = listener.local_addr().unwrap();
+        let url = format!("ws://127.0.0.1:{}", addr.port());
+
+        let (shutdown_tx, shutdown_rx) = oneshot::channel::<()>();
+
+        tokio::spawn(async move {
+            let mut shutdown_rx = shutdown_rx;
+            loop {
+                tokio::select! {
+                    result = listener.accept() => {
+                        let (stream, _) = result.unwrap();
+                        let ws_stream = tokio_tungstenite::accept_async(stream).await.unwrap();
+                        let (mut write, mut read) = ws_stream.split();
+
+                        tokio::spawn(async move {
+                            while let Some(msg) = read.next().await {
+                                if let Ok(msg) = msg {
+                                    if msg.is_text() || msg.is_binary() {
+                                        let _ = write.send(msg).await;
+                                    }
+                                }
+                            }
+                        });
+                    }
+                    _ = &mut shutdown_rx => {
+                        break;
+                    }
+                }
+            }
+        });
+
+        (url, shutdown_tx)
+    }
+
+    /// Test that connect() establishes a WebSocket connection.
+    #[tokio::test]
+    async fn connect_should_establish_websocket_connection() {
+        // Start echo server
+        let (url, shutdown) = start_echo_server().await;
+
+        // Create client and connect
+        let mut client = GatewayClient::new();
+        let result = client.connect(&url).await;
+
+        // Verify connection succeeded
+        assert!(result.is_ok(), "Expected connection to succeed: {:?}", result);
+        assert!(client.is_connected().await, "Client should be connected");
+
+        // Cleanup
+        let _ = client.disconnect().await;
+        let _ = shutdown.send(());
+    }
+
+    /// Test that recv() receives messages from the gateway.
+    #[tokio::test]
+    async fn recv_should_receive_messages_after_connection() {
+        // Start echo server
+        let (url, shutdown) = start_echo_server().await;
+
+        // Create client and connect
+        let mut client = GatewayClient::new();
+        client.connect(&url).await.unwrap();
+
+        // Send a message to the client via the echo server
+        // First, we need to get a reference to the server to send a message
+        // For this test, we'll use the echo server to echo back what we send
+        let test_message = r#"{"type":"register","project_name":"test","channels":[]}"#;
+        
+        // Send a message and receive the echo
+        client.send_text(test_message).await.unwrap();
+
+        // Receive the echoed message
+        let received = tokio::time::timeout(
+            std::time::Duration::from_secs(5),
+            client.recv()
+        ).await;
+
+        // Verify we received a message
+        assert!(received.is_ok(), "Should receive message within timeout");
+        let result = received.unwrap();
+        assert!(result.is_ok(), "recv should succeed: {:?}", result);
+        let msg = result.unwrap();
+        assert!(msg.is_some(), "Should receive a message");
+
+        if let Some(ReceivedMessage::Text(text)) = msg {
+            assert!(text.contains("register"), "Should receive echo of our message");
+        }
+
+        // Cleanup
+        let _ = client.disconnect().await;
+        let _ = shutdown.send(());
+    }
+
+    /// Test that heartbeat is sent automatically in the background.
+    #[tokio::test]
+    async fn heartbeat_should_send_periodically() {
+        // Start echo server
+        let (url, shutdown) = start_echo_server().await;
+
+        // Create client with short heartbeat interval
+        let config = GatewayClientConfig {
+            heartbeat_interval_secs: 1,
+            connection_timeout_secs: 10,
+        };
+        let mut client = GatewayClient::with_config(config);
+
+        // Connect and start heartbeat
+        client.connect(&url).await.unwrap();
+        client.start_heartbeat().await.unwrap();
+
+        // Wait for heartbeat to be sent (at least 1.5 seconds to ensure at least one heartbeat)
+        tokio::time::sleep(std::time::Duration::from_millis(1500)).await;
+
+        // Receive a message - should be the heartbeat
+        let received = tokio::time::timeout(
+            std::time::Duration::from_secs(5),
+            client.recv()
+        ).await;
+
+        // Verify heartbeat was received
+        assert!(received.is_ok(), "Should receive heartbeat within timeout");
+        let result = received.unwrap();
+        assert!(result.is_ok(), "recv should succeed: {:?}", result);
+        let msg = result.unwrap();
+        assert!(msg.is_some(), "Should receive a heartbeat message");
+
+        if let Some(ReceivedMessage::Text(text)) = msg {
+            assert!(text.contains("heartbeat"), "Should receive heartbeat message: {}", text);
+        }
+
+        // Cleanup
+        let _ = client.stop_heartbeat().await;
+        let _ = client.disconnect().await;
+        let _ = shutdown.send(());
+    }
+
+    /// Test that connect fails with meaningful error for invalid URL.
+    #[tokio::test]
+    async fn connect_should_fail_for_invalid_url() {
+        let mut client = GatewayClient::new();
+        
+        // Try to connect to invalid URL (non-existent server)
+        let result = client.connect("ws://127.0.0.1:99999").await;
+        
+        // Should fail with connection error
+        assert!(result.is_err());
+        match result.unwrap_err() {
+            GatewayClientError::ConnectionError { .. } => {}
+            _ => panic!("Expected ConnectionError"),
+        }
+    }
+
+    /// Test that client can send and receive GatewayMessage.
+    #[tokio::test]
+    async fn send_and_recv_message_should_work() {
+        // Start echo server
+        let (url, shutdown) = start_echo_server().await;
+
+        // Create client and connect
+        let mut client = GatewayClient::new();
+        client.connect(&url).await.unwrap();
+
+        // Create and send a GatewayMessage
+        let msg = GatewayMessage::Register {
+            project_name: "test-project".to_string(),
+            channels: vec!["channel1".to_string()],
+        };
+        client.send(msg).await.unwrap();
+
+        // Receive the echoed message
+        let received = tokio::time::timeout(
+            std::time::Duration::from_secs(5),
+            client.recv()
+        ).await;
+
+        assert!(received.is_ok(), "Should receive message within timeout");
+        let result = received.unwrap();
+        assert!(result.is_ok(), "recv should succeed: {:?}", result);
+        let msg = result.unwrap();
+        assert!(msg.is_some(), "Should receive a message");
+
+        // Parse as GatewayMessage
+        if let Some(ReceivedMessage::Text(text)) = msg {
+            let parsed: GatewayMessage = serde_json::from_str(&text).unwrap();
+            match parsed {
+                GatewayMessage::Register { project_name, channels } => {
+                    assert_eq!(project_name, "test-project");
+                    assert_eq!(channels, vec!["channel1".to_string()]);
+                }
+                _ => panic!("Expected Register message"),
+            }
+        }
+
+        // Cleanup
+        let _ = client.disconnect().await;
+        let _ = shutdown.send(());
+    }
 }

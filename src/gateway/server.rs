@@ -1701,4 +1701,316 @@ mod tests {
             assert!(subscribers.contains(&project_id_2));
         }
     }
+
+    // ============================================================
+    // WebSocket Integration Tests
+    // ============================================================
+    // These tests verify actual WebSocket functionality by starting
+    // a server and connecting with a tokio-tungstenite client.
+
+    mod websocket_integration {
+        use super::*;
+        use crate::gateway::protocol::GatewayMessage;
+        use tokio::net::TcpListener;
+        use tokio_tungstenite::{connect_async, tungstenite::Message};
+
+        /// Creates test app state with fresh registry
+        fn create_test_state() -> AppState {
+            let (_, gateway_config) = create_test_config();
+            AppState {
+                config: Arc::new(gateway_config),
+                registry: ChannelRegistry::new(),
+                discord_gateway: Arc::new(tokio::sync::Mutex::new(None)),
+            }
+        }
+
+        /// Test that WebSocket upgrade request is accepted and connection is established.
+        /// This verifies the /ws endpoint accepts HTTP upgrade requests.
+        #[tokio::test]
+        async fn websocket_upgrade_should_succeed() {
+            let state = create_test_state();
+
+            // Create router with WebSocket endpoint
+            let app = Router::new()
+                .route("/ws", get(ws_handler))
+                .route("/health", get(health_handler))
+                .with_state(state);
+
+            // Bind to a random available port
+            let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+            let addr = listener.local_addr().unwrap();
+            let port = addr.port();
+
+            // Spawn the server
+            let server = axum::serve(listener, app);
+
+            let server_handle = tokio::spawn(async move {
+                let _ = server.await;
+            });
+
+            // Wait for server to be ready
+            tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+
+            // Attempt WebSocket connection
+            let url = format!("ws://127.0.0.1:{}/ws", port);
+            let result = tokio::time::timeout(
+                std::time::Duration::from_secs(5),
+                connect_async(&url),
+            )
+            .await;
+
+            // Clean up server
+            server_handle.abort();
+
+            // Verify connection succeeded
+            assert!(result.is_ok(), "WebSocket connection should succeed");
+            let (ws_stream, response) = result.unwrap().unwrap();
+
+            // Verify upgrade was accepted (HTTP 101 Switching Protocols)
+            assert_eq!(
+                response.status(),
+                axum::http::StatusCode::SWITCHING_PROTOCOLS,
+                "Server should return 101 Switching Protocols"
+            );
+
+            // Verify WebSocket stream is usable
+            let (mut write, _read) = ws_stream.split();
+
+            // Send a ping to verify bidirectional communication
+            write.send(Message::Text("ping".to_string())).await.unwrap();
+        }
+
+        /// Test that a register message is correctly parsed and echoed back.
+        /// This verifies:
+        /// 1. JSON messages are parsed correctly
+        /// 2. The server echoes messages back
+        #[tokio::test]
+        async fn websocket_message_roundtrip_register() {
+            let state = create_test_state();
+
+            // Create router with WebSocket endpoint
+            let app = Router::new()
+                .route("/ws", get(ws_handler))
+                .with_state(state);
+
+            // Bind to a random available port
+            let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+            let addr = listener.local_addr().unwrap();
+            let port = addr.port();
+
+            // Spawn the server
+            let server = axum::serve(listener, app);
+
+            let server_handle = tokio::spawn(async move {
+                let _ = server.await;
+            });
+
+            // Wait for server to be ready
+            tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+
+            // Connect WebSocket client
+            let url = format!("ws://127.0.0.1:{}/ws", port);
+            let (ws_stream, _) = tokio::time::timeout(
+                std::time::Duration::from_secs(5),
+                connect_async(&url),
+            )
+            .await
+            .expect("Connection should not timeout")
+            .expect("Connection should succeed");
+
+            let (mut write, mut read) = ws_stream.split();
+
+            // Send a register message
+            let register_json = r#"{"type":"register","project_name":"test-project","channels":["channel1"]}"#;
+            write.send(Message::Text(register_json.to_string())).await.unwrap();
+
+            // Receive the echo/ack response
+            let response = tokio::time::timeout(
+                std::time::Duration::from_secs(5),
+                read.next(),
+            )
+            .await
+            .expect("Should receive response")
+            .expect("Stream should not error");
+
+            // Clean up server
+            server_handle.abort();
+
+            // Verify we got a text message back
+            let msg = response.unwrap();
+            assert!(msg.is_text(), "Response should be text message");
+
+            let text = msg.to_text().expect("Should be valid text");
+
+            // Parse the response - it should be a RegisterAck
+            let parsed: GatewayMessage =
+                serde_json::from_str(text).expect("Response should be valid JSON");
+
+            assert!(
+                matches!(
+                    parsed,
+                    GatewayMessage::RegisterAck { status, session_id }
+                    if status == "ok" && !session_id.is_empty()
+                ),
+                "Should receive RegisterAck with ok status and session_id, got: {}",
+                text
+            );
+        }
+
+        /// Test that a generic message is echoed back correctly.
+        /// This verifies JSON parsing and echo for Message variant.
+        #[tokio::test]
+        async fn websocket_message_roundtrip_echo() {
+            let state = create_test_state();
+
+            // Create router with WebSocket endpoint
+            let app = Router::new()
+                .route("/ws", get(ws_handler))
+                .with_state(state);
+
+            // Bind to a random available port
+            let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+            let addr = listener.local_addr().unwrap();
+            let port = addr.port();
+
+            // Spawn the server
+            let server = axum::serve(listener, app);
+
+            let server_handle = tokio::spawn(async move {
+                let _ = server.await;
+            });
+
+            // Wait for server to be ready
+            tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+
+            // Connect WebSocket client
+            let url = format!("ws://127.0.0.1:{}/ws", port);
+            let (ws_stream, _) = tokio::time::timeout(
+                std::time::Duration::from_secs(5),
+                connect_async(&url),
+            )
+            .await
+            .expect("Connection should not timeout")
+            .expect("Connection should succeed");
+
+            let (mut write, mut read) = ws_stream.split();
+
+            // Send a Message (not register - just echo test)
+            let message_json = r#"{"type":"message","payload":"hello world","channel_id":12345}"#;
+            write.send(Message::Text(message_json.to_string())).await.unwrap();
+
+            // Receive the echo response
+            let response = tokio::time::timeout(
+                std::time::Duration::from_secs(5),
+                read.next(),
+            )
+            .await
+            .expect("Should receive response")
+            .expect("Stream should not error");
+
+            // Clean up server
+            server_handle.abort();
+
+            // Verify we got a text message back
+            let msg = response.unwrap();
+            assert!(msg.is_text(), "Response should be text message");
+
+            let text = msg.to_text().expect("Should be valid text");
+
+            // Parse the response - it should echo the message back
+            let parsed: GatewayMessage =
+                serde_json::from_str(text).expect("Response should be valid JSON");
+
+            assert!(
+                matches!(
+                    parsed,
+                    GatewayMessage::Message { payload, channel_id }
+                    if payload == "hello world" && channel_id == 12345
+                ),
+                "Should receive echoed Message, got: {}",
+                text
+            );
+        }
+
+        /// Test that heartbeat messages receive acknowledgment.
+        #[tokio::test]
+        async fn websocket_heartbeat_roundtrip() {
+            let state = create_test_state();
+
+            // Create router with WebSocket endpoint
+            let app = Router::new()
+                .route("/ws", get(ws_handler))
+                .with_state(state);
+
+            // Bind to a random available port
+            let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+            let addr = listener.local_addr().unwrap();
+            let port = addr.port();
+
+            // Spawn the server
+            let server = axum::serve(listener, app);
+
+            let server_handle = tokio::spawn(async move {
+                let _ = server.await;
+            });
+
+            // Wait for server to be ready
+            tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+
+            // Connect WebSocket client
+            let url = format!("ws://127.0.0.1:{}/ws", port);
+            let (ws_stream, _) = tokio::time::timeout(
+                std::time::Duration::from_secs(5),
+                connect_async(&url),
+            )
+            .await
+            .expect("Connection should not timeout")
+            .expect("Connection should succeed");
+
+            let (mut write, mut read) = ws_stream.split();
+
+            // First register a project (required before heartbeat)
+            let register_json = r#"{"type":"register","project_name":"heartbeat-test","channels":["test"]}"#;
+            write.send(Message::Text(register_json.to_string())).await.unwrap();
+
+            // Wait for registration ack
+            let _ = read.next().await;
+
+            // Send a heartbeat message
+            let heartbeat_json = r#"{"type":"heartbeat","timestamp":1234567890}"#;
+            write.send(Message::Text(heartbeat_json.to_string())).await.unwrap();
+
+            // Receive the heartbeat ack
+            let response = tokio::time::timeout(
+                std::time::Duration::from_secs(5),
+                read.next(),
+            )
+            .await
+            .expect("Should receive response")
+            .expect("Stream should not error");
+
+            // Clean up server
+            server_handle.abort();
+
+            // Verify we got a text message back
+            let msg = response.unwrap();
+            assert!(msg.is_text(), "Response should be text message");
+
+            let text = msg.to_text().expect("Should be valid text");
+
+            // Parse the response - it should be a HeartbeatAck
+            let parsed: GatewayMessage =
+                serde_json::from_str(text).expect("Response should be valid JSON");
+
+            assert!(
+                matches!(
+                    parsed,
+                    GatewayMessage::HeartbeatAck { timestamp }
+                    if timestamp == 1234567890
+                ),
+                "Should receive HeartbeatAck with matching timestamp, got: {}",
+                text
+            );
+        }
+    }
 }
