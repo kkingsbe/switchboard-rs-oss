@@ -351,18 +351,12 @@ mod tests {
         let handle3 = tokio::spawn(async move { receiver3.recv().await });
 
         // Route message to channel "123"
-        let result = router
-            .route_message("123", "Fan-out message")
-            .await
-            .unwrap();
+        let result = router.route_message("123", "Fan-out message").await.unwrap();
 
         // Wait for all receivers to get the message
-        let received1 =
-            tokio::time::timeout(tokio::time::Duration::from_millis(100), handle1).await;
-        let received2 =
-            tokio::time::timeout(tokio::time::Duration::from_millis(100), handle2).await;
-        let received3 =
-            tokio::time::timeout(tokio::time::Duration::from_millis(100), handle3).await;
+        let received1 = tokio::time::timeout(tokio::time::Duration::from_millis(100), handle1).await;
+        let received2 = tokio::time::timeout(tokio::time::Duration::from_millis(100), handle2).await;
+        let received3 = tokio::time::timeout(tokio::time::Duration::from_millis(100), handle3).await;
 
         // Verify all 3 projects received the message
         assert_eq!(result, 3, "Message should be sent to all 3 projects");
@@ -410,30 +404,16 @@ mod tests {
         let handle3 = tokio::spawn(async move { receiver3.recv().await });
 
         // Route message to channel "123"
-        let result = router
-            .route_message("123", "Message despite disconnect")
-            .await
-            .unwrap();
+        let result = router.route_message("123", "Message despite disconnect").await.unwrap();
 
         // Wait for receivers to get the message
-        let received1 =
-            tokio::time::timeout(tokio::time::Duration::from_millis(100), handle1).await;
-        let received3 =
-            tokio::time::timeout(tokio::time::Duration::from_millis(100), handle3).await;
+        let received1 = tokio::time::timeout(tokio::time::Duration::from_millis(100), handle1).await;
+        let received3 = tokio::time::timeout(tokio::time::Duration::from_millis(100), handle3).await;
 
         // Verify projects 1 and 3 still receive the message (result should be 2)
-        assert_eq!(
-            result, 2,
-            "Message should be sent to 2 projects (project 2 failed)"
-        );
-        assert!(
-            received1.is_ok(),
-            "Project 1 should still receive the message"
-        );
-        assert!(
-            received3.is_ok(),
-            "Project 3 should still receive the message"
-        );
+        assert_eq!(result, 2, "Message should be sent to 2 projects (project 2 failed)");
+        assert!(received1.is_ok(), "Project 1 should still receive the message");
+        assert!(received3.is_ok(), "Project 3 should still receive the message");
     }
 
     /// Test 3: Message ordering preserved per subscriber
@@ -458,12 +438,9 @@ mod tests {
         router.route_message("123", "Message 3").await.unwrap();
 
         // Receive all 3 messages
-        let msg1 =
-            tokio::time::timeout(tokio::time::Duration::from_millis(100), receiver.recv()).await;
-        let msg2 =
-            tokio::time::timeout(tokio::time::Duration::from_millis(100), receiver.recv()).await;
-        let msg3 =
-            tokio::time::timeout(tokio::time::Duration::from_millis(100), receiver.recv()).await;
+        let msg1 = tokio::time::timeout(tokio::time::Duration::from_millis(100), receiver.recv()).await;
+        let msg2 = tokio::time::timeout(tokio::time::Duration::from_millis(100), receiver.recv()).await;
+        let msg3 = tokio::time::timeout(tokio::time::Duration::from_millis(100), receiver.recv()).await;
 
         // Verify all messages were received
         assert!(msg1.is_ok(), "Should receive message 1");
@@ -475,17 +452,8 @@ mod tests {
         let content2 = msg2.unwrap().unwrap();
         let content3 = msg3.unwrap().unwrap();
 
-        assert!(
-            content1.contains("Message 1"),
-            "First message should be 'Message 1'"
-        );
-        assert!(
-            content2.contains("Message 2"),
-            "Second message should be 'Message 2'"
-        );
-        assert!(
-            content3.contains("Message 3"),
-            "Third message should be 'Message 3'"
-        );
+        assert!(content1.contains("Message 1"), "First message should be 'Message 1'");
+        assert!(content2.contains("Message 2"), "Second message should be 'Message 2'");
+        assert!(content3.contains("Message 3"), "Third message should be 'Message 3'");
     }
 }

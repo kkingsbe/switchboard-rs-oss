@@ -116,6 +116,7 @@ pub fn create_build_context_tarball(
                     // Without this, Docker COPY fails because directories don't exist
                     let mut header = Header::new_gnu();
                     header.set_entry_type(tar::EntryType::Directory);
+                    header.set_size(0); // Directories have 0 size
                     header.set_mode(0o755);
                     header.set_mtime(0);
                     eprintln!("DEBUG: Adding .kilocode directory entry to tarball");
@@ -203,6 +204,7 @@ pub fn add_directory_to_tar<W: Write>(
             // Without this, Docker COPY fails because directories don't exist
             let mut header = Header::new_gnu();
             header.set_entry_type(tar::EntryType::Directory);
+            header.set_size(0); // Directories have 0 size
             header.set_mode(0o755);
             header.set_mtime(0);
             eprintln!(

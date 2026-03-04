@@ -209,7 +209,12 @@ pub fn generate_entrypoint_script(
                 script.push_str("# Skills are installed sequentially in declaration order to satisfy dependencies\n");
                 has_skill_install = true;
             }
-            script.push_str(&format!("npx skills add {} -a kilo -y\n", skill));
+            // Log skill installation start with distinguishable prefix
+            script.push_str(&format!("echo '[SKILL INSTALL] Installing skill: {}'\n", skill));
+            // Capture and prefix stderr line by line
+            script.push_str(&format!("npx skills add {} -a kilo -y 2>&1 | while IFS= read -r line; do echo \"[SKILL INSTALL STDERR] $line\"; done\n", skill));
+            // Log skill installation completion
+            script.push_str(&format!("echo '[SKILL INSTALL] Installing skill: {} completed'\n", skill));
         }
     }
 
@@ -1253,21 +1258,21 @@ mod tests {
 
     #[test]
     fn test_generate_entrypoint_script_skill_not_in_preexisting_list() {
-        // Test when skill is valid format but not in preexisting_skills list
-        let skills = vec!["owner/repo1".to_string(), "owner/repo2".to_string()];
-        // Only repo1 is in preexisting_skills, repo2 is missing
+        // Test when skill is valid format but not in preexisting_skills list AND not in filesystem
+        // Use a skill name that definitely doesn't exist in ./skills/ directory
+        let skills = vec!["owner/nonexistent_skill_xyz".to_string()];
         let preexisting_skills = vec!["repo1".to_string()];
         let result = generate_entrypoint_script("test-agent", &skills, &preexisting_skills);
 
         assert!(
             result.is_err(),
-            "Skill not in preexisting_skills should return error"
+            "Skill not in preexisting_skills and not in filesystem should return error"
         );
 
         if let Err(SkillsError::ScriptGenerationFailed { reason, .. }) = result {
             assert!(
-                reason.contains("repo2"),
-                "Error message should identify the missing skill (repo2). Got: {}",
+                reason.contains("nonexistent_skill_xyz"),
+                "Error message should identify the missing skill. Got: {}",
                 reason
             );
         } else {

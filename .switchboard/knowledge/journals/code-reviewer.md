@@ -1,5 +1,56 @@
 # Code Reviewer Journal
 
+## 2026-03-04T20:55:00Z — Sprint 16 Reviews
+
+### Review Session Notes
+
+Reviewed 2 stories from Sprint 15/16:
+
+#### Summary
+
+| Story | Status | Key Findings |
+|-------|--------|-------------|
+| story-007-05 | ✅ APPROVED | Gateway client library with connect, recv, heartbeat |
+| story-006-01 | ✅ APPROVED | Connection management with stale detection |
+
+#### story-007-05: Gateway Client Library
+- **Status:** ✅ APPROVED
+- **Implementation:** GatewayClient with WebSocket connect, recv, and automatic heartbeat
+- All 4 acceptance criteria met:
+  - GatewayClient struct: src/gateway/client.rs:159-161
+  - connect() method: src/gateway/client.rs:217-312
+  - recv() method: src/gateway/client.rs:339-357
+  - Automatic heartbeat: src/gateway/client.rs:488-589
+- Build: ✅ PASSED
+- Tests: 728 passed, 5 failed (pre-existing docker/skills failures)
+- Skills compliance: Uses thiserror, tracing, tokio, no unwrap() in production
+- Notable: Excellent doc comments on all public methods
+
+#### story-006-01: Project Connection Management
+- **Status:** ✅ APPROVED
+- **Implementation:** Connection struct, ConnectionManager with HashMap, StaleConnectionDetector
+- All 3 acceptance criteria met:
+  - Track connections: Connection struct with project_id, session_id, subscriptions
+  - Multiple connections: HashMap with Arc<RwLock> for thread safety
+  - Stale detection: StaleConnectionDetector background task
+- Build: ✅ PASSED
+- Tests: All gateway::connections tests pass
+- Skills compliance: Uses thiserror, tracing, tokio, no unwrap() in production
+
+#### Common Patterns Observed
+
+1. **Pre-existing test failures:** 5 Docker/Skills test failures continue (unrelated to gateway stories)
+2. **Good implementations:** Both stories followed skill conventions - thiserror for errors, tracing for logging, tokio for async
+3. **No scope violations:** Both implementations only modified files in their scope
+
+#### Calibration Notes
+
+- Was appropriately lenient - both implementations are solid and meet all acceptance criteria
+- The 5 pre-existing Docker test failures are NOT blocking (documented)
+- Clippy warning in cli/commands/gateway.rs is pre-existing and unrelated to reviewed stories
+
+---
+
 ## 2026-03-03T16:50:00Z — Sprint 8 Reviews
 
 ### Review Session Notes
