@@ -1,10 +1,10 @@
 # DEV_TODO2 — Development Agent 2
 
 > Sprint: 12
-> Focus Area: PID File Management
+> Focus Area: PID File Management, Reconnection Logic
 > Last Updated: 2026-03-04
-> Total Points: 12 (5 done, 7 remaining) → 7 (2 done, 5 remaining before rebalancing)
-> ⚠️ Rebalanced by Sprint Planner on 2026-03-04: moved story-005-04 (2pts) and story-006-04 (2pts) to dev-1
+> Total Points: 12 (2 done, 10 remaining after rebalancing)
+> ⚠️ Rebalanced by Sprint Planner on 2026-03-04
 
 ## Orientation
 
@@ -35,6 +35,14 @@ Before starting any stories, read these files:
 
 ### Remaining Stories
 
+- [ ] **story-007-04**: Gateway Logging (2 pts) [REBALANCED from dev-1]
+  - 📄 Story: `.switchboard/state/stories/story-007-04-logging.md`
+  - 📚 Skills: `skills/rust-engineer/SKILL.md`, `skills/rust-engineer/references/async.md`
+  - ⚡ Pre-check: Build + tests pass
+  - ✅ Post-check: Build + tests pass, acceptance criteria met
+  - 🔒 Risk: Low
+  - 📝 Commit: `feat(dev2): [story-007-04] gateway logging`
+
 - [ ] **story-007-02**: Gateway Down CLI (2 pts)
   - 📄 Story: `.switchboard/state/stories/story-007-02-gateway-down-cli.md`
   - 📚 Skills: `skills/rust-engineer/SKILL.md`, `skills/rust-engineer/references/async.md`
@@ -50,6 +58,14 @@ Before starting any stories, read these files:
   - ✅ Post-check: Build + tests pass, acceptance criteria met
   - 🔒 Risk: Low
   - 📝 Commit: `feat(dev2): [story-007-03] PID file management`
+
+- [ ] **story-006-03**: Reconnection Logic (3 pts) [REBALANCED from backlog]
+  - 📄 Story: `.switchboard/state/stories/story-006-03-reconnection-logic.md`
+  - 📚 Skills: `skills/rust-engineer/SKILL.md`, `skills/rust-engineer/references/async.md`, `skills/rust-engineer/references/error-handling.md`
+  - ⚡ Pre-check: Build + tests pass
+  - ✅ Post-check: Build + tests pass, acceptance criteria met
+  - 🔒 Risk: Medium
+  - 📝 Commit: `feat(dev2): [story-006-03] reconnection logic`
 
 ---
 

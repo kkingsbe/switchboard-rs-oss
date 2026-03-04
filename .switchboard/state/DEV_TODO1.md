@@ -3,7 +3,7 @@
 > Sprint: 12
 > Focus Area: CLI Infrastructure (Docker Trait, Logging)
 > Last Updated: 2026-03-04
-> Total Points: 10 (5 done, 5 remaining) → 12 (5 done, 7 remaining after rebalancing)
+> Total Points: 12 (5 done, 7 remaining after rebalancing)
 > ⚠️ Rebalanced by Sprint Planner on 2026-03-04
 
 ## Orientation
@@ -35,7 +35,7 @@ Before starting any stories, read these files:
 
 ### Remaining Stories
 
-- [ ] **story-007-04**: Gateway Logging (2 pts)
+- [ ] **story-007-04**: Gateway Logging (2 pts) [REBALANCED to dev-2]
   - 📄 Story: `.switchboard/state/stories/story-007-04-logging.md`
   - 📚 Skills: `skills/rust-engineer/SKILL.md`, `skills/rust-engineer/references/async.md`
   - ⚡ Pre-check: Build + tests pass
