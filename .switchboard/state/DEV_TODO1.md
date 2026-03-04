@@ -1,9 +1,10 @@
 # DEV_TODO1 — Development Agent 1
 
 > Sprint: 12
-> Focus Area: CLI Infrastructure (PID file, logging, Docker Trait)
+> Focus Area: CLI Infrastructure (Docker Trait, Logging)
 > Last Updated: 2026-03-04
-> Total Points: 6 (3 + 3 rebalanced from dev-2)
+> Total Points: 5 (after rebalancing)
+> ⚠️ Rebalanced by Sprint Planner on 2026-03-04
 
 ## Orientation
 
@@ -14,14 +15,6 @@ Before starting any stories, read these files:
 
 ## Stories
 
-- [ ] **story-007-03**: PID File Management (1 pt)
-  - 📄 Story: `.switchboard/state/stories/story-007-03-pid-file.md`
-  - 📚 Skills: `skills/rust-best-practices/SKILL.md`
-  - ⚡ Pre-check: Build + tests pass
-  - ✅ Post-check: Build + tests pass, acceptance criteria met
-  - 🔒 Risk: Low
-  - 📝 Commit: `feat(dev1): [story-007-03] PID file management`
-
 - [ ] **story-007-04**: Gateway Logging (2 pts)
   - 📄 Story: `.switchboard/state/stories/story-007-04-logging.md`
   - 📚 Skills: `skills/rust-engineer/SKILL.md`, `skills/rust-engineer/references/async.md`
@@ -30,7 +23,7 @@ Before starting any stories, read these files:
   - 🔒 Risk: Low
   - 📝 Commit: `feat(dev1): [story-007-04] gateway logging`
 
-- [ ] **story-001-docker**: Docker Connection Trait (3 pts) [REBALANCED from dev-2]
+- [ ] **story-001-docker**: Docker Connection Trait (3 pts)
   - 📄 Story: `.switchboard/state/stories/story-001-docker-connection-trait.md`
   - 📚 Skills: `skills/rust-best-practices/SKILL.md`, `skills/rust-engineer/SKILL.md`
   - ⚡ Pre-check: Build + tests pass
