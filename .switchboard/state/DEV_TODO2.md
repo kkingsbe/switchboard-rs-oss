@@ -1,9 +1,9 @@
 # DEV_TODO2 — Development Agent 2
 
 > Sprint: 12
-> Focus Area: PID File Management, Reconnection Logic
+> Focus Area: Gateway Logging, Gateway Down CLI, PID File
 > Last Updated: 2026-03-04
-> Total Points: 12 (2 done, 10 remaining after rebalancing)
+> Total Points: 13 (2 done, 9 remaining after rebalancing)
 > ⚠️ Rebalanced by Sprint Planner on 2026-03-04
 
 ## Orientation
@@ -43,6 +43,22 @@ Before starting any stories, read these files:
   - 🔒 Risk: Low
   - 📝 Commit: `feat(dev2): [story-007-04] gateway logging`
 
+- [ ] **story-005-04**: Runtime Channel Subscribe (2 pts) [REBALANCED from dev-1]
+  - 📄 Story: `.switchboard/state/stories/story-005-04-runtime-channel-subscribe.md`
+  - 📚 Skills: `skills/rust-engineer/SKILL.md`, `skills/rust-engineer/references/async.md`
+  - ⚡ Pre-check: Build + tests pass
+  - ✅ Post-check: Build + tests pass, acceptance criteria met
+  - 🔒 Risk: Medium
+  - 📝 Commit: `feat(dev2): [story-005-04] runtime channel subscribe`
+
+- [ ] **story-006-04**: Handle Disconnections (2 pts) [REBALANCED from dev-1]
+  - 📄 Story: `.switchboard/state/stories/story-006-04-handle-disconnections.md`
+  - 📚 Skills: `skills/rust-engineer/SKILL.md`, `skills/rust-engineer/references/async.md`
+  - ⚡ Pre-check: Build + tests pass
+  - ✅ Post-check: Build + tests pass, acceptance criteria met
+  - 🔒 Risk: Medium
+  - 📝 Commit: `feat(dev2): [story-006-04] handle disconnections`
+
 - [ ] **story-007-02**: Gateway Down CLI (2 pts)
   - 📄 Story: `.switchboard/state/stories/story-007-02-gateway-down-cli.md`
   - 📚 Skills: `skills/rust-engineer/SKILL.md`, `skills/rust-engineer/references/async.md`
@@ -58,14 +74,6 @@ Before starting any stories, read these files:
   - ✅ Post-check: Build + tests pass, acceptance criteria met
   - 🔒 Risk: Low
   - 📝 Commit: `feat(dev2): [story-007-03] PID file management`
-
-- [ ] **story-006-03**: Reconnection Logic (3 pts) [REBALANCED from backlog]
-  - 📄 Story: `.switchboard/state/stories/story-006-03-reconnection-logic.md`
-  - 📚 Skills: `skills/rust-engineer/SKILL.md`, `skills/rust-engineer/references/async.md`, `skills/rust-engineer/references/error-handling.md`
-  - ⚡ Pre-check: Build + tests pass
-  - ✅ Post-check: Build + tests pass, acceptance criteria met
-  - 🔒 Risk: Medium
-  - 📝 Commit: `feat(dev2): [story-006-03] reconnection logic`
 
 ---
 

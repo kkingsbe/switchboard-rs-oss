@@ -3,7 +3,7 @@
 > Sprint: 12
 > Focus Area: CLI Infrastructure (Docker Trait, Logging)
 > Last Updated: 2026-03-04
-> Total Points: 12 (5 done, 7 remaining after rebalancing)
+> Total Points: 13 (5 done, 8 remaining after rebalancing)
 > ⚠️ Rebalanced by Sprint Planner on 2026-03-04
 
 ## Orientation
@@ -35,14 +35,6 @@ Before starting any stories, read these files:
 
 ### Remaining Stories
 
-- [ ] **story-007-04**: Gateway Logging (2 pts) [REBALANCED to dev-2]
-  - 📄 Story: `.switchboard/state/stories/story-007-04-logging.md`
-  - 📚 Skills: `skills/rust-engineer/SKILL.md`, `skills/rust-engineer/references/async.md`
-  - ⚡ Pre-check: Build + tests pass
-  - ✅ Post-check: Build + tests pass, acceptance criteria met
-  - 🔒 Risk: Low
-  - 📝 Commit: `feat(dev1): [story-007-04] gateway logging`
-
 - [ ] **story-001-docker-connection-trait**: Docker Connection Trait (3 pts)
   - 📄 Story: `.switchboard/state/stories/story-001-docker-connection-trait.md`
   - 📚 Skills: `skills/rust-best-practices/SKILL.md`, `skills/rust-engineer/SKILL.md`
@@ -51,14 +43,6 @@ Before starting any stories, read these files:
   - 🔒 Risk: Low
   - 📝 Commit: `feat(dev1): [story-001-docker-connection-trait] Docker connection trait`
 
-- [ ] **story-005-04**: Runtime Channel Subscribe (2 pts) [REBALANCED from dev-2]
-  - 📄 Story: `.switchboard/state/stories/story-005-04-runtime-channel-subscribe.md`
-  - 📚 Skills: `skills/rust-engineer/SKILL.md`, `skills/rust-engineer/references/async.md`
-  - ⚡ Pre-check: Build + tests pass
-  - ✅ Post-check: Build + tests pass, acceptance criteria met
-  - 🔒 Risk: Medium
-  - 📝 Commit: `feat(dev1): [story-005-04] runtime channel subscribe`
-
 - [ ] **story-006-04**: Handle Disconnections (2 pts) [REBALANCED from dev-2]
   - 📄 Story: `.switchboard/state/stories/story-006-04-handle-disconnections.md`
   - 📚 Skills: `skills/rust-engineer/SKILL.md`, `skills/rust-engineer/references/async.md`
@@ -66,6 +50,14 @@ Before starting any stories, read these files:
   - ✅ Post-check: Build + tests pass, acceptance criteria met
   - 🔒 Risk: Medium
   - 📝 Commit: `feat(dev1): [story-006-04] handle disconnections`
+
+- [ ] **story-006-03**: Reconnection Logic (3 pts) [REBALANCED from dev-2]
+  - 📄 Story: `.switchboard/state/stories/story-006-03-reconnection-logic.md`
+  - 📚 Skills: `skills/rust-engineer/SKILL.md`, `skills/rust-engineer/references/async.md`, `skills/rust-engineer/references/error-handling.md`
+  - ⚡ Pre-check: Build + tests pass
+  - ✅ Post-check: Build + tests pass, acceptance criteria met
+  - 🔒 Risk: Medium
+  - 📝 Commit: `feat(dev1): [story-006-03] reconnection logic`
 
 ---
 

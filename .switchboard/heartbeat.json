@@ -1,12 +1,12 @@
 {
   "pid": 46632,
-  "last_heartbeat": "2026-03-04T07:52:28.138067200+00:00",
+  "last_heartbeat": "2026-03-04T09:12:28.908505300+00:00",
   "state": "running",
   "agents": [
     {
       "name": "sb-sprint-planner",
       "schedule": "5,35 * * * *",
-      "current_run": null
+      "current_run": "starting"
     },
     {
       "name": "sb-dev-1",
