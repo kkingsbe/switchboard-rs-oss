@@ -66,6 +66,39 @@ pub enum GatewayMessage {
         /// Unix timestamp matching the acknowledged heartbeat
         timestamp: u64,
     },
+
+    /// Subscribe to additional channels at runtime
+    ///
+    /// Sent by a project to subscribe to additional channels beyond
+    /// those specified during registration.
+    ChannelSubscribe {
+        /// List of channel names to subscribe to
+        channels: Vec<String>,
+    },
+
+    /// Acknowledge channel subscription
+    ///
+    /// Sent by the gateway in response to a ChannelSubscribe message.
+    ChannelSubscribeAck {
+        /// Status of the subscription (e.g., "ok")
+        status: String,
+    },
+
+    /// Unsubscribe from channels at runtime
+    ///
+    /// Sent by a project to unsubscribe from specific channels.
+    ChannelUnsubscribe {
+        /// List of channel names to unsubscribe from
+        channels: Vec<String>,
+    },
+
+    /// Acknowledge channel unsubscription
+    ///
+    /// Sent by the gateway in response to a ChannelUnsubscribe message.
+    ChannelUnsubscribeAck {
+        /// Status of the unsubscription (e.g., "ok")
+        status: String,
+    },
 }
 
 #[cfg(test)]
@@ -180,6 +213,77 @@ mod tests {
             serde_json::from_str(&json).expect("Failed to deserialize HeartbeatAck");
         assert!(
             matches!(deserialized, GatewayMessage::HeartbeatAck { timestamp, .. } if timestamp == 1700000000)
+        );
+    }
+
+    /// Test ChannelSubscribe serialization and deserialization roundtrip
+    #[test]
+    fn should_serialize_and_deserialize_channel_subscribe() {
+        let msg = GatewayMessage::ChannelSubscribe {
+            channels: vec!["channel1".to_string(), "channel2".to_string()],
+        };
+        let json = serde_json::to_string(&msg).expect("Failed to serialize ChannelSubscribe");
+        assert!(json.contains("\"type\":\"channel_subscribe\""));
+        assert!(json.contains("\"channels\":"));
+        let deserialized: GatewayMessage =
+            serde_json::from_str(&json).expect("Failed to deserialize ChannelSubscribe");
+        assert!(
+            matches!(deserialized, GatewayMessage::ChannelSubscribe { channels, .. } 
+            if channels.len() == 2
+            && channels[0] == "channel1"
+            && channels[1] == "channel2")
+        );
+    }
+
+    /// Test ChannelSubscribeAck serialization and deserialization roundtrip
+    #[test]
+    fn should_serialize_and_deserialize_channel_subscribe_ack() {
+        let msg = GatewayMessage::ChannelSubscribeAck {
+            status: "ok: subscribed to 2 channels".to_string(),
+        };
+        let json = serde_json::to_string(&msg).expect("Failed to serialize ChannelSubscribeAck");
+        assert!(json.contains("\"type\":\"channel_subscribe_ack\""));
+        assert!(json.contains("\"status\":\"ok: subscribed to 2 channels\""));
+        let deserialized: GatewayMessage =
+            serde_json::from_str(&json).expect("Failed to deserialize ChannelSubscribeAck");
+        assert!(
+            matches!(deserialized, GatewayMessage::ChannelSubscribeAck { status, .. } 
+            if status == "ok: subscribed to 2 channels")
+        );
+    }
+
+    /// Test ChannelUnsubscribe serialization and deserialization roundtrip
+    #[test]
+    fn should_serialize_and_deserialize_channel_unsubscribe() {
+        let msg = GatewayMessage::ChannelUnsubscribe {
+            channels: vec!["channel1".to_string()],
+        };
+        let json = serde_json::to_string(&msg).expect("Failed to serialize ChannelUnsubscribe");
+        assert!(json.contains("\"type\":\"channel_unsubscribe\""));
+        assert!(json.contains("\"channels\":"));
+        let deserialized: GatewayMessage =
+            serde_json::from_str(&json).expect("Failed to deserialize ChannelUnsubscribe");
+        assert!(
+            matches!(deserialized, GatewayMessage::ChannelUnsubscribe { channels, .. } 
+            if channels.len() == 1
+            && channels[0] == "channel1")
+        );
+    }
+
+    /// Test ChannelUnsubscribeAck serialization and deserialization roundtrip
+    #[test]
+    fn should_serialize_and_deserialize_channel_unsubscribe_ack() {
+        let msg = GatewayMessage::ChannelUnsubscribeAck {
+            status: "ok: unsubscribed from 1 channels".to_string(),
+        };
+        let json = serde_json::to_string(&msg).expect("Failed to serialize ChannelUnsubscribeAck");
+        assert!(json.contains("\"type\":\"channel_unsubscribe_ack\""));
+        assert!(json.contains("\"status\":\"ok: unsubscribed from 1 channels\""));
+        let deserialized: GatewayMessage =
+            serde_json::from_str(&json).expect("Failed to deserialize ChannelUnsubscribeAck");
+        assert!(
+            matches!(deserialized, GatewayMessage::ChannelUnsubscribeAck { status, .. } 
+            if status == "ok: unsubscribed from 1 channels")
         );
     }
 }

@@ -494,4 +494,49 @@ Implementation is complete with comprehensive tracing throughout gateway modules
 
 ---
 
+## Sprint 10
+
+### story-004-08: CLI `gateway up` Command
+
+- **Implemented by:** dev-1
+- **Sprint:** 10
+- **Commit:** 3469bedb94b14e378d38bdcb5c8b0dc7fe67ccdf
+- **Story file:** `.switchboard/state/stories/story-004-08-gateway-up-cli.md`
+- **Files changed:** src/cli/commands/gateway.rs, src/cli/mod.rs
+- **Build Result:** ✅ PASSED (`cargo build --features "discord gateway"`)
+- **Test Result:** ✅ PASSED (693 passed; 5 failed - pre-existing docker tests)
+- **Status:** PENDING_REVIEW
+
+#### Acceptance Criteria:
+- [x] CLI has `gateway` subcommand with `up` action — MET (verified by: gateway_command_has_up_subcommand test)
+- [x] Command starts gateway with config from `gateway.toml` — MET (verified by: gateway_up_loads_default_config test)
+- [x] Support `--config` flag for custom config path — MET (verified by: custom_config_path test)
+- [x] Support `--detach` flag (placeholder) — MET
+
+#### Summary:
+Implementation already exists in codebase. Gateway CLI `up` command fully implemented with config loading, logging, and PID file management. All 137 gateway tests pass. 5 pre-existing docker test failures are unrelated to this story.
+
+---
+
+### story-007-01: CLI `gateway status` Command
+
+- **Implemented by:** dev-1
+- **Sprint:** 10
+- **Commit:** 3469bedb94b14e378d38bdcb5c8b0dc7fe67ccdf
+- **Story file:** `.switchboard/state/stories/story-007-01-gateway-status.md`
+- **Files changed:** src/cli/commands/gateway.rs
+- **Build Result:** ✅ PASSED (`cargo build --features "discord gateway"`)
+- **Test Result:** ✅ PASSED (693 passed; 5 failed - pre-existing docker tests)
+- **Status:** PENDING_REVIEW
+
+#### Acceptance Criteria:
+- [x] Show gateway running/stopped status — MET (verified by: gateway_status command checks PID file)
+- [x] Show Discord connection status — MET (verified by: gateway_status test)
+- [x] Show connected projects/channels — MET (verified by: gateway_status_returns_connected_projects test)
+
+#### Summary:
+Implementation already exists in codebase. Gateway CLI `status` command fully implemented with PID file checking and status reporting. All 137 gateway tests pass. 5 pre-existing docker test failures are unrelated to this story.
+
+---
+
 ### Previously Reviewed

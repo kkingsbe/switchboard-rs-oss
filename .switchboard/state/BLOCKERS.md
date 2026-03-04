@@ -13,3 +13,20 @@
   
 - **Impact:** Tests failing in unrelated module prevent dev-2 from completing AGENT QA verification phase
 - **Note:** Build passes. Gateway stories (ChannelRegistry, Config Validation) implemented by dev-2 do not touch Docker module.
+
+---
+
+### BLOCKER: [Sprint 10] Pre-existing Test Failures
+
+- **Agent:** dev-1
+- **Date:** 2026-03-04
+- **Type:** test-failure
+- **Description:** 5 pre-existing test failures in docker/skills modules, unrelated to dev-1's gateway CLI stories (story-004-08, story-007-01). Failures are in:
+  - docker::build::tests::test_kilocode_included_in_build_context_tarball
+  - docker::run::run::tests::test_skill_install_logs_are_distinguishable_from_agent_logs
+  - docker::run::run::tests::test_skill_install_stderr_has_distinct_prefix
+  - docker::run::run::tests::test_skill_install_success_log_has_prefix
+  - docker::skills::tests::test_generate_entrypoint_script_skill_not_in_preexisting_list
+
+- **Impact:** Tests fail (693 pass, 5 fail), but build passes. These appear to be regressions from dev-2's stories (story-004-05, story-005-03).
+- **Verification:** Build: `cargo build --features "discord gateway"` ✅ passes. Tests: `cargo test --lib --features "discord gateway"` shows 693 pass, 5 fail.

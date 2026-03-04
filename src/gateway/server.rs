@@ -151,6 +151,9 @@ async fn ws_handler(
 async fn handle_websocket(socket: WebSocket, state: AppState) {
     let (mut sender, mut receiver) = socket.split();
 
+    // Track the project_id after successful registration
+    let mut project_id: Option<String> = None;
+
     // Process incoming messages
     while let Some(msg_result) = receiver.next().await {
         match msg_result {
@@ -189,14 +192,14 @@ async fn handle_websocket(socket: WebSocket, state: AppState) {
                                 }
 
                                 // Generate a unique project ID
-                                let project_id = Uuid::new_v4().to_string();
+                                let new_project_id = Uuid::new_v4().to_string();
 
                                 // Create a channel for sending messages to this client
                                 let (tx, _rx) = mpsc::channel::<String>(100);
 
                                 // Create project connection
                                 let project = ProjectConnection::new(
-                                    project_id.clone(),
+                                    new_project_id.clone(),
                                     project_name.clone(),
                                     tx,
                                 );
@@ -206,6 +209,9 @@ async fn handle_websocket(socket: WebSocket, state: AppState) {
                                 let registry = state.registry.clone();
                                 match registry.register(project, channels).await {
                                     Ok(()) => {
+                                        // Store the project_id for subsequent message handling
+                                        project_id = Some(new_project_id.clone());
+
                                         // Send success acknowledgment
                                         let ack = GatewayMessage::RegisterAck {
                                             status: "ok".to_string(),
@@ -232,6 +238,108 @@ async fn handle_websocket(socket: WebSocket, state: AppState) {
                                     }
                                 }
                             }
+
+                            // Handle channel subscribe messages
+                            // Handle channel subscribe messages
+                            GatewayMessage::ChannelSubscribe { channels } => {
+                                // Check if project is registered
+                                let Some(ref pid) = project_id else {
+                                    let error_response = GatewayMessage::RegisterError {
+                                        error: "Project not registered".to_string(),
+                                    };
+                                    if let Ok(response) = serde_json::to_string(&error_response) {
+                                        let _ = sender.send(Message::Text(response)).await;
+                                    }
+                                    continue;
+                                };
+
+                                // Validate channels is not empty
+                                if channels.is_empty() {
+                                    let error_response = GatewayMessage::ChannelSubscribeAck {
+                                        status: "error: no channels specified".to_string(),
+                                    };
+                                    if let Ok(response) = serde_json::to_string(&error_response) {
+                                        let _ = sender.send(Message::Text(response)).await;
+                                    }
+                                    continue;
+                                }
+
+                                // Add channel subscriptions
+                                let registry = state.registry.clone();
+                                let mut errors = Vec::new();
+                                for channel in &channels {
+                                    match registry.add_channel_subscription(pid, channel).await {
+                                        Ok(()) => {}
+                                        Err(e) => errors.push(e.to_string()),
+                                    }
+                                }
+
+                                // Send acknowledgment
+                                let status = if errors.is_empty() {
+                                    format!("ok: subscribed to {} channels", channels.len())
+                                } else {
+                                    format!("error: {}", errors.join(", "))
+                                };
+                                let ack = GatewayMessage::ChannelSubscribeAck { status };
+                                if let Ok(response) = serde_json::to_string(&ack) {
+                                    if sender.send(Message::Text(response)).await.is_err() {
+                                        warn!(target: "gateway::server", "Failed to send subscribe ack, client disconnected");
+                                        break;
+                                    }
+                                }
+                                info!(target: "gateway::server", "Channel subscribe processed for project {}", pid);
+                            }
+
+                            // Handle channel unsubscribe messages
+                            GatewayMessage::ChannelUnsubscribe { channels } => {
+                                // Check if project is registered
+                                let Some(ref pid) = project_id else {
+                                    let error_response = GatewayMessage::RegisterError {
+                                        error: "Project not registered".to_string(),
+                                    };
+                                    if let Ok(response) = serde_json::to_string(&error_response) {
+                                        let _ = sender.send(Message::Text(response)).await;
+                                    }
+                                    continue;
+                                };
+
+                                // Validate channels is not empty
+                                if channels.is_empty() {
+                                    let error_response = GatewayMessage::ChannelUnsubscribeAck {
+                                        status: "error: no channels specified".to_string(),
+                                    };
+                                    if let Ok(response) = serde_json::to_string(&error_response) {
+                                        let _ = sender.send(Message::Text(response)).await;
+                                    }
+                                    continue;
+                                }
+
+                                // Remove channel subscriptions
+                                let registry = state.registry.clone();
+                                let mut errors = Vec::new();
+                                for channel in &channels {
+                                    match registry.remove_channel_subscription(pid, channel).await {
+                                        Ok(()) => {}
+                                        Err(e) => errors.push(e.to_string()),
+                                    }
+                                }
+
+                                // Send acknowledgment
+                                let status = if errors.is_empty() {
+                                    format!("ok: unsubscribed from {} channels", channels.len())
+                                } else {
+                                    format!("error: {}", errors.join(", "))
+                                };
+                                let ack = GatewayMessage::ChannelUnsubscribeAck { status };
+                                if let Ok(response) = serde_json::to_string(&ack) {
+                                    if sender.send(Message::Text(response)).await.is_err() {
+                                        warn!(target: "gateway::server", "Failed to send unsubscribe ack, client disconnected");
+                                        break;
+                                    }
+                                }
+                                info!(target: "gateway::server", "Channel unsubscribe processed for project {}", pid);
+                            }
+
                             // Echo other message types back to the client
                             _ => match serde_json::to_string(&gateway_msg) {
                                 Ok(response) => {
@@ -1232,6 +1340,132 @@ mod tests {
                 && channels[0] == "general"
                 && channels[1] == "random"
             ));
+        }
+
+        /// Test that ChannelSubscribe message can be parsed from JSON
+        #[test]
+        fn should_parse_channel_subscribe_message() {
+            let json = r#"{"type":"channel_subscribe","channels":["general","random"]}"#;
+            let msg: GatewayMessage = serde_json::from_str(json).expect("Failed to parse");
+
+            assert!(matches!(
+                msg,
+                GatewayMessage::ChannelSubscribe { channels }
+                if channels.len() == 2
+                && channels[0] == "general"
+                && channels[1] == "random"
+            ));
+        }
+
+        /// Test that ChannelUnsubscribe message can be parsed from JSON
+        #[test]
+        fn should_parse_channel_unsubscribe_message() {
+            let json = r#"{"type":"channel_unsubscribe","channels":["general"]}"#;
+            let msg: GatewayMessage = serde_json::from_str(json).expect("Failed to parse");
+
+            assert!(matches!(
+                msg,
+                GatewayMessage::ChannelUnsubscribe { channels }
+                if channels.len() == 1
+                && channels[0] == "general"
+            ));
+        }
+
+        /// Test that ChannelSubscribeAck can be parsed from JSON
+        #[test]
+        fn should_parse_channel_subscribe_ack_message() {
+            let json = r#"{"type":"channel_subscribe_ack","status":"ok: subscribed to 2 channels"}"#;
+            let msg: GatewayMessage = serde_json::from_str(json).expect("Failed to parse");
+
+            assert!(matches!(
+                msg,
+                GatewayMessage::ChannelSubscribeAck { status }
+                if status == "ok: subscribed to 2 channels"
+            ));
+        }
+
+        /// Test that ChannelUnsubscribeAck can be parsed from JSON
+        #[test]
+        fn should_parse_channel_unsubscribe_ack_message() {
+            let json = r#"{"type":"channel_unsubscribe_ack","status":"ok: unsubscribed from 1 channels"}"#;
+            let msg: GatewayMessage = serde_json::from_str(json).expect("Failed to parse");
+
+            assert!(matches!(
+                msg,
+                GatewayMessage::ChannelUnsubscribeAck { status }
+                if status == "ok: unsubscribed from 1 channels"
+            ));
+        }
+    }
+
+    /// Integration tests for channel subscribe/unsubscribe flow
+    mod channel_subscription {
+        use super::*;
+
+        /// Test that channel subscribe updates registry correctly
+        #[tokio::test]
+        async fn should_add_channel_subscription_to_registry() {
+            let registry = ChannelRegistry::new();
+            let project_id = "test-project-1".to_string();
+
+            // Add initial project with one channel
+            let project = ProjectConnection::new(
+                project_id.clone(),
+                "test-project".to_string(),
+                tokio::sync::mpsc::channel::<String>(10).0,
+            );
+            registry
+                .register(project, vec!["channel1".to_string()])
+                .await
+                .expect("Failed to register project");
+
+            // Add subscription to a new channel
+            registry
+                .add_channel_subscription(&project_id, "channel2")
+                .await
+                .expect("Failed to add channel subscription");
+
+            // Verify the channel was added
+            let project = registry
+                .get_project(&project_id)
+                .await
+                .expect("Project not found");
+            assert!(project.subscribed_channels.contains(&"channel2".to_string()));
+        }
+
+        /// Test that channel unsubscribe removes from registry correctly
+        #[tokio::test]
+        async fn should_remove_channel_subscription_from_registry() {
+            let registry = ChannelRegistry::new();
+            let project_id = "test-project-2".to_string();
+
+            // Add initial project with two channels
+            let project = ProjectConnection::new(
+                project_id.clone(),
+                "test-project".to_string(),
+                tokio::sync::mpsc::channel::<String>(10).0,
+            );
+            registry
+                .register(
+                    project,
+                    vec!["channel1".to_string(), "channel2".to_string()],
+                )
+                .await
+                .expect("Failed to register project");
+
+            // Remove subscription from channel1
+            registry
+                .remove_channel_subscription(&project_id, "channel1")
+                .await
+                .expect("Failed to remove channel subscription");
+
+            // Verify the channel was removed
+            let project = registry
+                .get_project(&project_id)
+                .await
+                .expect("Project not found");
+            assert!(!project.subscribed_channels.contains(&"channel1".to_string()));
+            assert!(project.subscribed_channels.contains(&"channel2".to_string()));
         }
     }
 }

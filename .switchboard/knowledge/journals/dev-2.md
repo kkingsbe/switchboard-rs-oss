@@ -86,3 +86,13 @@
 - Added retry_after_secs field to ChannelState to properly handle 429 responses
 - Tests: all gateway::ratelimit tests now pass (10/10)
 - Pre-existing docker/skills test failures (9) are unrelated to this sprint's work
+
+### 2026-03-04 — Sprint 10, Stories: [005-03]
+
+- Story 005-03 (Route Messages by Channel) completed and queued for review
+- Build passes successfully with `cargo build --features "discord gateway"`
+- Test suite: 698 tests run, 693 passed, 5 failed (pre-existing Docker module failures)
+- Pre-existing test failures documented in BLOCKERS.md - unrelated to current story
+- AGENT QA: Unable to get fully green tests due to pre-existing Docker module failures
+- Dev-1 still has pending work (story-006-01 rework + 2 stories), so sprint won't complete yet
+- Story involved integrating MessageRouter with Discord events in src/gateway/server.rs

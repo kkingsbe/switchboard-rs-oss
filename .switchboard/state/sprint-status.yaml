@@ -2,13 +2,30 @@
 
 ## Current Sprint
 
-**Sprint**: 10  
+**Sprint**: 11  
 **Start Date**: 2026-03-03  
 **End Date**: 2026-03-17
 
 ---
 
-## Sprint 10 Stories
+## Sprint 11 Stories
+
+### In Progress
+
+| Story | Points | Status | Assigned To |
+|-------|--------|--------|-------------|
+| story-004-08 (CLI gateway up) | 3 | In Progress (Sprint 11) | dev-1 |
+| story-005-04 (Runtime Channel Subscribe/Unsubscribe) | 2 | In Progress (Sprint 11) | dev-2 |
+| story-006-02 (Heartbeat Protocol) | 2 | In Progress (Sprint 11) | dev-2 |
+| story-006-04 (Handle Disconnections) | 2 | In Progress (Sprint 11) | dev-2 |
+| story-007-01 (Gateway status) | 2 | In Progress (Sprint 11) | dev-1 |
+| story-007-02 (Gateway Down CLI) | 2 | In Progress (Sprint 11) | dev-2 |
+
+**Sprint 11 Total**: 13 points (dev-1: 5 pts, dev-2: 8 pts)
+
+---
+
+## Sprint 10 Stories (Archived)
 
 ### In Progress
 
@@ -16,9 +33,13 @@
 |-------|--------|--------|-------------|
 | story-004-08 (CLI gateway up) | 3 | In Progress | dev-1 |
 | story-005-03 (Route messages by channel) | 3 | Complete (APPROVED 2026-03-03) | dev-2 |
+| story-005-04 (Runtime Channel Subscribe/Unsubscribe) | 2 | In Progress (Sprint 10) | dev-2 |
+| story-006-02 (Heartbeat Protocol) | 2 | In Progress (Sprint 10) | dev-2 |
+| story-006-04 (Handle Disconnections) | 2 | In Progress (Sprint 10) | dev-2 |
 | story-007-01 (Gateway status) | 2 | In Progress | dev-1 |
+| story-007-02 (Gateway Down CLI) | 2 | In Progress (Sprint 10) | dev-2 |
 
-**Sprint 10 Total**: 8 points (dev-1: 5 pts, dev-2: 3 pts)
+**Sprint 10 Total**: 16 points (dev-1: 5 pts, dev-2: 11 pts)
 
 ---
 

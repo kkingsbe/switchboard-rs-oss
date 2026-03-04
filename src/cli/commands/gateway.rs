@@ -4,6 +4,7 @@
 //! the Discord Gateway service.
 
 use crate::gateway::config::{GatewayConfig, GatewayConfigError};
+use crate::gateway::pid::{PidFile, PidFileError};
 use crate::gateway::server::GatewayServer;
 use clap::{Parser, Subcommand};
 use std::fs;
@@ -51,6 +52,8 @@ pub struct GatewayCommand {
 pub enum GatewaySubcommand {
     /// Start the gateway server
     Up(GatewayUpArgs),
+    /// Check gateway status
+    Status(GatewayStatusArgs),
 }
 
 /// Arguments for the gateway up command.
@@ -65,6 +68,15 @@ pub struct GatewayUpArgs {
     /// Note: This is a placeholder for future implementation.
     #[arg(long)]
     pub detach: bool,
+}
+
+/// Arguments for the gateway status command.
+#[derive(Parser)]
+#[command(about = "Check gateway status")]
+pub struct GatewayStatusArgs {
+    /// Path to the gateway configuration file (default: gateway.toml)
+    #[arg(short, long, value_name = "PATH", default_value = "gateway.toml")]
+    pub config: String,
 }
 
 /// Default log file path for gateway.
@@ -164,6 +176,7 @@ fn init_file_logging(log_file: &Option<String>) -> Result<WorkerGuard, GatewayCo
 pub async fn run_gateway(args: GatewayCommand) -> Result<(), Box<dyn std::error::Error>> {
     match args.subcommand {
         GatewaySubcommand::Up(up_args) => run_gateway_up(up_args).await,
+        GatewaySubcommand::Status(status_args) => run_gateway_status(status_args).await,
     }
 }
 
@@ -211,6 +224,53 @@ async fn run_gateway_up(args: GatewayUpArgs) -> Result<(), Box<dyn std::error::E
     Ok(())
 }
 
+/// Run the gateway status subcommand.
+///
+/// This function checks if the gateway is currently running by checking
+/// the PID file and verifying the process.
+///
+/// # Arguments
+///
+/// * `args` - The [`GatewayStatusArgs`] containing CLI arguments
+///
+/// # Returns
+///
+/// Returns `Ok(())` on success, or an error if:
+/// - Configuration file validation fails
+/// - PID file check fails unexpectedly
+async fn run_gateway_status(args: GatewayStatusArgs) -> Result<(), Box<dyn std::error::Error>> {
+    let config_path = &args.config;
+
+    // Validate config path exists (optional - we can still check status without it)
+    let path = Path::new(config_path);
+    if !path.exists() {
+        tracing::warn!(
+            "Configuration file not found: {}, will check PID file anyway",
+            config_path
+        );
+    }
+
+    // Check if gateway is running using PID file
+    let pid_path = PidFile::default_path();
+
+    match PidFile::check_existing(&pid_path) {
+        Ok(()) => {
+            println!("Gateway is not running");
+        }
+        Err(PidFileError::AlreadyRunning(pid)) => {
+            println!("Gateway is running (PID: {})", pid);
+        }
+        Err(e) => {
+            // For other errors (like IO errors), we'll still report not running
+            // but log the error
+            tracing::debug!("PID file check error: {}, reporting not running", e);
+            println!("Gateway is not running");
+        }
+    }
+
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -225,6 +285,7 @@ mod tests {
                 assert_eq!(args.config, "gateway.toml");
                 assert!(!args.detach);
             }
+            GatewaySubcommand::Status(_) => unreachable!("Expected Up subcommand"),
         }
     }
 
@@ -235,6 +296,7 @@ mod tests {
             GatewaySubcommand::Up(args) => {
                 assert_eq!(args.config, "custom.toml");
             }
+            GatewaySubcommand::Status(_) => unreachable!("Expected Up subcommand"),
         }
     }
 
@@ -245,6 +307,7 @@ mod tests {
             GatewaySubcommand::Up(args) => {
                 assert!(args.detach);
             }
+            GatewaySubcommand::Status(_) => unreachable!("Expected Up subcommand"),
         }
     }
 
@@ -253,6 +316,40 @@ mod tests {
         let args = GatewayUpArgs::parse_from(["up"]);
         assert_eq!(args.config, "gateway.toml");
         assert!(!args.detach);
+    }
+
+    #[test]
+    fn test_gateway_status_args_defaults() {
+        let args = GatewayStatusArgs::parse_from(["status"]);
+        assert_eq!(args.config, "gateway.toml");
+    }
+
+    #[test]
+    fn test_gateway_status_args_with_custom_config() {
+        let args = GatewayStatusArgs::parse_from(["status", "--config", "custom.toml"]);
+        assert_eq!(args.config, "custom.toml");
+    }
+
+    #[test]
+    fn test_gateway_status_command_parsing() {
+        let cmd = GatewayCommand::parse_from(["gateway", "status"]);
+        match cmd.subcommand {
+            GatewaySubcommand::Status(args) => {
+                assert_eq!(args.config, "gateway.toml");
+            }
+            GatewaySubcommand::Up(_) => unreachable!("Expected Status subcommand"),
+        }
+    }
+
+    #[test]
+    fn test_gateway_status_command_with_config() {
+        let cmd = GatewayCommand::parse_from(["gateway", "status", "--config", "custom.toml"]);
+        match cmd.subcommand {
+            GatewaySubcommand::Status(args) => {
+                assert_eq!(args.config, "custom.toml");
+            }
+            GatewaySubcommand::Up(_) => unreachable!("Expected Status subcommand"),
+        }
     }
 
     #[test]
