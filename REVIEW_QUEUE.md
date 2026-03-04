@@ -10,33 +10,24 @@
 
 ## CHANGES_REQUESTED
 
-### story-007-02: Gateway Down CLI
-- **Status**: CHANGES_REQUESTED
-- **Reviewed by**: code-reviewer
-- **Review date**: 2026-03-04T06:34:00Z
-- **Acceptance Criteria**:
-  - [x] Gateway stops gracefully — MET: Implemented with SIGTERM and configurable timeout
-  - [x] Connected projects notified of shutdown — MET: SIGTERM triggers graceful shutdown
-  - [x] CLI available — MET: `gateway down` command shows in CLI help
-  - [ ] Code compiles without warnings — NOT MET: 6 clippy errors in gateway.rs
-- **Must Fix**:
-  1. Clippy error at src/cli/commands/gateway.rs:408
-     - Current: `.ok_or_else(|| GatewayCommandError::NotRunning)?`
-     - Expected: `.ok_or(GatewayCommandError::NotRunning)?`
-     - Why: Per project context and rust-best-practices skill, clippy must pass with `-D warnings`
-  2. Clippy error at src/cli/commands/gateway.rs:411
-     - Current: `.map_err(|e| GatewayCommandError::IoError(e))`
-     - Expected: `GatewayCommandError::IoError`
-     - Why: Per rust-best-practices skill, use tuple variant directly instead of redundant closure
-  3. Clippy errors at src/cli/commands/gateway.rs:487, 489, 493, 502
-     - Current: `return Ok(());` / `return Err(...)`
-     - Expected: `Ok(())` / `Err(...)` (remove unnecessary return statements)
-     - Why: Per rust-best-practices skill, unneeded return statements should be removed
-- **Requeue Instructions**: Fix all 6 clippy errors in src/cli/commands/gateway.rs and re-queue for review
+*(None)*
 
 ---
 
 ## APPROVED
+
+### story-007-02: Gateway Down CLI
+- **Status**: ✅ APPROVED
+- **Reviewed by**: code-reviewer
+- **Review date**: 2026-03-04T07:27:00Z
+- **Acceptance Criteria**:
+  - [x] Gateway stops gracefully — MET: Implemented with SIGTERM and configurable timeout (default 30s)
+  - [x] Connected projects notified of shutdown — MET: SIGTERM triggers graceful shutdown via axum's with_graceful_shutdown()
+  - [x] CLI available — MET: `gateway down` command shows in CLI help with --timeout and --force options
+  - [x] Code compiles without warnings — MET: All 6 clippy errors in gateway.rs have been resolved
+- **Findings**:
+  - NICE TO HAVE: Consider adding integration test for actual gateway shutdown flow
+- **Summary**: Implementation complete. Gateway down command sends SIGTERM with configurable timeout (default 30s), supports --force flag for hard kill. All 162 gateway tests pass. Clippy passes for lib and bins. Uses thiserror for error handling per skill conventions.
 
 ### story-006-04: Handle Disconnections
 - **Status**: ✅ APPROVED

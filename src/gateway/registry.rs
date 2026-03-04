@@ -8,8 +8,8 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use thiserror::Error;
 use tokio::sync::{mpsc, RwLock};
-use tracing::{debug, info, warn};
 use tracing::instrument;
+use tracing::{debug, info, warn};
 use uuid::Uuid;
 
 /// Type alias for project ID
@@ -109,7 +109,11 @@ impl ChannelRegistry {
     /// Register a project with the gateway and subscribe to channels
     ///
     /// If the project is already registered, updates its channel subscriptions.
-    #[instrument(name = "registry_register", skip(self, project, channels), fields(project_id, project_name))]
+    #[instrument(
+        name = "registry_register",
+        skip(self, project, channels),
+        fields(project_id, project_name)
+    )]
     pub async fn register(
         &self,
         project: ProjectConnection,
@@ -155,7 +159,7 @@ impl ChannelRegistry {
             // Add to projects map
             let mut updated_project = project;
             updated_project.subscribed_channels = channels.clone();
-            
+
             // Record the project_id and project_name in the tracing span
             tracing::Span::current()
                 .record("project_id", &project_id)
@@ -363,7 +367,11 @@ impl ChannelRegistry {
     }
 
     /// Check if a project's connection is stale based on timeout duration
-    pub async fn is_connection_stale(&self, project_id: &ProjectId, timeout: chrono::Duration) -> bool {
+    pub async fn is_connection_stale(
+        &self,
+        project_id: &ProjectId,
+        timeout: chrono::Duration,
+    ) -> bool {
         let inner = self.inner.read().await;
 
         if let Some(project) = inner.projects.get(project_id) {
@@ -668,7 +676,10 @@ mod tests {
         registry.register(project, channels).await.unwrap();
 
         // Get initial project state
-        let project_before = registry.get_project(&"project-1".to_string()).await.unwrap();
+        let project_before = registry
+            .get_project(&"project-1".to_string())
+            .await
+            .unwrap();
         let initial_heartbeat = project_before.last_heartbeat;
 
         // Wait a small amount to ensure time difference
@@ -681,7 +692,10 @@ mod tests {
             .unwrap();
 
         // Verify heartbeat was updated
-        let project_after = registry.get_project(&"project-1".to_string()).await.unwrap();
+        let project_after = registry
+            .get_project(&"project-1".to_string())
+            .await
+            .unwrap();
         assert!(
             project_after.last_heartbeat > initial_heartbeat,
             "Heartbeat should be updated to a newer timestamp"
@@ -750,7 +764,11 @@ mod tests {
 
         // 1. Register project
         registry.register(project, channels.clone()).await.unwrap();
-        assert!(registry.is_registered(&"heartbeat-project".to_string()).await);
+        assert!(
+            registry
+                .is_registered(&"heartbeat-project".to_string())
+                .await
+        );
 
         // 2. Update heartbeat
         registry
@@ -760,7 +778,10 @@ mod tests {
 
         // Verify not stale immediately after heartbeat
         let is_stale = registry
-            .is_connection_stale(&"heartbeat-project".to_string(), chrono::Duration::seconds(90))
+            .is_connection_stale(
+                &"heartbeat-project".to_string(),
+                chrono::Duration::seconds(90),
+            )
             .await;
         assert!(!is_stale, "Connection should not be stale after heartbeat");
 
@@ -769,10 +790,17 @@ mod tests {
             .unregister(&"heartbeat-project".to_string())
             .await
             .unwrap();
-        assert!(!registry.is_registered(&"heartbeat-project".to_string()).await);
+        assert!(
+            !registry
+                .is_registered(&"heartbeat-project".to_string())
+                .await
+        );
 
         // 4. Verify removed from channel
         let projects = registry.projects_for_channel("heartbeat-channel").await;
-        assert!(projects.is_empty(), "Project should be removed from channel");
+        assert!(
+            projects.is_empty(),
+            "Project should be removed from channel"
+        );
     }
 }

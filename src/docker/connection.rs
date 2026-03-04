@@ -24,20 +24,20 @@ pub enum DockerCommand {
     /// # Arguments
     /// * `all` - If true, include stopped containers
     ListContainers { all: bool },
-    
+
     /// List all images
     ///
     /// # Arguments
     /// * `all` - If true, include intermediate images
     ListImages { all: bool },
-    
+
     /// Pull an image from a registry
     ///
     /// # Arguments
     /// * `image` - The image name (e.g., "nginx:latest")
     /// * `tag` - The specific tag to pull
     PullImage { image: String, tag: String },
-    
+
     /// Build an image from a Dockerfile
     ///
     /// # Arguments
@@ -49,7 +49,7 @@ pub enum DockerCommand {
         dockerfile: String,
         tag: String,
     },
-    
+
     /// Create and start a container
     ///
     /// # Arguments
@@ -61,40 +61,40 @@ pub enum DockerCommand {
         name: String,
         command: Option<Vec<String>>,
     },
-    
+
     /// Start an existing container
     ///
     /// # Arguments
     /// * `id` - Container ID or name
     StartContainer { id: String },
-    
+
     /// Stop a running container
     ///
     /// # Arguments
     /// * `id` - Container ID or name
     /// * `timeout` - Seconds to wait before killing
     StopContainer { id: String, timeout: Option<u64> },
-    
+
     /// Remove a container
     ///
     /// # Arguments
     /// * `id` - Container ID or name
     /// * `force` - Force removal even if running
     RemoveContainer { id: String, force: bool },
-    
+
     /// Get container logs
     ///
     /// # Arguments
     /// * `id` - Container ID or name
     /// * `tail` - Number of lines to read from the end
     ContainerLogs { id: String, tail: Option<u64> },
-    
+
     /// Inspect a container
     ///
     /// # Arguments
     /// * `id` - Container ID or name
     InspectContainer { id: String },
-    
+
     /// Ping the Docker daemon
     Ping,
 }
@@ -109,52 +109,52 @@ pub enum DockerResponse {
     ///
     /// Contains a vector of container info tuples: (id, name, image, status)
     ListContainers(Vec<(String, String, String, String)>),
-    
+
     /// Response for ListImages command
     ///
     /// Contains a vector of image info tuples: (id, repository, tag, size)
     ListImages(Vec<(String, String, String, u64)>),
-    
+
     /// Response for PullImage command
     ///
     /// Contains the pulled image reference
     PullImage { reference: String },
-    
+
     /// Response for BuildImage command
     ///
     /// Contains the built image ID
     BuildImage { image_id: String },
-    
+
     /// Response for RunContainer command
     ///
     /// Contains the created container ID
     RunContainer { container_id: String },
-    
+
     /// Response for StartContainer command
     ///
     /// Contains the container ID
     StartContainer { container_id: String },
-    
+
     /// Response for StopContainer command
     ///
     /// Contains the container ID
     StopContainer { container_id: String },
-    
+
     /// Response for RemoveContainer command
     ///
     /// Contains the removed container ID
     RemoveContainer { container_id: String },
-    
+
     /// Response for ContainerLogs command
     ///
     /// Contains the log output as a string
     ContainerLogs { logs: String },
-    
+
     /// Response for InspectContainer command
     ///
     /// Contains the container details as JSON string
     InspectContainer { details: String },
-    
+
     /// Response for Ping command
     ///
     /// Contains the ping result string
@@ -218,7 +218,10 @@ pub trait DockerConnectionTrait: Send + Sync {
     /// # Errors
     ///
     /// Returns `DockerError` if the command execution fails.
-    fn execute(&self, cmd: DockerCommand) -> Pin<Box<dyn Future<Output = Result<DockerResponse, DockerError>> + Send>>;
+    fn execute(
+        &self,
+        cmd: DockerCommand,
+    ) -> Pin<Box<dyn Future<Output = Result<DockerResponse, DockerError>> + Send>>;
 }
 
 /// Production implementation of DockerConnectionTrait
@@ -297,13 +300,18 @@ impl DockerConnectionTrait for RealDockerConnection {
         })
     }
 
-    fn execute(&self, _cmd: DockerCommand) -> Pin<Box<dyn Future<Output = Result<DockerResponse, DockerError>> + Send>> {
+    fn execute(
+        &self,
+        _cmd: DockerCommand,
+    ) -> Pin<Box<dyn Future<Output = Result<DockerResponse, DockerError>> + Send>> {
         Box::pin(async move {
             // For production, we delegate to the actual Docker client operations
             // This is a placeholder implementation - in production, you would
             // create a Docker client and execute the command
-            tracing::debug!("Execute called on RealDockerConnection - command would be processed here");
-            
+            tracing::debug!(
+                "Execute called on RealDockerConnection - command would be processed here"
+            );
+
             // Return a not-implemented error for now since this is a placeholder
             Err(DockerError::NotImplemented(
                 "execute() method not yet fully implemented for RealDockerConnection".to_string(),
@@ -449,7 +457,7 @@ impl DockerConnectionTrait for MockDockerConnection {
     fn disconnect(&self) -> Pin<Box<dyn Future<Output = Result<(), DockerError>> + Send>> {
         // Clone the data we need from self before entering the async block
         let disconnect_success = self.disconnect_success;
-        
+
         Box::pin(async move {
             if disconnect_success {
                 tracing::debug!("MockDockerConnection: disconnect succeeded");
@@ -474,11 +482,14 @@ impl DockerConnectionTrait for MockDockerConnection {
         }
     }
 
-    fn execute(&self, cmd: DockerCommand) -> Pin<Box<dyn Future<Output = Result<DockerResponse, DockerError>> + Send>> {
+    fn execute(
+        &self,
+        cmd: DockerCommand,
+    ) -> Pin<Box<dyn Future<Output = Result<DockerResponse, DockerError>> + Send>> {
         // Clone the data we need from self before entering the async block
         let execute_success = self.execute_success;
         let execute_response = self.execute_response.clone();
-        
+
         Box::pin(async move {
             if !execute_success {
                 return Err(DockerError::ConnectionError(
@@ -488,7 +499,10 @@ impl DockerConnectionTrait for MockDockerConnection {
 
             // Return configured response if available
             if let Some(response) = &execute_response {
-                tracing::debug!("MockDockerConnection: execute returning configured response for {:?}", cmd);
+                tracing::debug!(
+                    "MockDockerConnection: execute returning configured response for {:?}",
+                    cmd
+                );
                 // Clone the response to avoid borrowing issues
                 return Ok(response.clone());
             }
@@ -496,25 +510,27 @@ impl DockerConnectionTrait for MockDockerConnection {
             // Return a mock response based on the command type
             // We need to clone cmd to avoid borrowing issues
             let response = match cmd.clone() {
-                DockerCommand::ListContainers { .. } => {
-                    DockerResponse::ListContainers(vec![
-                        ("abc123".to_string(), "nginx".to_string(), "nginx:latest".to_string(), "running".to_string()),
-                    ])
-                }
-                DockerCommand::ListImages { .. } => {
-                    DockerResponse::ListImages(vec![
-                        ("sha256:abc123".to_string(), "nginx".to_string(), "latest".to_string(), 142000000),
-                    ])
-                }
-                DockerCommand::PullImage { image, tag } => {
-                    DockerResponse::PullImage { reference: format!("{}:{}", image, tag) }
-                }
-                DockerCommand::BuildImage { tag, .. } => {
-                    DockerResponse::BuildImage { image_id: format!("sha256:{}", &tag[..8]) }
-                }
-                DockerCommand::RunContainer { name, .. } => {
-                    DockerResponse::RunContainer { container_id: format!("mock-{}", name) }
-                }
+                DockerCommand::ListContainers { .. } => DockerResponse::ListContainers(vec![(
+                    "abc123".to_string(),
+                    "nginx".to_string(),
+                    "nginx:latest".to_string(),
+                    "running".to_string(),
+                )]),
+                DockerCommand::ListImages { .. } => DockerResponse::ListImages(vec![(
+                    "sha256:abc123".to_string(),
+                    "nginx".to_string(),
+                    "latest".to_string(),
+                    142000000,
+                )]),
+                DockerCommand::PullImage { image, tag } => DockerResponse::PullImage {
+                    reference: format!("{}:{}", image, tag),
+                },
+                DockerCommand::BuildImage { tag, .. } => DockerResponse::BuildImage {
+                    image_id: format!("sha256:{}", &tag[..8]),
+                },
+                DockerCommand::RunContainer { name, .. } => DockerResponse::RunContainer {
+                    container_id: format!("mock-{}", name),
+                },
                 DockerCommand::StartContainer { id } => {
                     DockerResponse::StartContainer { container_id: id }
                 }
@@ -524,17 +540,15 @@ impl DockerConnectionTrait for MockDockerConnection {
                 DockerCommand::RemoveContainer { id, .. } => {
                     DockerResponse::RemoveContainer { container_id: id }
                 }
-                DockerCommand::ContainerLogs { .. } => {
-                    DockerResponse::ContainerLogs { logs: "Mock container logs".to_string() }
-                }
-                DockerCommand::InspectContainer { id } => {
-                    DockerResponse::InspectContainer {
-                        details: format!(r#"{{"Id": "{}", "Name": "/mock-container"}}"#, id)
-                    }
-                }
-                DockerCommand::Ping => {
-                    DockerResponse::Ping { result: "OK".to_string() }
-                }
+                DockerCommand::ContainerLogs { .. } => DockerResponse::ContainerLogs {
+                    logs: "Mock container logs".to_string(),
+                },
+                DockerCommand::InspectContainer { id } => DockerResponse::InspectContainer {
+                    details: format!(r#"{{"Id": "{}", "Name": "/mock-container"}}"#, id),
+                },
+                DockerCommand::Ping => DockerResponse::Ping {
+                    result: "OK".to_string(),
+                },
             };
 
             Ok(response)
@@ -690,7 +704,7 @@ mod tests {
 
         let result = mock.execute(DockerCommand::ListContainers { all: true });
         let response = result.await.unwrap();
-        
+
         match response {
             DockerResponse::ListContainers(containers) => {
                 assert!(!containers.is_empty());
@@ -705,7 +719,7 @@ mod tests {
 
         let result = mock.execute(DockerCommand::Ping);
         let response = result.await.unwrap();
-        
+
         match response {
             DockerResponse::Ping { result } => {
                 assert_eq!(result, "OK");
@@ -719,7 +733,7 @@ mod tests {
         let custom_response = DockerResponse::BuildImage {
             image_id: "custom-image-id".to_string(),
         };
-        
+
         let mock = MockDockerConnectionBuilder::new()
             .with_execute_response(Some(custom_response.clone()))
             .build();
@@ -729,7 +743,7 @@ mod tests {
             dockerfile: "Dockerfile".to_string(),
             tag: "test:latest".to_string(),
         });
-        
+
         let response = result.await.unwrap();
         match response {
             DockerResponse::BuildImage { image_id } => {

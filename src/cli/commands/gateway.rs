@@ -321,39 +321,37 @@ async fn run_gateway_status(args: GatewayStatusArgs) -> Result<(), Box<dyn std::
             let status_url = format!("http://localhost:{}/status", http_port);
 
             match reqwest::get(&status_url).await {
-                Ok(response) => {
-                    match response.json::<StatusResponse>().await {
-                        Ok(status) => {
-                            println!("Gateway: Running (PID: {})", pid);
-                            println!(
-                                "Discord: {}",
-                                if status.discord_connected {
-                                    "Connected"
-                                } else {
-                                    "Disconnected"
-                                }
-                            );
-
-                            if status.connected_projects.is_empty() {
-                                println!("Connected Projects: None");
+                Ok(response) => match response.json::<StatusResponse>().await {
+                    Ok(status) => {
+                        println!("Gateway: Running (PID: {})", pid);
+                        println!(
+                            "Discord: {}",
+                            if status.discord_connected {
+                                "Connected"
                             } else {
-                                println!("Connected Projects:");
-                                for project in &status.connected_projects {
-                                    let channels = if project.channels.is_empty() {
-                                        "(no channels)".to_string()
-                                    } else {
-                                        project.channels.join(", ")
-                                    };
-                                    println!("  - {}: {}", project.name, channels);
-                                }
+                                "Disconnected"
+                            }
+                        );
+
+                        if status.connected_projects.is_empty() {
+                            println!("Connected Projects: None");
+                        } else {
+                            println!("Connected Projects:");
+                            for project in &status.connected_projects {
+                                let channels = if project.channels.is_empty() {
+                                    "(no channels)".to_string()
+                                } else {
+                                    project.channels.join(", ")
+                                };
+                                println!("  - {}: {}", project.name, channels);
                             }
                         }
-                        Err(e) => {
-                            tracing::warn!("Failed to parse status response: {}", e);
-                            println!("Gateway: Running (PID: {}) - Status unavailable", pid);
-                        }
                     }
-                }
+                    Err(e) => {
+                        tracing::warn!("Failed to parse status response: {}", e);
+                        println!("Gateway: Running (PID: {}) - Status unavailable", pid);
+                    }
+                },
                 Err(e) => {
                     tracing::warn!("Failed to query status endpoint: {}", e);
                     println!("Gateway: Running (PID: {}) - Status unavailable", pid);
@@ -419,16 +417,13 @@ async fn run_gateway_down(args: GatewayDownArgs) -> Result<(), Box<dyn std::erro
     #[cfg(unix)]
     {
         // Check if process exists by sending signal 0
-        let result = Command::new("kill")
-            .arg("-0")
-            .arg(pid.to_string())
-            .output();
+        let result = Command::new("kill").arg("-0").arg(pid.to_string()).output();
 
         match result {
             Ok(output) if output.status.success() => {
                 // Process exists, send SIGTERM
                 println!("Sending SIGTERM to gateway (PID: {})...", pid);
-                
+
                 let kill_result = Command::new("kill")
                     .arg("-TERM")
                     .arg(pid.to_string())
@@ -442,21 +437,19 @@ async fn run_gateway_down(args: GatewayDownArgs) -> Result<(), Box<dyn std::erro
                         let mut elapsed = 0u64;
 
                         while elapsed < timeout_secs {
-                            let check = Command::new("kill")
-                                .arg("-0")
-                                .arg(pid.to_string())
-                                .output();
+                            let check =
+                                Command::new("kill").arg("-0").arg(pid.to_string()).output();
 
                             match check {
                                 Ok(output) if !output.status.success() => {
                                     // Process has exited
                                     println!("Gateway stopped successfully");
-                                    
+
                                     // Clean up PID file
                                     if let Err(e) = PidFile::cleanup(&pid_path) {
                                         tracing::warn!("Failed to clean up PID file: {}", e);
                                     }
-                                    
+
                                     return Ok(());
                                 }
                                 _ => {
@@ -470,31 +463,27 @@ async fn run_gateway_down(args: GatewayDownArgs) -> Result<(), Box<dyn std::erro
                         // Timeout reached
                         if args.force {
                             println!("Gateway did not stop gracefully, forcing kill...");
-                            let _ = Command::new("kill")
-                                .arg("-9")
-                                .arg(pid.to_string())
-                                .output();
-                            
+                            let _ = Command::new("kill").arg("-9").arg(pid.to_string()).output();
+
                             // Wait a bit more for the process to be killed
                             tokio::time::sleep(Duration::from_secs(1)).await;
-                            
+
                             // Clean up PID file
                             if let Err(e) = PidFile::cleanup(&pid_path) {
                                 tracing::warn!("Failed to clean up PID file: {}", e);
                             }
-                            
+
                             println!("Gateway force stopped");
                             Ok(())
                         } else {
                             Err(GatewayCommandError::Timeout.into())
                         }
                     }
-                    Err(e) => {
-                        Err(GatewayCommandError::SignalError(format!(
-                            "Failed to send SIGTERM: {}",
-                            e
-                        )).into())
-                    }
+                    Err(e) => Err(GatewayCommandError::SignalError(format!(
+                        "Failed to send SIGTERM: {}",
+                        e
+                    ))
+                    .into()),
                 }
             }
             _ => {

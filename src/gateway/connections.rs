@@ -9,9 +9,13 @@ use std::sync::Arc;
 use thiserror::Error;
 use tokio::sync::RwLock;
 use tokio::task::JoinHandle;
-use tracing::{debug, info, warn};
 use tracing::instrument;
+use tracing::{debug, info, warn};
 use uuid::Uuid;
+
+use crate::gateway::reconnection::{
+    ReconnectionConfig, ReconnectionManager,
+};
 
 /// Type alias for project ID (consistent with registry)
 pub type ProjectId = String;
@@ -30,6 +34,12 @@ pub enum ConnectionError {
 
     #[error("Connection manager error: {0}")]
     ManagerError(String),
+
+    #[error("Reconnection failed for project {project_id}: {message}")]
+    ReconnectionFailed {
+        project_id: ProjectId,
+        message: String,
+    },
 }
 
 /// Result type for connection operations
@@ -312,6 +322,110 @@ impl ConnectionManager {
         );
 
         Ok(())
+    }
+
+    /// Attempt to reconnect with exponential backoff
+    ///
+    /// This method uses the ReconnectionManager to handle retry logic with
+    /// exponential backoff (1s, 2s, 4s... max 60s). It preserves the existing
+    /// session_id and subscriptions across reconnection attempts.
+    ///
+    /// # Arguments
+    /// * `project_id` - The project ID to reconnect
+    /// * `callback` - Async callback that attempts the actual reconnection.
+    ///   Takes the current attempt number and returns true if successful.
+    /// * `config` - Optional reconnection configuration. Uses default if None.
+    ///
+    /// # Returns
+    /// * `Ok(true)` - Reconnection successful
+    /// * `Ok(false)` - Reconnection failed but within retry limit (callback returned false)
+    /// * `Err(ConnectionError::ConnectionNotFound)` - No connection exists for project
+    /// * `Err(ConnectionError::ReconnectionFailed)` - All retries exhausted
+    #[instrument(
+        name = "connection_reconnect_with_backoff",
+        skip(self, callback),
+        fields(project_id)
+    )]
+    pub async fn reconnect_with_backoff<F, Fut>(&self, project_id: &ProjectId, callback: F, config: Option<ReconnectionConfig>) -> ConnectionResult<bool>
+    where
+        F: Fn(u32) -> Fut + Send + Sync,
+        Fut: std::future::Future<Output = bool> + Send,
+    {
+        let project_id = project_id.clone();
+
+        // First, check if connection exists and get current session info
+        let (_session_id, _subscriptions) = {
+            let inner = self.inner.read().await;
+            let Some(connection) = inner.connections.get(&project_id) else {
+                return Err(ConnectionError::ConnectionNotFound(project_id.clone()));
+            };
+            // Preserve session_id and subscriptions across reconnects
+            // (these values are preserved in the existing connection, not modified)
+            (connection.session_id.clone(), connection.subscriptions.clone())
+        };
+
+        // Record project_id in tracing span
+        tracing::Span::current().record("project_id", &project_id);
+
+        // Create reconnection manager
+        let reconnection_config = config.unwrap_or_default();
+        let max_retries = reconnection_config.max_retries;
+        let initial_delay = reconnection_config.initial_delay;
+        let max_delay = reconnection_config.max_delay;
+        let mut reconnection_manager = ReconnectionManager::new(project_id.clone(), reconnection_config);
+
+        info!(
+            target: "gateway::connections",
+            project_id = %project_id,
+            max_retries = max_retries,
+            initial_delay_secs = initial_delay.as_secs(),
+            max_delay_secs = max_delay.as_secs(),
+            "Starting reconnection with exponential backoff"
+        );
+
+        // Attempt reconnection with the callback
+        let result = reconnection_manager.attempt_reconnection(callback).await;
+
+        match result {
+            Ok(true) => {
+                // Reconnection successful - update connection state
+                let mut inner = self.inner.write().await;
+                if let Some(connection) = inner.connections.get_mut(&project_id) {
+                    connection.connect();
+                    info!(
+                        target: "gateway::connections",
+                        project_id = %project_id,
+                        session_id = %connection.session_id,
+                        "Reconnection successful"
+                    );
+                }
+                Ok(true)
+            }
+            Ok(false) => {
+                // Callback returned false but within retry limit
+                warn!(
+                    target: "gateway::connections",
+                    project_id = %project_id,
+                    "Reconnection callback returned false"
+                );
+                Ok(false)
+            }
+            Err(reconnection_err) => {
+                // All retries exhausted
+                warn!(
+                    target: "gateway::connections",
+                    project_id = %project_id,
+                    retries = max_retries,
+                    error = %reconnection_err,
+                    "Reconnection failed after max retries"
+                );
+
+                Err(ConnectionError::ReconnectionFailed {
+                    project_id: project_id.clone(),
+                    message: format!("Max retries ({}) exceeded: {}", max_retries, reconnection_err),
+                })
+            }
+        }
     }
 
     /// Get the number of active connections
@@ -898,5 +1012,204 @@ mod tests {
     async fn test_connection_state_display() {
         assert_eq!(ConnectionState::Connected.to_string(), "Connected");
         assert_eq!(ConnectionState::Disconnected.to_string(), "Disconnected");
+    }
+
+    // Tests for reconnect_with_backoff method
+
+    /// Test: Successful reconnection with exponential backoff
+    #[tokio::test]
+    async fn test_reconnect_with_backoff_success() {
+        use std::sync::atomic::{AtomicU32, Ordering};
+        use std::sync::Arc;
+
+        let manager = ConnectionManager::new();
+        let connection = create_test_connection("project-1");
+        let original_session_id = connection.session_id;
+        
+        manager.add_connection(connection).await.unwrap();
+
+        // Track attempt count
+        let attempt_count = Arc::new(AtomicU32::new(0));
+        let attempt_count_clone = Arc::clone(&attempt_count);
+
+        // Callback that succeeds on first try
+        let result = manager
+            .reconnect_with_backoff(
+                &"project-1".to_string(),
+                move |_attempt| {
+                    let count = attempt_count_clone.fetch_add(1, Ordering::SeqCst);
+                    async move { count == 0 } // Succeed on first attempt
+                },
+                None,
+            )
+            .await;
+
+        assert!(result.is_ok());
+        assert!(result.unwrap());
+        
+        // Verify connection state is now Connected
+        let conn = manager.get_connection(&"project-1".to_string()).await.unwrap();
+        assert_eq!(conn.state, ConnectionState::Connected);
+        
+        // Verify session_id was preserved
+        assert_eq!(conn.session_id, original_session_id);
+    }
+
+    /// Test: Failed reconnection after max retries exceeded
+    #[tokio::test]
+    async fn test_reconnect_with_backoff_max_retries_exceeded() {
+        use std::sync::atomic::{AtomicU32, Ordering};
+        use std::sync::Arc;
+        use crate::gateway::reconnection::ReconnectionConfig;
+        use std::time::Duration;
+
+        let manager = ConnectionManager::new();
+        let connection = create_test_connection("project-1");
+        
+        manager.add_connection(connection).await.unwrap();
+
+        // Track attempt count
+        let attempt_count = Arc::new(AtomicU32::new(0));
+        let attempt_count_clone = Arc::clone(&attempt_count);
+
+        // Callback that always fails
+        let result = manager
+            .reconnect_with_backoff(
+                &"project-1".to_string(),
+                move |_attempt| {
+                    attempt_count_clone.fetch_add(1, Ordering::SeqCst);
+                    async move { false } // Always fail
+                },
+                Some(ReconnectionConfig {
+                    initial_delay: Duration::from_millis(1),
+                    max_delay: Duration::from_millis(10),
+                    max_retries: 3,
+                    multiplier: 2.0,
+                }),
+            )
+            .await;
+
+        // Should fail with ReconnectionFailed error
+        assert!(result.is_err());
+        let err = result.unwrap_err();
+        match err {
+            ConnectionError::ReconnectionFailed { project_id, message } => {
+                assert_eq!(project_id, "project-1");
+                assert!(message.contains("Max retries"));
+            }
+            _ => panic!("Expected ReconnectionFailed error"),
+        }
+    }
+
+    /// Test: Preserves session_id and subscriptions across reconnects
+    #[tokio::test]
+    async fn test_reconnect_preserves_session_and_subscriptions() {
+        use std::sync::atomic::{AtomicU32, Ordering};
+        use std::sync::Arc;
+
+        let manager = ConnectionManager::new();
+        
+        // Create connection with specific session and subscriptions
+        let connection = Connection::new(
+            "project-1".to_string(),
+            Uuid::new_v4(),
+            vec!["channel-1".to_string(), "channel-2".to_string()],
+        );
+        let original_session_id = connection.session_id;
+        let original_subscriptions = connection.subscriptions.clone();
+        
+        manager.add_connection(connection).await.unwrap();
+
+        // Track attempts
+        let attempt_count = Arc::new(AtomicU32::new(0));
+        let attempt_count_clone = Arc::clone(&attempt_count);
+
+        // Callback that succeeds on second attempt
+        let result = manager
+            .reconnect_with_backoff(
+                &"project-1".to_string(),
+                move |_attempt| {
+                    let count = attempt_count_clone.fetch_add(1, Ordering::SeqCst);
+                    async move { count >= 1 } // Succeed on second attempt
+                },
+                None,
+            )
+            .await;
+
+        assert!(result.is_ok());
+        
+        // Verify session_id was preserved
+        let conn = manager.get_connection(&"project-1".to_string()).await.unwrap();
+        assert_eq!(conn.session_id, original_session_id);
+        assert_eq!(conn.subscriptions, original_subscriptions);
+    }
+
+    /// Test: Connection not found returns error
+    #[tokio::test]
+    async fn test_reconnect_with_backoff_connection_not_found() {
+        let manager = ConnectionManager::new();
+
+        let result = manager
+            .reconnect_with_backoff(
+                &"nonexistent".to_string(),
+                |_attempt| async move { true },
+                None,
+            )
+            .await;
+
+        assert!(result.is_err());
+        match result.unwrap_err() {
+            ConnectionError::ConnectionNotFound(_) => {}
+            _ => panic!("Expected ConnectionNotFound error"),
+        }
+    }
+
+    /// Test: Callback returns false but within retry limit
+    #[tokio::test]
+    async fn test_reconnect_with_backoff_callback_returns_false() {
+        use std::sync::atomic::{AtomicU32, Ordering};
+        use std::sync::Arc;
+        use crate::gateway::reconnection::ReconnectionConfig;
+        use std::time::Duration;
+
+        let manager = ConnectionManager::new();
+        let connection = create_test_connection("project-1");
+        
+        manager.add_connection(connection).await.unwrap();
+
+        // Track attempts
+        let attempt_count = Arc::new(AtomicU32::new(0));
+        let attempt_count_clone = Arc::clone(&attempt_count);
+
+        // Custom config with 5 retries
+        let config = ReconnectionConfig {
+            initial_delay: Duration::from_millis(1),
+            max_delay: Duration::from_millis(10),
+            max_retries: 5,
+            multiplier: 2.0,
+        };
+
+        // Callback that returns false (simulating connection failure but wants to continue)
+        let result = manager
+            .reconnect_with_backoff(
+                &"project-1".to_string(),
+                move |attempt| {
+                    let count = attempt_count_clone.fetch_add(1, Ordering::SeqCst);
+                    async move { 
+                        // Return false for first 3 attempts, then true
+                        count >= 3 
+                    }
+                },
+                Some(config),
+            )
+            .await;
+
+        // Should succeed after callback returns true
+        assert!(result.is_ok());
+        assert!(result.unwrap());
+        
+        // Verify connection state is Connected
+        let conn = manager.get_connection(&"project-1".to_string()).await.unwrap();
+        assert_eq!(conn.state, ConnectionState::Connected);
     }
 }

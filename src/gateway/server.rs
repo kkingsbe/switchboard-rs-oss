@@ -24,8 +24,8 @@ use thiserror::Error;
 use tokio::signal;
 use tokio::sync::mpsc;
 use tower_http::trace::TraceLayer;
-use tracing::{debug, error, info, warn};
 use tracing::instrument;
+use tracing::{debug, error, info, warn};
 use uuid::Uuid;
 
 /// Error types for gateway server operations.
@@ -150,7 +150,11 @@ async fn ws_handler(
 ///
 /// This function manages the bidirectional message flow, parsing incoming
 /// JSON messages and echoing them back for testing.
-#[instrument(name = "websocket_handler", skip(socket, state), fields(project_id, session_id))]
+#[instrument(
+    name = "websocket_handler",
+    skip(socket, state),
+    fields(project_id, session_id)
+)]
 async fn handle_websocket(socket: WebSocket, state: AppState) {
     let (mut sender, mut receiver) = socket.split();
 
@@ -871,7 +875,10 @@ async fn process_discord_events(
                 );
 
                 // Log channel_id extraction for verification (AC1)
-                debug!("Extracted channel_id: {} from MessageCreate event", channel_id);
+                debug!(
+                    "Extracted channel_id: {} from MessageCreate event",
+                    channel_id
+                );
 
                 // Use MessageRouter to route message to subscribed projects
                 match router.route_message(&channel_id, &content).await {
@@ -1493,7 +1500,8 @@ mod tests {
         /// Test that ChannelSubscribeAck can be parsed from JSON
         #[test]
         fn should_parse_channel_subscribe_ack_message() {
-            let json = r#"{"type":"channel_subscribe_ack","status":"ok: subscribed to 2 channels"}"#;
+            let json =
+                r#"{"type":"channel_subscribe_ack","status":"ok: subscribed to 2 channels"}"#;
             let msg: GatewayMessage = serde_json::from_str(json).expect("Failed to parse");
 
             assert!(matches!(
@@ -1506,7 +1514,8 @@ mod tests {
         /// Test that ChannelUnsubscribeAck can be parsed from JSON
         #[test]
         fn should_parse_channel_unsubscribe_ack_message() {
-            let json = r#"{"type":"channel_unsubscribe_ack","status":"ok: unsubscribed from 1 channels"}"#;
+            let json =
+                r#"{"type":"channel_unsubscribe_ack","status":"ok: unsubscribed from 1 channels"}"#;
             let msg: GatewayMessage = serde_json::from_str(json).expect("Failed to parse");
 
             assert!(matches!(
@@ -1549,7 +1558,9 @@ mod tests {
                 .get_project(&project_id)
                 .await
                 .expect("Project not found");
-            assert!(project.subscribed_channels.contains(&"channel2".to_string()));
+            assert!(project
+                .subscribed_channels
+                .contains(&"channel2".to_string()));
         }
 
         /// Test that channel unsubscribe removes from registry correctly
@@ -1583,8 +1594,12 @@ mod tests {
                 .get_project(&project_id)
                 .await
                 .expect("Project not found");
-            assert!(!project.subscribed_channels.contains(&"channel1".to_string()));
-            assert!(project.subscribed_channels.contains(&"channel2".to_string()));
+            assert!(!project
+                .subscribed_channels
+                .contains(&"channel1".to_string()));
+            assert!(project
+                .subscribed_channels
+                .contains(&"channel2".to_string()));
         }
 
         /// Tests for disconnection handling behavior
