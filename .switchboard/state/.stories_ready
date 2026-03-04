@@ -1,6 +1,9 @@
-# Stories Ready for Sprint 11
+Stories are ready for development.
 
-Sprint: 11
-Stories: 6
-Total Points: 13 (dev-1: 5 pts, dev-2: 8 pts)
-Created: 2026-03-04
+Sprint 12 has been planned with 4 new stories:
+- story-006-01 (Project Connection Management) - dev-2
+- story-007-03 (PID File Management) - dev-1
+- story-007-04 (Gateway Logging) - dev-1
+- story-001-docker-connection-trait (Docker Connection Trait) - dev-2
+
+Ready for dev agent pickup.

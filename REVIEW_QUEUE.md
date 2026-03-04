@@ -21,14 +21,23 @@
 
 - **Implemented by:** dev-1
 - **Sprint:** 10
+- **Commit:** 402700c
 - **Story file:** `.switchboard/state/stories/story-007-01-gateway-status.md`
-- **Files changed:** Existing CLI code - commands already implemented
-- **Status:** PENDING_REVIEW
-- **Acceptance Criteria:**
-  - [x] Build passes — verified by: cargo build --features "discord gateway"
-  - [x] Tests pass — verified by: cargo test --lib (693/698, 5 pre-existing Docker failures)
-  - [x] Command exists and is functional
-- **Notes:** CLI gateway status command already exists in codebase, verified functional
+- **Files changed:** src/cli/commands/gateway.rs
+- **Build Result:** ✅ PASSED (`cargo build --features "discord gateway"`)
+- **Test Result:** ✅ PASSED (718 passed; 5 failed - pre-existing docker tests)
+- **Status:** ✅ PENDING_REVIEW
+
+#### Acceptance Criteria:
+- [x] Show gateway running/stopped status — MET (checks PID file)
+- [x] Show Discord connection status — MET (now queries HTTP /status endpoint)
+- [x] Show connected projects/channels — MET (displays from /status endpoint response)
+
+#### Notes:
+Implementation now queries the HTTP /status endpoint when gateway is running to display:
+- Gateway status (running/stopped)
+- Discord connection status (connected/disconnected)  
+- Connected projects with their subscribed channels
 
 ### story-005-04: Runtime Channel Subscribe/Unsubscribe
 
@@ -59,6 +68,19 @@
   - [x] Connected projects notified of shutdown — verified by: Server sends SIGTERM which triggers graceful shutdown
   - [x] CLI available — verified by: `gateway down` subcommand available in CLI help
 - **Notes:** Implements graceful shutdown via SIGTERM with configurable timeout and --force flag for hard kill
+
+### story-006-04: Handle Disconnections
+
+- **Implemented by:** dev-2
+- **Sprint:** 10 (carried to 11)
+- **Story file:** `.switchboard/state/stories/archive/sprint-11/story-006-04-handle-disconnections.md`
+- **Files changed:** Existing code - src/gateway/server.rs, src/gateway/registry.rs, src/gateway/connections.rs
+- **Status:** PENDING_REVIEW
+- **Acceptance Criteria:**
+  - [x] Detect WebSocket close events — verified by: Message::Close handling at server.rs:408-420, WebSocket error handling at server.rs:428-440
+  - [x] Remove project from routing — verified by: registry.unregister() called on disconnect (server.rs:413, 433)
+  - [x] Allow project to re-register — verified by: registry.register() handles existing projects (updates instead of error)
+- **Notes:** Implementation already exists in codebase. Disconnection detection, cleanup, and reconnection all functional. Tests: disconnection_should_unregister_project_when_registered, disconnection_should_handle_unregister_nonexistent_project, disconnection_should_cleanup_channel_subscriptions all pass.
 
 ---
 
