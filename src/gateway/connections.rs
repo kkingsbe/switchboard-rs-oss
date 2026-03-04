@@ -10,6 +10,7 @@ use thiserror::Error;
 use tokio::sync::RwLock;
 use tokio::task::JoinHandle;
 use tracing::{debug, info, warn};
+use tracing::instrument;
 use uuid::Uuid;
 
 /// Type alias for project ID (consistent with registry)
@@ -167,6 +168,7 @@ impl ConnectionManager {
     /// Add a new connection to the manager
     ///
     /// Returns an error if a connection already exists for this project.
+    #[instrument(name = "connection_add", skip(self, connection), fields(project_id))]
     pub async fn add_connection(&self, connection: Connection) -> ConnectionResult<()> {
         let project_id = connection.project_id.clone();
 
@@ -183,6 +185,9 @@ impl ConnectionManager {
 
         inner.connections.insert(project_id.clone(), connection);
 
+        // Record the project_id in the tracing span
+        tracing::Span::current().record("project_id", &project_id);
+
         info!(
             target: "gateway::connections",
             project_id = %project_id,
@@ -195,6 +200,7 @@ impl ConnectionManager {
     /// Remove a connection from the manager
     ///
     /// Returns the removed connection if it existed.
+    #[instrument(name = "connection_remove", skip(self), fields(project_id))]
     pub async fn remove_connection(&self, project_id: &ProjectId) -> ConnectionResult<Connection> {
         let mut inner = self.inner.write().await;
 
@@ -245,6 +251,7 @@ impl ConnectionManager {
     /// Update the heartbeat for a connection
     ///
     /// Returns an error if the connection doesn't exist.
+    #[instrument(name = "heartbeat_update", skip(self), fields(project_id))]
     pub async fn update_heartbeat(&self, project_id: &ProjectId) -> ConnectionResult<()> {
         let mut inner = self.inner.write().await;
 
@@ -266,6 +273,7 @@ impl ConnectionManager {
     /// Disconnect a project connection
     ///
     /// Changes the connection state to Disconnected but keeps it in the manager.
+    #[instrument(name = "connection_disconnect", skip(self), fields(project_id))]
     pub async fn disconnect(&self, project_id: &ProjectId) -> ConnectionResult<()> {
         let mut inner = self.inner.write().await;
 
@@ -287,6 +295,7 @@ impl ConnectionManager {
     /// Reconnect a project
     ///
     /// Changes the connection state back to Connected and updates heartbeat.
+    #[instrument(name = "connection_reconnect", skip(self), fields(project_id))]
     pub async fn reconnect(&self, project_id: &ProjectId) -> ConnectionResult<()> {
         let mut inner = self.inner.write().await;
 

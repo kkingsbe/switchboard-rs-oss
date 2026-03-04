@@ -76,7 +76,7 @@ pub fn init_logging(log_dir: PathBuf) -> Result<WorkerGuard, SkillsError> {
 ///
 /// This function sets up tracing to write logs to two separate files:
 /// - `<log_dir>/switchboard.log` - Main switchboard logs
-/// - `<log_dir>/gateway.log` - Gateway-specific logs
+/// - `<log_dir>/gateway-{date}.log` - Gateway-specific logs with daily rotation
 ///
 /// It creates the log directory if it doesn't exist and configures non-blocking
 /// writers for performance.
@@ -106,7 +106,7 @@ pub fn init_logging(log_dir: PathBuf) -> Result<WorkerGuard, SkillsError> {
 /// let (_main_guard, _gateway_guard) = init_gateway_logging(log_dir);
 /// // Logging is now initialized with separate files for main and gateway logs
 /// // Main logs: .switchboard/logs/switchboard.log
-/// // Gateway logs: .switchboard/logs/gateway.log
+/// // Gateway logs: .switchboard/logs/gateway-YYYY-MM-DD.log
 /// ```
 pub fn init_gateway_logging(log_dir: PathBuf) -> Result<(WorkerGuard, WorkerGuard), SkillsError> {
     // Create the log directory if it doesn't exist
@@ -121,8 +121,8 @@ pub fn init_gateway_logging(log_dir: PathBuf) -> Result<(WorkerGuard, WorkerGuar
     let main_file_appender = tracing_appender::rolling::never(&log_dir, "switchboard.log");
     let (main_non_blocking, main_guard) = tracing_appender::non_blocking(main_file_appender);
 
-    // Create file appender for gateway.log (gateway-specific logs)
-    let gateway_file_appender = tracing_appender::rolling::never(&log_dir, "gateway.log");
+    // Create file appender for gateway-{date}.log (gateway-specific logs with daily rotation)
+    let gateway_file_appender = tracing_appender::rolling::daily(&log_dir, "gateway");
     let (gateway_non_blocking, gateway_guard) =
         tracing_appender::non_blocking(gateway_file_appender);
 

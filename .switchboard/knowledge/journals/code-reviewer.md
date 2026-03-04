@@ -97,6 +97,67 @@
 - Common violation: Out-of-scope file modifications - this is the second review round for this issue
 - The implementation itself is solid - routing logic, tests, error handling all correct
 
+## 2026-03-04T06:35:00Z — Sprint 12 Reviews
+
+### Review Session Notes
+
+Reviewed 5 stories from Sprint 10/11:
+
+#### Summary
+
+| Story | Status | Key Findings |
+|-------|--------|-------------|
+| story-004-08 | ✅ APPROVED | CLI gateway up command exists and works |
+| story-007-01 | ✅ APPROVED | Enhanced status to query HTTP /status endpoint |
+| story-005-04 | ✅ APPROVED | Runtime channel subscribe/unsubscribe implemented |
+| story-007-02 | ❌ CHANGES_REQUESTED | 6 clippy errors in gateway.rs |
+| story-006-04 | ✅ APPROVED | Disconnection handling exists in codebase |
+
+#### story-004-08: CLI `gateway up` Command
+- **Status:** ✅ APPROVED
+- **Implementation:** Existing code verified functional
+- All acceptance criteria met: build passes, tests pass (726/731), command works
+- Skills compliance: Uses thiserror, tracing, no unwrap() in production
+
+#### story-007-01: CLI `gateway status` Command
+- **Status:** ✅ APPROVED
+- **Implementation:** Queries HTTP /status endpoint to display gateway/discord/project status
+- All acceptance criteria met
+- Clippy passes for status command code
+
+#### story-005-04: Runtime Channel Subscribe/Unsubscribe
+- **Status:** ✅ APPROVED
+- **Implementation:** ChannelSubscribe/ChannelUnsubscribe message types and handlers
+- Tests: All serialization tests pass
+- Clippy passes for protocol.rs and server.rs
+
+#### story-007-02: Gateway Down CLI
+- **Status:** ❌ CHANGES_REQUESTED
+- **Issue:** 6 clippy errors in src/cli/commands/gateway.rs:
+  1. Line 408: `ok_or_else` should be `ok_or`
+  2. Line 411: redundant closure - use tuple variant directly
+  3. Lines 487, 489, 493, 502: unnecessary return statements
+- **Why:** Per rust-best-practices skill and project context, clippy must pass with `-D warnings`
+- **Requeue:** Fix clippy errors and re-queue
+
+#### story-006-04: Handle Disconnections
+- **Status:** ✅ APPROVED
+- **Implementation:** Existing code in server.rs with Message::Close handling
+- Tests: disconnection_should_unregister_project_when_registered, etc. all pass
+- Clippy passes for server.rs
+
+#### Common Patterns Observed
+
+1. **Clippy violations blocking approval:** story-007-02 has clippy errors that must be fixed - this is now a consistent pattern where clippy must pass for approval
+2. **Pre-existing test failures:** 5 Docker/Skills test failures continue (test_kilocode_included, test_skill_install_stderr, test_skill_install_logs, test_skill_install_success, test_generate_entrypoint)
+3. **Existing code verification:** Some stories (004-08, 006-04) were about verifying existing implementations work correctly
+
+#### Calibration Notes
+
+- Was appropriately strict on clippy violations (story-007-02) - skills say clippy must pass
+- Approved stories where implementation was correct even though some were existing code verification
+- The 5 pre-existing Docker test failures are NOT blocking (documented in review queue)
+
 ---
 
 ## 2026-03-04T03:29:00Z — Sprint 10 Reviews

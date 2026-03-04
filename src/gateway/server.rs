@@ -25,6 +25,7 @@ use tokio::signal;
 use tokio::sync::mpsc;
 use tower_http::trace::TraceLayer;
 use tracing::{debug, error, info, warn};
+use tracing::instrument;
 use uuid::Uuid;
 
 /// Error types for gateway server operations.
@@ -149,6 +150,7 @@ async fn ws_handler(
 ///
 /// This function manages the bidirectional message flow, parsing incoming
 /// JSON messages and echoing them back for testing.
+#[instrument(name = "websocket_handler", skip(socket, state), fields(project_id, session_id))]
 async fn handle_websocket(socket: WebSocket, state: AppState) {
     let (mut sender, mut receiver) = socket.split();
 
@@ -212,6 +214,11 @@ async fn handle_websocket(socket: WebSocket, state: AppState) {
                                     Ok(()) => {
                                         // Store the project_id for subsequent message handling
                                         project_id = Some(new_project_id.clone());
+
+                                        // Record project_id and session_id in the tracing span
+                                        tracing::Span::current()
+                                            .record("project_id", &new_project_id)
+                                            .record("session_id", &session_id);
 
                                         // Send success acknowledgment
                                         let ack = GatewayMessage::RegisterAck {
@@ -501,6 +508,7 @@ impl GatewayServer {
     /// let server = GatewayServer::new(config, gateway_config);
     /// server.run().await?;
     /// ```
+    #[instrument(name = "gateway_server", skip(self))]
     pub async fn run(self) -> Result<(), GatewayServerError> {
         let pid_path = self.pid_path.clone();
 
@@ -512,7 +520,8 @@ impl GatewayServer {
             http_port = self.config.http_port,
             ws_port = self.config.ws_port,
             pid_file = %pid_path.display(),
-            discord_configured = !self.gateway_config.discord_token.is_empty()
+            discord_enabled = !self.gateway_config.discord_token.is_empty(),
+            log_level = %self.gateway_config.logging.level
         );
 
         // Check if another gateway is already running
@@ -837,6 +846,7 @@ async fn shutdown_signal() {
 ///
 /// This function listens for Discord events from the channel and routes
 /// messages to all projects that are subscribed to the message's channel.
+#[instrument(name = "discord_event_processor", skip(event_receiver, registry))]
 async fn process_discord_events(
     mut event_receiver: mpsc::Receiver<DiscordEvent>,
     registry: ChannelRegistry,

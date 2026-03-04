@@ -34,7 +34,7 @@ serde_repr = "0.1"
 toml = "0.8"
 chrono = "0.4"
 chrono-tz = "0.10"
-tracing = "0.1"
+tracing = { version = "0.1", features = ["attributes"] }
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 tracing-appender = "0.2"
 anyhow = "1.0"

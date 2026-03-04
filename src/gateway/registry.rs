@@ -9,6 +9,7 @@ use std::sync::Arc;
 use thiserror::Error;
 use tokio::sync::{mpsc, RwLock};
 use tracing::{debug, info, warn};
+use tracing::instrument;
 use uuid::Uuid;
 
 /// Type alias for project ID
@@ -108,6 +109,7 @@ impl ChannelRegistry {
     /// Register a project with the gateway and subscribe to channels
     ///
     /// If the project is already registered, updates its channel subscriptions.
+    #[instrument(name = "registry_register", skip(self, project, channels), fields(project_id, project_name))]
     pub async fn register(
         &self,
         project: ProjectConnection,
@@ -153,6 +155,12 @@ impl ChannelRegistry {
             // Add to projects map
             let mut updated_project = project;
             updated_project.subscribed_channels = channels.clone();
+            
+            // Record the project_id and project_name in the tracing span
+            tracing::Span::current()
+                .record("project_id", &project_id)
+                .record("project_name", &updated_project.project_name);
+
             inner.projects.insert(project_id.clone(), updated_project);
 
             // Add to channel mappings (fan-out: multiple projects per channel)

@@ -49,6 +49,13 @@
   - 🔒 Risk: Low
   - 📝 Commit: `feat(dev2): [007-02] implement gateway down CLI command`
 
+- [ ] **story-007-02** (REWORK): Gateway Down CLI - Fix clippy errors
+  - 📄 Story: `.switchboard/state/stories/story-007-02-gateway-down-cli.md`
+  - 🔍 Review: See REVIEW_QUEUE.md — CHANGES_REQUESTED
+  - ⚡ Pre-check: Build + tests pass
+  - ✅ Post-check: Address ALL clippy errors in gateway.rs (6 errors total)
+  - 📝 Commit: `fix(dev2): [story-007-02] fix clippy errors in gateway down command`
+
 - [x] AGENT QA: Run full build and test suite. If green, create
   `.switchboard/state/.dev_done_2` with date. If ALL `.dev_done_*`
   files exist for all agents with work, also create
