@@ -8,7 +8,7 @@
 
 ---
 
-## Sprint 12 Stories
+## Sprint 12 Stories (Current)
 
 ### In Progress
 
@@ -16,12 +16,16 @@
 |-------|--------|--------|-------------|
 | story-004-08 (CLI gateway up) | 3 | COMPLETE (APPROVED 2026-03-04) | dev-1 |
 | story-005-04 (Runtime Channel Subscribe/Unsubscribe) | 2 | In Progress (Sprint 11) | dev-2 |
-| story-006-02 (Heartbeat Protocol) | 2 | In Progress (Sprint 11) | dev-2 |
+| story-006-02 (Heartbeat Protocol) | 2 | COMPLETE (APPROVED 2026-03-04) | dev-2 |
 | story-006-04 (Handle Disconnections) | 2 | In Progress (Sprint 11) | dev-2 |
-| story-007-01 (Gateway status) | 2 | In Progress (Sprint 11) | dev-1 |
+| story-007-01 (Gateway status) | 2 | COMPLETE (APPROVED 2026-03-04) | dev-1 |
 | story-007-02 (Gateway Down CLI) | 2 | In Progress (Sprint 11) | dev-2 |
+| story-006-01 (Project Connection Management) | 3 | COMPLETE (APPROVED 2026-03-04) | dev-2 |
+| story-007-03 (PID File Management) | 1 | In Progress | dev-1 |
+| story-007-04 (Gateway Logging) | 2 | In Progress | dev-1 |
+| story-001-docker-connection-trait (Docker Connection Trait) | 3 | In Progress | dev-2 |
 
-**Sprint 11 Total**: 13 points (dev-1: 5 pts, dev-2: 8 pts)
+**Sprint 12 Total**: 22 points (dev-1: 8 pts, dev-2: 14 pts)
 
 ---
 
