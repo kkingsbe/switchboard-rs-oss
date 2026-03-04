@@ -310,7 +310,79 @@
 
 #### story-005-03: Route Messages by Channel
 
+
+---
+
 ### story-004-08: CLI `gateway up` Command
+
+- **Implemented by:** dev-1
+- **Sprint:** 10
+- **Commit:** 3469bedb94b14e378d38bdcb5c8b0dc7fe67ccdf
+- **Story file:** `.switchboard/state/stories/story-004-08-gateway-up-cli.md`
+- **Files changed:** src/cli/commands/gateway.rs, src/cli/mod.rs
+- **Build Result:** ✅ PASSED (`cargo build --features "discord gateway"`)
+- **Test Result:** ✅ PASSED (703 passed; 5 failed - pre-existing docker tests)
+- **Status:** ✅ APPROVED
+- **Reviewed by:** code-reviewer
+- **Review date:** 2026-03-04
+
+#### Acceptance Criteria:
+- [x] CLI has `gateway` subcommand with `up` action — MET (verified by: gateway_command_has_up_subcommand test)
+- [x] Command starts gateway with config from `gateway.toml` — MET (verified by: gateway_up_loads_default_config test)
+- [x] Support `--config` flag for custom config path — MET (verified by: custom_config_path test)
+- [x] Support `--detach` flag (placeholder) — MET
+
+#### Findings:
+- SHOULD FIX: None
+- NICE TO HAVE: None
+
+#### Summary:
+Implementation is complete with proper config loading, logging initialization, and graceful shutdown. All 147 gateway tests pass. Code follows Rust best practices with thiserror for error types, proper tracing logging, and no unwrap() in production. Pre-existing docker test failures (5) are unrelated to this story.
+
+---
+
+### story-007-01: CLI `gateway status` Command
+
+- **Implemented by:** dev-1
+- **Sprint:** 10
+- **Commit:** 3469bedb94b14e378d38bdcb5c8b0dc7fe67ccdf
+- **Story file:** `.switchboard/state/stories/story-007-01-gateway-status.md`
+- **Files changed:** src/cli/commands/gateway.rs
+- **Build Result:** ✅ PASSED (`cargo build --features "discord gateway"`)
+- **Test Result:** ✅ PASSED (703 passed; 5 failed - pre-existing docker tests)
+- **Status:** ❌ CHANGES_REQUESTED
+- **Reviewed by:** code-reviewer
+- **Review date:** 2026-03-04
+
+#### Acceptance Criteria:
+- [x] Show gateway running/stopped status — PARTIAL (only checks PID file)
+- [ ] Show Discord connection status — NOT IMPLEMENTED
+- [ ] Show connected projects/channels — NOT IMPLEMENTED
+
+#### Must Fix:
+1. **Missing Discord connection status display:**
+   - The server has `/status` endpoint that returns Discord connection status
+   - The CLI status command only checks PID file - does NOT call HTTP endpoint
+   - Expected: CLI should call GET http://localhost:<port>/status and display discord_connected field
+
+2. **Missing connected projects/channels display:**
+   - The `/status` endpoint returns connected_projects with name and channels
+   - Expected: CLI should display list of connected projects and their subscribed channels
+
+#### Should Fix:
+- None
+
+#### Requeue Instructions:
+1. Modify `run_gateway_status()` in `src/cli/commands/gateway.rs` to:
+   - Parse http_port from config (or use default 9745)
+   - Make HTTP GET request to `http://localhost:<port>/status`
+   - Display discord_connected status (connected/disconnected)
+   - Display connected_projects list with project names and channels
+   - Handle case when gateway is not running (HTTP request fails)
+2. Add reqwest dependency if needed (or use existing HTTP client)
+3. Run build and tests to verify
+4. Commit: `feat(dev1): [007-01] implement HTTP status endpoint call`
+5. Re-submit for review
 
 - **Implemented by:** dev-1
 - **Sprint:** 8
@@ -447,6 +519,50 @@ Implementation is complete with comprehensive tracing throughout gateway modules
 ## PENDING_REVIEW
 
 ### story-006-01: Project Connection Management
+
+- **Implemented by:** dev-1
+- **Sprint:** 9
+- **Commit:** 6f9efdf (current HEAD)
+- **Story file:** `.switchboard/state/stories/archive/sprint-6/story-006-01-project-connections.md`
+- **Files changed (in scope):**
+  - `src/gateway/connections.rs` (new file)
+  - `src/gateway/mod.rs` (modified - added connections module)
+- **Build Result:** ✅ PASSED (`cargo build --features "discord gateway"`)
+- **Test Result:** ✅ PASSED (147 gateway tests passed)
+- **Clippy:** ✅ PASSED
+- **Status:** ❌ CHANGES_REQUESTED (RE-REVIEW - THIRD ROUND)
+- **Reviewed by:** code-reviewer
+- **Review date:** 2026-03-04
+
+#### Acceptance Criteria:
+- [x] Track active connections with project_id, session_id, subscription info — MET (verified by: test_connection_list_accurate, test_all_connections)
+- [x] Handle multiple simultaneous project connections — MET (verified by: test_multiple_concurrent_connections)
+- [x] Detect and clean up stale connections — MET (verified by: test_dead_connections_removed_after_timeout, test_stale_connection_detection)
+
+#### Must Fix (THIRD ATTEMPT - FINAL):
+1. **Scope violation STILL NOT FIXED after TWO previous reviews:**
+   - Files in scope per story: `src/gateway/connections.rs`, `src/gateway/mod.rs`
+   - Files still modified in commit 6f9efdf: `src/discord/gateway.rs`, `src/gateway/ratelimit.rs`, `src/gateway/registry.rs`, `src/gateway/routing.rs`, `src/logging.rs`
+   - Expected: Revert changes to all files EXCEPT `src/gateway/connections.rs` and `src/gateway/mod.rs`
+   - Why: Story scope is sacred per code reviewer protocol - changes outside scope risk breaking other agents work work
+
+#### Should Fix:
+- None
+
+#### Requeue Instructions (FINAL ATTEMPT):
+1. This is the THIRD round of review - scope violations were flagged in TWO previous reviews and NOT fixed
+2. Revert ALL changes to files not in scope:
+   - `git checkout -- src/discord/gateway.rs`
+   - `git checkout -- src/gateway/ratelimit.rs`
+   - `git checkout -- src/gateway/registry.rs`
+   - `git checkout -- src/gateway/routing.rs`
+   - `git checkout -- src/logging.rs`
+3. Keep ONLY changes to:
+   - `src/gateway/connections.rs` (new file - KEEP)
+   - `src/gateway/mod.rs` (add connections module - KEEP)
+4. Run `cargo build --features "discord gateway"` and tests to verify
+5. Commit: `fix(dev1): [006-01] REVERT out-of-scope changes (FINAL - NO MORE RETRIES)`
+6. Re-submit for review
 
 - **Implemented by:** dev-1
 - **Sprint:** 9
