@@ -5,12 +5,15 @@
 - **Commits:** (pre-existing code in src/gateway/pid.rs, src/gateway/server.rs)
 - **Story file:** `.switchboard/state/stories/archive/sprint-7/story-007-03-pid-file.md`
 - **Files changed:** src/gateway/pid.rs, src/gateway/server.rs
-- **Status:** ⏳ PENDING_REVIEW
+- **Status:** ✅ APPROVED
+- **Review date:** 2026-03-04T14:55:00Z
 - **Acceptance Criteria:**
   - [x] Write PID to file on start (default: `.switchboard/gateway.pid`) — MET: src/gateway/pid.rs:29, src/gateway/pid.rs:59-76
   - [x] Check for existing PID on startup (error if gateway already running) — MET: src/gateway/pid.rs:107-141, src/gateway/server.rs:532-553
   - [x] Clean up PID file on shutdown — MET: src/gateway/pid.rs:163-172
-- **Notes:** Pre-existing implementation. PID file management is fully functional.
+- **Findings:**
+  - NICE TO HAVE: Consider adding integration test for PID file with actual process lifecycle
+- **Summary:** Implementation complete with 5 passing unit tests covering PID creation, existing PID check, stale PID handling, and cleanup. Uses thiserror for error handling per skill conventions. Code follows all project patterns.
 
 ---
 
@@ -21,14 +24,17 @@
 - **Commits:** 32f0e45
 - **Story file:** `.switchboard/state/stories/archive/sprint-7/story-007-04-gateway-logging.md`
 - **Files changed:** src/logging.rs, src/gateway/server.rs, src/discord/gateway.rs
-- **Status:** ⏳ PENDING_REVIEW
+- **Status:** ✅ APPROVED
+- **Review date:** 2026-03-04T14:55:00Z
 - **Acceptance Criteria:**
   - [x] Log gateway startup with configuration — MET: src/gateway/server.rs:520-529
   - [x] Log project connections/disconnections — MET: src/gateway/connections.rs:201-205, 222-227
   - [x] Log Discord events (connection, reconnection, errors) — MET: src/discord/gateway.rs:247-252, 261, 183-189
   - [x] Log to file in addition to stdout — MET: src/logging.rs:127-130 (uses Tee with stdout)
   - [x] Log file path `.switchboard/gateway.log` — MET: src/logging.rs:127 (uses rolling::never for gateway.log)
-- **Notes:** Fixed stdout output and changed log file from dated to gateway.log
+- **Findings:**
+  - SHOULD FIX: None
+- **Summary:** Gateway logging implementation complete. Uses Tee to write to both stdout and gateway.log file. All logging statements follow tracing conventions. Pre-existing clippy warnings in unrelated code (doc overindent, clone_on_copy, derivable_impls) - not blocking. Build passes with feature flags.
 
 ---
 
