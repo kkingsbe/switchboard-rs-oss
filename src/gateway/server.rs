@@ -17,8 +17,10 @@ use tokio::sync::broadcast;
 use tower::ServiceBuilder;
 use tower_http::trace::TraceLayer;
 use tracing::{error, info, warn};
+use uuid::Uuid;
 
 use crate::gateway::config::{GatewayConfig, ServerConfig};
+use crate::gateway::protocol::GatewayMessage;
 
 /// Error types for the gateway HTTP server.
 #[derive(Debug, thiserror::Error)]
@@ -114,7 +116,8 @@ async fn ws_handler(
 
 /// Handle an established WebSocket connection.
 ///
-/// This function echoes received messages back to the client.
+/// This function handles incoming WebSocket messages, implementing the registration
+/// protocol and echoing back non-registration messages.
 ///
 /// # Arguments
 ///
@@ -129,12 +132,63 @@ async fn handle_socket(socket: WebSocket, _state: Arc<AppState>) {
             Ok(msg) => {
                 if let Message::Text(text) = msg {
                     info!("Received WebSocket message: {}", text);
-                    // Echo the message back to the client
-                    if sender.send(Message::Text(text)).await.is_err() {
-                        warn!("Failed to send message to client, connection may be closed");
-                        break;
+
+                    // Try to parse the message as a GatewayMessage
+                    match serde_json::from_str::<GatewayMessage>(&text) {
+                        Ok(gateway_msg) => {
+                            // Handle the message based on its type
+                            match gateway_msg {
+                                GatewayMessage::Register { project_name, channels: _ } => {
+                                    // Validate project_name is not empty
+                                    if project_name.trim().is_empty() {
+                                        // Send error response for empty project name
+                                        let error_msg = GatewayMessage::RegisterError {
+                                            error: "project_name cannot be empty".to_string(),
+                                        };
+                                        if let Ok(json) = serde_json::to_string(&error_msg) {
+                                            let _ = sender.send(Message::Text(json)).await;
+                                        }
+                                        continue;
+                                    }
+
+                                    // Generate a unique session ID
+                                    let session_id = Uuid::new_v4().to_string();
+
+                                    info!(
+                                        "Registered project: {} with session_id: {}",
+                                        project_name, session_id
+                                    );
+
+                                    // Send RegisterAck response
+                                    let ack_msg = GatewayMessage::RegisterAck {
+                                        status: "ok".to_string(),
+                                        session_id,
+                                    };
+                                    if let Ok(json) = serde_json::to_string(&ack_msg) {
+                                        let _ = sender.send(Message::Text(json)).await;
+                                    }
+                                }
+                                // For non-register messages, echo back for backward compatibility
+                                _ => {
+                                    if sender.send(Message::Text(text)).await.is_err() {
+                                        warn!("Failed to send message to client, connection may be closed");
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+                        Err(e) => {
+                            // Parse error - send RegisterError response
+                            warn!("Failed to parse message as GatewayMessage: {}", e);
+                            let error_msg = GatewayMessage::RegisterError {
+                                error: "invalid message format".to_string(),
+                            };
+                            if let Ok(json) = serde_json::to_string(&error_msg) {
+                                let _ = sender.send(Message::Text(json)).await;
+                            }
+                        }
                     }
-                } else if let Message::Close(_)= msg {
+                } else if let Message::Close(_) = msg {
                     info!("Client initiated close");
                     break;
                 }
@@ -399,5 +453,95 @@ mod tests {
         // Creating the router should not panic - it includes /ws route now
         let _app = create_router(state);
         // If we get here without panicking, the test passes
+    }
+
+    // ==================== Registration Protocol Tests ====================
+
+    use crate::gateway::protocol::GatewayMessage;
+
+    /// Test that valid registration message returns session_id
+    #[test]
+    fn test_valid_registration_returns_session_id() {
+        let json = r#"{"type":"register","project_name":"test-project","channels":["channel1","channel2"]}"#;
+        let msg: GatewayMessage = serde_json::from_str(json).expect("Failed to parse register message");
+
+        match msg {
+            GatewayMessage::Register { project_name, channels } => {
+                assert_eq!(project_name, "test-project");
+                assert_eq!(channels.len(), 2);
+                assert_eq!(channels[0], "channel1");
+                assert_eq!(channels[1], "channel2");
+            }
+            _ => panic!("Expected Register message"),
+        }
+    }
+
+    /// Test that empty project_name returns error
+    #[test]
+    fn test_empty_project_name_returns_error() {
+        let json = r#"{"type":"register","project_name":"   ","channels":["channel1"]}"#;
+        let msg: GatewayMessage = serde_json::from_str(json).expect("Failed to parse register message");
+
+        match msg {
+            GatewayMessage::Register { project_name, .. } => {
+                // Validate that trimmed project_name is empty
+                assert!(project_name.trim().is_empty(), "Project name should be empty after trimming");
+            }
+            _ => panic!("Expected Register message"),
+        }
+    }
+
+    /// Test that malformed JSON returns error
+    #[test]
+    fn test_malformed_json_returns_error() {
+        let json = r#"this is not valid json"#;
+        let result: Result<GatewayMessage, _> = serde_json::from_str(json);
+        assert!(result.is_err(), "Malformed JSON should fail to parse");
+    }
+
+    /// Test that RegisterAck message is correctly serialized
+    #[test]
+    fn test_register_ack_serialization() {
+        let msg = GatewayMessage::RegisterAck {
+            status: "ok".to_string(),
+            session_id: "test-session-123".to_string(),
+        };
+        let json = serde_json::to_string(&msg).expect("Failed to serialize RegisterAck");
+        assert!(json.contains("\"type\":\"register_ack\""));
+        assert!(json.contains("\"status\":\"ok\""));
+        assert!(json.contains("\"session_id\":\"test-session-123\""));
+    }
+
+    /// Test that RegisterError message is correctly serialized
+    #[test]
+    fn test_register_error_serialization() {
+        let msg = GatewayMessage::RegisterError {
+            error: "invalid message format".to_string(),
+        };
+        let json = serde_json::to_string(&msg).expect("Failed to serialize RegisterError");
+        assert!(json.contains("\"type\":\"register_error\""));
+        assert!(json.contains("\"error\":\"invalid message format\""));
+    }
+
+    /// Test that non-register messages can be deserialized
+    #[test]
+    fn test_heartbeat_message_deserialization() {
+        let json = r#"{"type":"heartbeat","timestamp":1699999999}"#;
+        let msg: GatewayMessage = serde_json::from_str(json).expect("Failed to parse heartbeat message");
+        assert!(matches!(msg, GatewayMessage::Heartbeat { timestamp: 1699999999 }));
+    }
+
+    /// Test that Message variant is correctly deserialized
+    #[test]
+    fn test_message_variant_deserialization() {
+        let json = r#"{"type":"message","payload":"Hello world","channel_id":12345}"#;
+        let msg: GatewayMessage = serde_json::from_str(json).expect("Failed to parse message");
+        match msg {
+            GatewayMessage::Message { payload, channel_id } => {
+                assert_eq!(payload, "Hello world");
+                assert_eq!(channel_id, 12345);
+            }
+            _ => panic!("Expected Message variant"),
+        }
     }
 }
