@@ -18,8 +18,6 @@
 
 ---
 
-## PENDING_REVIEW
-
 ### story-004-03: HTTP server with health check
 
 - **Implemented by:** dev-2
@@ -28,20 +26,22 @@
 - **Story file:** `.switchboard/state/stories/story-004-03-http-server-health-check.md`
 - **Files changed:** src/gateway/server.rs (already existed)
 - **Build Result:** ✅ PASS - `cargo build --features "discord gateway"`
-- **Test Result:** ✅ PASS - `cargo test --lib --features "gateway"` (6 server tests pass)
-- **Status:** PENDING_REVIEW
-- **Review Date:** 2026-03-05
+- **Test Result:** ✅ PASS - `cargo test --lib --features "gateway"` (719 tests pass)
+- **Clippy Result:** ✅ PASS - no warnings
+- **Status:** ✅ APPROVED
+- **Review Date:** 2026-03-05T10:53:00Z
 
 **Acceptance Criteria:**
-  - [x] HTTP server on configured port (default 9745) — MET: ServerConfig.http_port used in serve()
-  - [x] GET /health returns {"status": "ok"} — MET: health_handler() returns Json<HealthResponse>
-  - [x] Graceful shutdown handling — MET: shutdown_signal() handles SIGINT/SIGTERM
+  - [x] HTTP server on configured port (default 9745) — MET: ServerConfig.http_port used in serve() at line 241
+  - [x] GET /health returns {"status": "ok"} — MET: health_handler() returns Json<HealthResponse> at lines 93-95
+  - [x] Graceful shutdown handling — MET: shutdown_signal() handles SIGINT/SIGTERM at lines 298-324
 
 **Findings:**
 - **NOTE:** Implementation already exists in codebase from previous sprint. Verified code structure and tests pass.
+- Skills Compliance: ✅ Uses thiserror for error types, ✅ Uses tokio async, ✅ Uses tracing for logging, ✅ No unwrap() in production
 
 **Summary:**
-The HTTP server with health check endpoint is fully implemented using Axum. The /health endpoint returns the expected JSON response. Graceful shutdown is implemented with signal handling. All 6 gateway server tests pass.
+The HTTP server with health check endpoint is fully implemented using Axum. The /health endpoint returns the expected JSON response. Graceful shutdown is implemented with signal handling. All 719 tests pass. Clippy passes with no warnings. Implementation follows all project conventions.
 
 ---
 
@@ -53,20 +53,22 @@ The HTTP server with health check endpoint is fully implemented using Axum. The 
 - **Story file:** `.switchboard/state/stories/story-004-04-websocket-server.md`
 - **Files changed:** src/gateway/server.rs (already existed)
 - **Build Result:** ✅ PASS - `cargo build --features "discord gateway"`
-- **Test Result:** ✅ PASS - `cargo test --lib --features "gateway"` (6 server tests pass)
-- **Status:** PENDING_REVIEW
-- **Review Date:** 2026-03-05
+- **Test Result:** ✅ PASS - `cargo test --lib --features "gateway"` (719 tests pass)
+- **Clippy Result:** ✅ PASS - no warnings
+- **Status:** ✅ APPROVED
+- **Review Date:** 2026-03-05T10:53:00Z
 
 **Acceptance Criteria:**
-  - [x] WebSocket endpoint at /ws — MET: ws_handler() registered at /ws route
-  - [x] Handle connections and parse messages — MET: handle_socket() receives and processes messages
-  - [x] Echo messages back for testing — MET: handle_socket() echoes received messages
+  - [x] WebSocket endpoint at /ws — MET: ws_handler() registered at /ws route at line 218
+  - [x] Handle connections and parse messages — MET: handle_socket() receives and processes messages at lines 126-204
+  - [x] Echo messages back for testing — MET: handle_socket() echoes received messages at lines 172-177
 
 **Findings:**
 - **NOTE:** Implementation already exists in codebase from previous sprint. Verified code structure and tests pass.
+- Skills Compliance: ✅ Uses thiserror for error types, ✅ Uses tokio async, ✅ Uses tracing for logging, ✅ No unwrap() in production
 
 **Summary:**
-The WebSocket server is fully implemented using tokio-tungstenite. The /ws endpoint accepts upgrade requests and handles connections. Messages are echoed back for testing purposes. All 6 gateway server tests pass.
+The WebSocket server is fully implemented using tokio-tungstenite. The /ws endpoint accepts upgrade requests and handles connections. Messages are echoed back for testing purposes. All 719 tests pass. Clippy passes with no warnings. Implementation follows all project conventions.
 
 ---
 
@@ -76,23 +78,25 @@ The WebSocket server is fully implemented using tokio-tungstenite. The /ws endpo
 - **Sprint:** 19
 - **Commits:** 4b17d97..4bb2740
 - **Story file:** `.switchboard/state/stories/story-004-06-registration-protocol.md`
-- **Files changed:** src/gateway/server.rs
+- **Files changed:** src/gateway/server.rs, src/gateway/protocol.rs
 - **Build Result:** ✅ PASS - cargo build --features "discord gateway"
 - **Test Result:** ✅ PASS (719 tests) - cargo test --lib --features "discord gateway"
-- **Status:** PENDING_REVIEW
-- **Review Date:** 2026-03-05
+- **Clippy Result:** ✅ PASS - no warnings
+- **Status:** ✅ APPROVED
+- **Review Date:** 2026-03-05T10:53:00Z
 
 **Acceptance Criteria:**
-  - [x] Registration Request - Message parsed correctly — MET: Unit test test_valid_registration_returns_session_id verifies parsing
-  - [x] Successful Response - Registration completes with session_id — MET: Unit test test_register_ack_serialization verifies response format
-  - [x] Error Handling - Invalid registration returns error — MET: Unit tests test_empty_project_name_returns_error and test_malformed_json_returns_error verify error handling
+  - [x] Registration Request - Message parsed correctly — MET: Unit test test_valid_registration_returns_session_id verifies parsing at server.rs:463
+  - [x] Successful Response - Registration completes with session_id — MET: Unit test test_register_ack_serialization verifies response format at server.rs:507
+  - [x] Error Handling - Invalid registration returns error — MET: Unit tests test_empty_project_name_returns_error and test_malformed_json_returns_error verify error handling at server.rs:480,495
 
 **Findings:**
 - **NOTE:** Implementation uses UUID v4 for session ID generation
 - **NOTE:** Echo behavior maintained for non-registration messages for backward compatibility
+- Skills Compliance: ✅ Uses thiserror for error types, ✅ Uses tokio async, ✅ Uses tracing for logging, ✅ No unwrap() in production
 
 **Summary:**
-Implemented basic registration protocol in the gateway WebSocket server. The server now parses incoming Register messages, validates project_name is not empty, generates a unique session_id using UUID v4, and responds with RegisterAck. Invalid registrations return RegisterError with appropriate error messages.
+Implemented basic registration protocol in the gateway WebSocket server. The server now parses incoming Register messages, validates project_name is not empty, generates a unique session_id using UUID v4, and responds with RegisterAck. Invalid registrations return RegisterError with appropriate error messages. All 719 tests pass. Clippy passes with no warnings. Implementation follows all project conventions and skill requirements.
 
 ---
 

@@ -27,3 +27,17 @@
 - Sprint is already complete - both .dev_done_1 and .dev_done_2 exist
 - .sprint_complete already exists
 - The project_complete file was deleted per protocol (had stale not-started entries from archived Sprint 1)
+
+### 2026-03-05T10:55:00Z — Sprint 19, Stories: [story-004-06]
+
+- The protocol types (GatewayMessage) were already defined in protocol.rs from previous stories - I only needed to implement the handler logic in server.rs
+- Used UUID v4 for session ID generation - the uuid crate is already a dependency in the project
+- Unit tests are essential - added 7 tests that verify registration parsing, validation, and error handling
+- Build/test command requires `--features "discord gateway"` flag - tests use conditional compilation with #[cfg(feature = "gateway")]
+- The existing handle_socket() function just echoed messages - needed to modify it to parse JSON and handle Register variant
+- Error handling follows thiserror pattern from skills - created proper error responses instead of using unwrap()
+- Echo behavior maintained for non-register messages to preserve backward compatibility during integration testing
+
+- Subtask delegation worked well: one code-mode subtask handled the full implementation including tests
+- No reverts were needed - implementation worked on first attempt
+- Key learning: Always check existing code first before implementing - protocol types were already there!
