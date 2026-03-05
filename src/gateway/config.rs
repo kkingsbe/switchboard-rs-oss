@@ -96,6 +96,11 @@ pub struct GatewayConfig {
     /// Discord bot token (supports ${VAR} syntax).
     pub discord_token: String,
 
+    /// Discord gateway intents (bitfield for Discord API).
+    /// Defaults to GUILD_MESSAGES | MESSAGE_CONTENT (512 | 16384 = 16896).
+    #[serde(default = "default_intents")]
+    pub discord_intents: u32,
+
     /// Server configuration.
     #[serde(default)]
     pub server: ServerConfig,
@@ -124,6 +129,11 @@ fn default_ws_port() -> u32 {
 
 fn default_log_level() -> String {
     "info".to_string()
+}
+
+/// Default intents: GUILD_MESSAGES | MESSAGE_CONTENT (512 | 16384 = 16896)
+fn default_intents() -> u32 {
+    512 | 16384
 }
 
 impl GatewayConfig {
@@ -206,6 +216,7 @@ impl GatewayConfig {
 
         Ok(GatewayConfig {
             discord_token,
+            discord_intents: 512 | 16384, // Default intents
             server: ServerConfig {
                 host,
                 http_port,
@@ -274,7 +285,7 @@ impl GatewayConfig {
                 )));
             }
             // Validate channel_id is numeric (Discord snowflake)
-            if channel.channel_id.parse::<u64>().is_err() {
+            if !channel.channel_id.chars().all(|c| c.is_ascii_digit()) {
                 return Err(GatewayConfigError::ValidationError(format!(
                     "channel at index {} has invalid channel_id '{}' - must be numeric",
                     idx, channel.channel_id
