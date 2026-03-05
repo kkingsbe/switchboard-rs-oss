@@ -7,4 +7,7 @@
 
 ## Stories
 
-<!-- No stories assigned yet -->
+**Completed Stories:**
+- **{story-004-06}**: Implement basic registration protocol (3 pts) ✅ queued for review
+  - Story file: `.switchboard/state/stories/story-004-06-registration-protocol.md`
+  - Commits: 4bb2740, bd1caf2
