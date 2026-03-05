@@ -14,9 +14,11 @@
 
 | Story | Points | Status | Assigned To |
 |-------|--------|--------|-------------|
-| (none) | 0 | - | - |
+| story-004-07 (Discord Gateway Connection) | 5 | IN PROGRESS | dev-1 |
+| story-005-02 (Channel Mapping Config) | 2 | IN PROGRESS | dev-2 |
+| story-005-04 (Runtime Channel Subscribe) | 2 | IN PROGRESS | dev-2 |
 
-**Sprint 20 Total**: 0 points
+**Sprint 20 Total**: 9 points (dev-1: 5 pts, dev-2: 4 pts)
 
 
 ## Sprint 19 Stories (Archived)
