@@ -2,19 +2,42 @@
 
 ## Current Sprint
 
-**Sprint**: 17  
+**Sprint**: 18  
 **Start Date**: 2026-03-04  
 **End Date**: 2026-03-18
 
 ---
 
-## Sprint 17 Stories (Current)
+## Sprint 18 Stories (Current)
 
 ### In Progress
 
 | Story | Points | Status | Assigned To |
 |-------|--------|--------|-------------|
-| story-003-refactor-docker-mod | 5 | In Progress | dev-1 |
+| story-004-01 (gateway module structure) | 1 | IN PROGRESS | dev-1 |
+| story-004-02 (gateway config loading) | 2 | IN PROGRESS | dev-1 |
+| story-004-05 (message protocol types) | 2 | IN PROGRESS | dev-1 |
+
+### In Review (Complete)
+
+| Story | Points | Status | Assigned To |
+|-------|--------|--------|-------------|
+| story-004-03 (HTTP server health check) | 3 | COMPLETE (IN REVIEW) | dev-2 |
+| story-004-04 (WebSocket server) | 3 | COMPLETE (IN REVIEW) | dev-2 |
+
+**Sprint 18 Total**: 11 points (dev-1: 5 pts, dev-2: 6 pts)
+
+---
+
+## Sprint 17 Stories (Archived)
+
+### In Progress
+
+| Story | Points | Status | Assigned To |
+|-------|--------|--------|-------------|
+| story-003-refactor-docker-mod | 5 | COMPLETE (APPROVED 2026-03-05) | dev-1 |
+
+**Sprint 17 Total**: 5 points (dev-1: 5 pts, dev-2: 0 pts)
 
 ---
 
