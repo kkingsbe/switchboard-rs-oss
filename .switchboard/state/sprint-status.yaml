@@ -22,8 +22,8 @@
 
 | Story | Points | Status | Assigned To |
 |-------|--------|--------|-------------|
-| story-004-03 (HTTP server health check) | 3 | COMPLETE (IN REVIEW) | dev-2 |
-| story-004-04 (WebSocket server) | 3 | COMPLETE (IN REVIEW) | dev-2 |
+| story-004-03 (HTTP server health check) | 3 | COMPLETE (APPROVED 2026-03-05) | dev-2 |
+| story-004-04 (WebSocket server) | 3 | COMPLETE (APPROVED 2026-03-05) | dev-2 |
 
 **Sprint 18 Total**: 11 points (dev-1: 5 pts, dev-2: 6 pts)
 

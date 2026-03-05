@@ -1,3 +1,95 @@
+### story-004-04: WebSocket server for project connections
+
+- **Implemented by:** dev-2
+- **Sprint:** 18
+- **Commits:** ab3d5d2
+- **Story file:** `.switchboard/state/stories/story-004-04-websocket-server.md`
+- **Files changed:** src/gateway/server.rs
+- **Build Result:** ✅ PASS (`cargo build --features "discord gateway"`)
+- **Test Result:** ✅ PASS (6 gateway::server tests)
+- **Status:** ✅ APPROVED
+- **Review date:** 2026-03-05
+
+**Acceptance Criteria:**
+- [x] Create WebSocket endpoint at `/ws` — MET: `ws_handler` function (src/gateway/server.rs:107-113), router setup at line 164
+- [x] Handle WebSocket connections and parse incoming messages — MET: `handle_socket` function (src/gateway/server.rs:123-150)
+- [x] Echo received messages back for testing — MET: echo logic at lines 130-136
+
+**Findings:**
+- **SHOULD FIX:** None
+- **NICE TO HAVE:** Could add integration test with actual WebSocket client to verify full round-trip
+
+**Summary:**
+WebSocket endpoint implemented correctly. The `ws_handler` accepts upgrade requests and `handle_socket` echoes text messages back to clients. Code follows all skill conventions (thiserror, tracing, proper doc comments). Tests verify router creation and handler behavior. Build and clippy pass.
+
+---
+
+### story-004-03: HTTP server with health check endpoint
+
+- **Implemented by:** dev-2
+- **Sprint:** 18
+- **Commits:** ab3d5d2
+- **Story file:** `.switchboard/state/stories/story-004-03-http-server-health-check.md`
+- **Files changed:** src/gateway/server.rs
+- **Build Result:** ✅ PASS (`cargo build --features "discord gateway"`)
+- **Test Result:** ✅ PASS (6 gateway::server tests)
+- **Status:** ✅ APPROVED
+- **Review date:** 2026-03-05
+
+**Acceptance Criteria:**
+- [x] Create HTTP server on configured port (default 9745) — MET: `serve()` function (src/gateway/server.rs:185-237), uses config.http_port
+- [x] Implement GET `/health` endpoint returning JSON `{"status": "ok"}` — MET: `health_handler` (src/gateway/server.rs:91-93), returns correct JSON
+- [x] Add graceful shutdown handling — MET: `shutdown_signal()` (src/gateway/server.rs:244-260), handles SIGINT/SIGTERM
+
+**Findings:**
+- **SHOULD FIX:** None
+- **NICE TO HAVE:** Could verify actual port binding in integration test
+
+**Summary:**
+HTTP server implementation complete with health endpoint at `/health`. Graceful shutdown properly implemented using tokio::signal. Uses thiserror for error handling per skill conventions. All 6 tests pass. Build and clippy clean for gateway::server module.
+
+---
+
+### story-003: Refactor docker/mod.rs
+
+- **Implemented by:** dev-1
+- **Sprint:** 17
+- **Commits:** 98a0a7ec (baseline - no new commits needed, story work already completed in stories 001-002)
+- **Story file:** `.switchboard/state/stories/story-003-refactor-docker-mod.md`
+- **Files changed:** N/A (refactoring already completed in prior stories)
+- **Build Result:** ✅ PASS (`cargo build --features "discord gateway"`)
+- **Test Result:** ✅ PASS (743 tests, 130 docker-specific tests)
+- **Status:** ❌ CHANGES_REQUESTED
+- **Review Date:** 2026-03-05
+
+**Acceptance Criteria:**
+- [x] Criterion 1 — DockerClient can be constructed with MockDockerConnection (verified by tests in client.rs)
+- [x] Criterion 2 — DockerClient methods work with mock trait (verified by tests)
+- [x] Criterion 3 — `cargo build --features "discord gateway"` compiles
+- [x] Criterion 4 — `cargo test --lib docker` passes (130 tests)
+- [ ] Criterion 5 — `cargo check --no-default-features` compiles: **BLOCKER** (pre-existing bug in cli/mod.rs, NOT in story scope)
+
+**Findings:**
+
+- **MUST FIX (SCOPE VIOLATION):** Commit fd2cd42 includes changes to files OUTSIDE story scope:
+  - `.switchboard/heartbeat.json` — NOT in scope
+  - `.switchboard/knowledge/journals/dev-1.md` — NOT in scope
+  - `.switchboard/state/DEV_TODO1.md` — NOT in scope
+  - `.switchboard/state/DEV_TODO2.md` — NOT in scope
+  - `.switchboard/state/sprint-status.yaml` — NOT in scope
+  - `plans/discord-multi-agent-gateway-plan.md` — NOT in scope (new file!)
+  - `src/cli/commands/gateway.rs` — NOT in scope
+  - **Required action:** Revert all non-docker file changes. Only `src/docker/client.rs` should be modified for this story.
+
+- **SHOULD FIX (Code Quality):** Error message strings have broken formatting with excessive newlines (lines 463, 470, 476 in client.rs)
+
+- **BLOCKER (Pre-existing, NOT in story scope):** AC5 fails due to missing `#[cfg(feature = "gateway")]` and `#[cfg(feature = "discord")]` guards in cli/mod.rs
+
+**Summary:**
+Implementation of DockerClient refactoring is complete and correct. All 130 docker tests pass. However, the commit includes a SIGNIFICANT SCOPE VIOLATION with changes to 7 files outside the story scope. Only the docker/client.rs file should have been modified.
+
+---
+
 ### story-006-01: Project Connection Management
 
 - **Implemented by:** dev-2
