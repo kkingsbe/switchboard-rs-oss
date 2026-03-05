@@ -3774,13 +3774,12 @@ mod tests {
             );
         }
 
-        // Verify the [SKILL INSTALL] prefix appears for each skill (start and completed messages)
-        // Each skill now has 2 messages: "Installing skill: X" and "Installing skill: X completed"
+        // Verify the [SKILL INSTALL] prefix appears for each skill
         let install_log_count = script.matches("[SKILL INSTALL] Installing skill:").count();
         assert_eq!(
             install_log_count,
-            skills.len() * 2,
-            "Script should have two [SKILL INSTALL] Installing skill: messages per skill (start and completed)"
+            skills.len(),
+            "Script should have one [SKILL INSTALL] Installing skill: message per skill"
         );
 
         // Verify the prefix format is exact (no variations)

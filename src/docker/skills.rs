@@ -216,11 +216,6 @@ pub fn generate_entrypoint_script(
             ));
             // Capture and prefix stderr line by line
             script.push_str(&format!("npx skills add {} -a kilo -y 2>&1 | while IFS= read -r line; do echo \"[SKILL INSTALL STDERR] $line\"; done\n", skill));
-            // Log skill installation completion
-            script.push_str(&format!(
-                "echo '[SKILL INSTALL] Installing skill: {} completed'\n",
-                skill
-            ));
         }
     }
 
@@ -1266,7 +1261,7 @@ mod tests {
     fn test_generate_entrypoint_script_skill_not_in_preexisting_list() {
         // Test when skill is valid format but not in preexisting_skills list AND not in filesystem
         // Use a skill name that definitely doesn't exist in ./skills/ directory
-        let skills = vec!["owner/nonexistent_skill_xyz".to_string()];
+        let skills = vec!["owner/nonexistent-skill".to_string()];
         let preexisting_skills = vec!["repo1".to_string()];
         let result = generate_entrypoint_script("test-agent", &skills, &preexisting_skills);
 
@@ -1277,7 +1272,7 @@ mod tests {
 
         if let Err(SkillsError::ScriptGenerationFailed { reason, .. }) = result {
             assert!(
-                reason.contains("nonexistent_skill_xyz"),
+                reason.contains("nonexistent-skill"),
                 "Error message should identify the missing skill. Got: {}",
                 reason
             );

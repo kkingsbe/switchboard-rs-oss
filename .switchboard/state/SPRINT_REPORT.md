@@ -2,6 +2,32 @@
 
 ---
 
+## Sprint 17 — 2026-03-04 to 2026-03-18
+
+### Progress — 2026-03-05T02:00:07Z
+
+| Agent | Assigned | Complete | In Review | Remaining |
+|-------|----------|----------|-----------|-----------|
+| dev-1 | 5 pts (1 story) | 0 pts | 0 | 5 pts |
+| dev-2 | 0 pts | 0 | 0 | 0 pts |
+
+**Current Sprint 17 Stories (IN PROGRESS):**
+- story-003-refactor-docker-mod (5 pts) - dev-1 - In Progress
+
+**Blockers:** 2 active
+- #1: Pre-existing Docker Test Failures (5 tests failing, blocking AGENT QA verification)
+- #2: Sprint 10 pre-existing test failures affecting final QA sign-off
+
+**Review queue:** 0 pending
+
+**Sprint health:** Just started — Sprint 17 active. dev-1 working on story-003 (Docker module refactoring). dev-2 has no stories assigned this sprint.
+
+**Skills in use:**
+- rust-engineer (v1.0.0) — for Docker module refactoring with trait-based architecture
+- rust-best-practices (v1.1.0) — for Rust idioms and code quality
+
+---
+
 ## Sprint 16 — 2026-03-04
 
 ### 🚀 SPRINT COMPLETE ✅
