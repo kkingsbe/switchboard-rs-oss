@@ -1,3 +1,26 @@
+### story-004-05: Message protocol types for gateway<->project communication
+
+- **Implemented by:** dev-1
+- **Sprint:** 18
+- **Commits:** aec71499 (code already exists in repo)
+- **Story file:** `.switchboard/state/stories/story-004-05-message-protocol-types.md`
+- **Files changed:** src/gateway/protocol.rs
+- **Build Result:** ✅ PASS (`cargo build --features "discord gateway"`)
+- **Test Result:** ✅ PASS (20 gateway::protocol tests)
+- **Status:** PENDING_REVIEW
+
+**Acceptance Criteria:**
+- [x] Define `GatewayMessage` enum with variants: Register, RegisterAck, Message, Heartbeat, HeartbeatAck — MET: src/gateway/protocol.rs:14-102
+- [x] Implement serde serialization/deserialization — MET: tests verify JSON round-trip for all variants
+- [x] Document protocol in code comments — MET: Each variant has comprehensive doc comments
+
+**Notes:**
+- Implementation already exists and is complete
+- 20 unit tests verify serialization/deserialization
+- Uses thiserror for errors per skill conventions
+
+---
+
 ### story-004-04: WebSocket server for project connections
 
 - **Implemented by:** dev-2

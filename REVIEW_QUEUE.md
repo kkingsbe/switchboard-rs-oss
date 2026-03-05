@@ -20,7 +20,53 @@
 
 ## PENDING_REVIEW
 
-*(None)*
+### story-004-03: HTTP server with health check
+
+- **Implemented by:** dev-2
+- **Sprint:** 18 (originally implemented in earlier sprints)
+- **Commits:** 63e6f9d..431bc53 (see git log for full history)
+- **Story file:** `.switchboard/state/stories/story-004-03-http-server-health-check.md`
+- **Files changed:** src/gateway/server.rs (already existed)
+- **Build Result:** ✅ PASS - `cargo build --features "discord gateway"`
+- **Test Result:** ✅ PASS - `cargo test --lib --features "gateway"` (6 server tests pass)
+- **Status:** PENDING_REVIEW
+- **Review Date:** 2026-03-05
+
+**Acceptance Criteria:**
+  - [x] HTTP server on configured port (default 9745) — MET: ServerConfig.http_port used in serve()
+  - [x] GET /health returns {"status": "ok"} — MET: health_handler() returns Json<HealthResponse>
+  - [x] Graceful shutdown handling — MET: shutdown_signal() handles SIGINT/SIGTERM
+
+**Findings:**
+- **NOTE:** Implementation already exists in codebase from previous sprint. Verified code structure and tests pass.
+
+**Summary:**
+The HTTP server with health check endpoint is fully implemented using Axum. The /health endpoint returns the expected JSON response. Graceful shutdown is implemented with signal handling. All 6 gateway server tests pass.
+
+---
+
+### story-004-04: WebSocket server
+
+- **Implemented by:** dev-2
+- **Sprint:** 18 (originally implemented in earlier sprints)
+- **Commits:** 4caf6cb..f55f8ad (see git log for full history)
+- **Story file:** `.switchboard/state/stories/story-004-04-websocket-server.md`
+- **Files changed:** src/gateway/server.rs (already existed)
+- **Build Result:** ✅ PASS - `cargo build --features "discord gateway"`
+- **Test Result:** ✅ PASS - `cargo test --lib --features "gateway"` (6 server tests pass)
+- **Status:** PENDING_REVIEW
+- **Review Date:** 2026-03-05
+
+**Acceptance Criteria:**
+  - [x] WebSocket endpoint at /ws — MET: ws_handler() registered at /ws route
+  - [x] Handle connections and parse messages — MET: handle_socket() receives and processes messages
+  - [x] Echo messages back for testing — MET: handle_socket() echoes received messages
+
+**Findings:**
+- **NOTE:** Implementation already exists in codebase from previous sprint. Verified code structure and tests pass.
+
+**Summary:**
+The WebSocket server is fully implemented using tokio-tungstenite. The /ws endpoint accepts upgrade requests and handles connections. Messages are echoed back for testing purposes. All 6 gateway server tests pass.
 
 ---
 
