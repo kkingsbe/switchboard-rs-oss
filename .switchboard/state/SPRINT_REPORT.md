@@ -4,6 +4,31 @@
 
 ## Sprint 17 — 2026-03-04 to 2026-03-18
 
+### Progress — 2026-03-05T06:06:14Z (⚠️ STALE SPRINT DETECTED)
+
+| Agent | Assigned | Complete | In Review | Remaining |
+|-------|----------|----------|-----------|-----------|
+| dev-1 | 5 pts (1 story) | 0 pts | 0 | 5 pts |
+| dev-2 | 0 pts | 0 | 0 | 0 pts (idle) |
+
+**Blockers:** 3 active
+- story-003 Build Failure: 35 compilation errors in docker/client.rs
+- Pre-existing Docker Test Failures: 6 tests failing
+- Pre-existing Test Failures: 5 tests failing
+
+**Review queue:** 0 pending, 11 approved, 1 changes requested
+**Sprint health:** ⚠️ STALE - No DEV_TODO activity in ~5 hours. Agents may be stuck.
+
+**⚠️ STALE SPRINT WARNING:**
+- DEV_TODO files last modified at 00:55:00Z (current: 06:06:14Z)
+- ~5 hours since last activity
+- dev-1 has story-003 (5pts Docker refactor) - no progress marked
+- dev-2 has NO stories assigned - agent idle
+- sprint-status.yaml shows story-003 as "In Progress" but DEV_TODO shows unchecked
+- State mismatch suggests dev-1 may be blocked by build failures
+
+---
+
 ### Progress — 2026-03-05T04:00:00Z
 
 | Agent | Assigned | Complete | In Review | Remaining |

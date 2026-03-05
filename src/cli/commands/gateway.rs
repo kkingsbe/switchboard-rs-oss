@@ -257,9 +257,9 @@ async fn run_gateway_up(args: GatewayUpArgs) -> Result<(), Box<dyn std::error::E
 /// Returns `Ok(())` on success (parent returns immediately, child runs server),
 /// or an error if daemonization fails.
 async fn run_gateway_detached(
-    config: GatewayConfig,
-    host: String,
-    http_port: u32,
+    _config: GatewayConfig,
+    _host: String,
+    _http_port: u32,
     config_path: String,
 ) -> Result<(), Box<dyn std::error::Error>> {
     #[cfg(unix)]
@@ -296,8 +296,10 @@ async fn run_gateway_detached(
     {
         // On non-Unix systems, we can't easily daemonize
         // For now, just run in foreground with a warning
-        tracing::warn!("Detached mode is not fully supported on this platform. Running in foreground.");
-        
+        tracing::warn!(
+            "Detached mode is not fully supported on this platform. Running in foreground."
+        );
+
         let server = GatewayServer::new(config.server.clone(), config);
         tracing::info!("Starting gateway server on {}:{}", host, http_port);
         server.run().await?;
@@ -308,9 +310,7 @@ async fn run_gateway_detached(
 
 /// Internal function to run gateway as a detached child process.
 /// This is called when SWITCHBOARD_DETACHED_CHILD environment variable is set.
-async fn run_gateway_as_child(
-    args: GatewayUpArgs,
-) -> Result<(), Box<dyn std::error::Error>> {
+async fn run_gateway_as_child(args: GatewayUpArgs) -> Result<(), Box<dyn std::error::Error>> {
     let config_path = &args.config;
 
     // Validate config path exists

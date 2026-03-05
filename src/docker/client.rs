@@ -6,9 +6,7 @@
 //! - DockerClient struct with all methods
 //! - DockerClientTrait implementations
 
-use crate::docker::connection::{
-    DockerConnectionTrait, RealDockerConnection,
-};
+use crate::docker::connection::{DockerConnectionTrait, RealDockerConnection};
 use bollard::Docker;
 use std::path::Path;
 use std::sync::Arc;
@@ -18,9 +16,6 @@ pub use crate::traits::{
     BuildOptions, DockerClientTrait, ProcessError, ProcessExecutorTrait, RealDockerClient,
     RealProcessExecutor,
 };
-
-/// Error message used when Docker client is not available
-const DOCKER_NOT_AVAILABLE: &str = "Docker client not available";
 
 /// Get the Docker socket path from the active Docker context
 ///
@@ -360,7 +355,7 @@ impl From<std::io::Error> for DockerError {
 ///
 /// # Fields
 ///
-/// - `docker` - The underlying `bollard::Docker` client instance for Docker API calls
+/// - `client` - The Docker client trait object for Docker operations
 /// - `_image_name` - The Docker image name (currently unused, reserved for future use)
 /// - `_image_tag` - The Docker image tag (currently unused, reserved for future use)
 ///
@@ -386,8 +381,8 @@ impl From<std::io::Error> for DockerError {
 /// // Check if Docker is available
 /// client.check_available().await?;
 ///
-/// // Get access to the underlying Docker client for advanced operations
-/// let docker = client.docker();
+/// // Use the client trait for Docker operations
+/// let docker_client = client.client();
 /// # Ok(())
 /// # }
 /// ```
@@ -396,8 +391,10 @@ pub struct DockerClient {
     connection: Arc<dyn DockerConnectionTrait>,
     /// The Docker client trait object for Docker operations
     client: Arc<dyn DockerClientTrait>,
-    /// The bollard Docker client (for backward compatibility)
-    docker: Option<Docker>,
+    /// The underlying bollard Docker client (derived from client)
+    /// Only available when the "discord" feature is enabled
+    #[cfg(feature = "discord")]
+    docker: Docker,
     /// Docker image name
     _image_name: String,
     /// Docker image tag
@@ -409,6 +406,7 @@ impl Clone for DockerClient {
         DockerClient {
             connection: Arc::clone(&self.connection),
             client: Arc::clone(&self.client),
+            #[cfg(feature = "discord")]
             docker: self.docker.clone(),
             _image_name: self._image_name.clone(),
             _image_tag: self._image_tag.clone(),
@@ -417,17 +415,6 @@ impl Clone for DockerClient {
 }
 
 impl DockerClient {
-    /// Get the Docker client, returning an error if not available
-    ///
-    /// # Errors
-    ///
-    /// Returns `DockerError::ConnectionError` if the Docker client is not available.
-    fn get_docker(&self) -> Result<&Docker, DockerError> {
-        self.docker.as_ref().ok_or(DockerError::ConnectionError(
-            DOCKER_NOT_AVAILABLE.to_string(),
-        ))
-    }
-
     /// Create a new DockerClient instance and verify Docker is available
     ///
     /// # Arguments
@@ -529,7 +516,8 @@ impl DockerClient {
         Ok(DockerClient {
             connection,
             client,
-            docker: Some(docker),
+            #[cfg(feature = "discord")]
+            docker,
             _image_name: image_name,
             _image_tag: image_tag,
         })
@@ -552,6 +540,7 @@ impl DockerClient {
     /// needed when using an existing client connection. These fields are preserved
     /// for backward compatibility with existing code that may access them.
     pub fn from_real_client(real_client: crate::traits::RealDockerClient) -> Self {
+        #[cfg(feature = "discord")]
         let docker = real_client.docker().clone();
         let client: Arc<dyn DockerClientTrait> = Arc::new(real_client);
         // Create a default RealDockerConnection for backward compatibility
@@ -559,7 +548,8 @@ impl DockerClient {
         DockerClient {
             connection,
             client,
-            docker: Some(docker),
+            #[cfg(feature = "discord")]
+            docker,
             _image_name: String::new(),
             _image_tag: String::new(),
         }
@@ -602,46 +592,6 @@ impl DockerClient {
         self.client.ping()
     }
 
-    /// Returns a reference to the internal bollard Docker client.
-    ///
-    /// This getter provides access to the underlying `bollard::Docker` instance
-    /// used by this client. This is useful for advanced use cases where direct
-    /// access to the Docker API is needed beyond the methods provided by the
-    /// `DockerClient` wrapper.
-    ///
-    /// The returned client is connected to the Docker daemon and can be used
-    /// to interact with Docker containers, images, volumes, networks, and other
-    /// Docker resources using the full bollard API.
-    ///
-    /// # Returns
-    ///
-    /// An optional reference to the internal `bollard::Docker` client instance.
-    /// Returns `None` if the client was created via `new_with_client()` without
-    /// providing the underlying Docker client.
-    ///
-    /// # Examples
-    ///
-    /// ```rust,no_run
-    /// use bollard::Docker;
-    /// use switchboard::docker::DockerClient;
-    ///
-    /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
-    /// let client = DockerClient::new(
-    ///     "my-image".to_string(),
-    ///     "latest".to_string(),
-    /// ).await?;
-    ///
-    /// // Get access to the underlying Docker client
-    /// if let Some(docker) = client.docker() {
-    ///     let containers = docker.list_containers::<String>(None).await?;
-    /// }
-    /// # Ok(())
-    /// # }
-    /// ```
-    pub fn docker(&self) -> Option<&Docker> {
-        self.docker.as_ref()
-    }
-
     /// Get a reference to the underlying Docker client trait
     ///
     /// This method provides access to the Docker client trait for operations
@@ -652,6 +602,26 @@ impl DockerClient {
     /// A reference to the Docker client trait object.
     pub fn client(&self) -> &dyn DockerClientTrait {
         self.client.as_ref()
+    }
+
+    /// Get a reference to the underlying bollard Docker client
+    ///
+    /// This method provides direct access to the underlying bollard Docker client.
+    /// This is useful for advanced operations that are not exposed through the trait.
+    ///
+    /// # Returns
+    ///
+    /// An optional reference to the internal bollard Docker client.
+    /// Returns `None` if the "discord" feature is not enabled.
+    pub fn docker(&self) -> Option<&Docker> {
+        #[cfg(feature = "discord")]
+        {
+            Some(&self.docker)
+        }
+        #[cfg(not(feature = "discord"))]
+        {
+            None
+        }
     }
 
     /// Get a reference to the underlying Arc<dyn DockerClientTrait>
@@ -751,50 +721,16 @@ impl AsRef<Arc<dyn DockerClientTrait>> for &DockerClient {
     }
 }
 
-// Implement DockerClientTrait for DockerClient for compatibility
+// Implement DockerClientTrait for DockerClient
 // This allows DockerClient to be used where DockerClientTrait is expected
+// by delegating all operations to the internal client field
 impl crate::traits::DockerClientTrait for DockerClient {
     fn ping(&self) -> Result<(), DockerError> {
-        let docker = self.get_docker()?;
-        // Use block_in_place to properly handle being called from within an async context
-        tokio::task::block_in_place(|| {
-            let handle = tokio::runtime::Handle::current();
-            handle.block_on(docker.ping())
-        })
-        .map(|_| ())
-        .map_err(|e| DockerError::ConnectionError(e.to_string()))
+        self.client.ping()
     }
 
     fn image_exists(&self, name: &str, tag: &str) -> Result<bool, DockerError> {
-        use bollard::image::ListImagesOptions;
-
-        let image_name = format!("{}:{}", name, tag);
-        let docker = self.get_docker()?;
-
-        // Use block_in_place to properly handle being called from within an async context
-        tokio::task::block_in_place(|| {
-            let handle = tokio::runtime::Handle::current();
-            handle.block_on(async {
-                let options = Some(ListImagesOptions::<String> {
-                    all: false,
-                    ..Default::default()
-                });
-
-                let images = docker.list_images(options).await?;
-
-                for image in images {
-                    let repo_tags = &image.repo_tags;
-                    for repo_tag in repo_tags {
-                        if repo_tag == &image_name {
-                            return Ok(true);
-                        }
-                    }
-                }
-
-                Ok(false)
-            })
-        })
-        .map_err(|e: bollard::errors::Error| DockerError::ConnectionError(e.to_string()))
+        self.client.image_exists(name, tag)
     }
 
     fn build_image(
@@ -802,84 +738,15 @@ impl crate::traits::DockerClientTrait for DockerClient {
         options: crate::traits::BuildOptions,
         context: std::path::PathBuf,
     ) -> Result<String, DockerError> {
-        // Clone the internal docker client (it's Arc-based)
-        let docker = self.get_docker()?.clone();
-
-        // Clone values needed for block_in_place
-        let dockerfile = options
-            .dockerfile
-            .unwrap_or_else(|| "Dockerfile".to_string());
-        let image_name = options.image_name.clone();
-        let tag = options.tag.clone();
-
-        // Use block_in_place to handle both sync and async contexts properly
-        let result = tokio::task::block_in_place(|| {
-            let handle = tokio::runtime::Handle::current();
-            handle.block_on(async move {
-                use bollard::image::BuildImageOptions;
-                use futures::StreamExt;
-
-                // Create tarball - call through the module path to ensure correct resolution
-                let tarball = crate::docker::create_build_context_tarball(&context, &dockerfile)
-                    .map_err(|e| std::io::Error::other(e.to_string()))?;
-                let tarball_bytes = bytes::Bytes::from(tarball.into_inner());
-
-                let build_options = BuildImageOptions {
-                    dockerfile: "Dockerfile",
-                    t: &format!("{}:{}", image_name, tag),
-                    rm: true,
-                    ..Default::default()
-                };
-
-                let mut stream = docker.build_image(build_options, None, Some(tarball_bytes));
-                let mut final_image_id = String::new();
-
-                while let Some(build_result) = stream.next().await {
-                    match build_result {
-                        Ok(info) => {
-                            if let Some(id) = info.id {
-                                final_image_id = id;
-                            }
-                        }
-                        Err(e) => {
-                            return Err(std::io::Error::other(e.to_string()));
-                        }
-                    }
-                }
-
-                Ok(final_image_id)
-            })
-        })
-        .map_err(|e| DockerError::ConnectionError(e.to_string()))?;
-
-        Ok(result)
+        self.client.build_image(options, context)
     }
 
-    fn run_container(
-        &self,
-        _config: crate::traits::ContainerConfig,
-    ) -> Result<String, DockerError> {
-        // This is a simple implementation - for full functionality, use RealDockerClient
-        Err(DockerError::NotImplemented(
-            "run_container not implemented for DockerClient, use RealDockerClient".to_string(),
-        ))
+    fn run_container(&self, config: crate::traits::ContainerConfig) -> Result<String, DockerError> {
+        self.client.run_container(config)
     }
 
     fn stop_container(&self, container_id: &str, timeout: u64) -> Result<(), DockerError> {
-        use bollard::container::StopContainerOptions;
-
-        let options = StopContainerOptions { t: timeout as i64 };
-        let docker = self.get_docker()?.clone();
-        let container_id = container_id.to_string();
-
-        // Use block_in_place to handle both sync and async contexts properly
-        tokio::task::block_in_place(|| {
-            let handle = tokio::runtime::Handle::current();
-            handle.block_on(async { docker.stop_container(&container_id, Some(options)).await })
-        })
-        .map_err(|e: bollard::errors::Error| DockerError::ConnectionError(e.to_string()))?;
-
-        Ok(())
+        self.client.stop_container(container_id, timeout)
     }
 
     fn container_logs(
@@ -888,79 +755,15 @@ impl crate::traits::DockerClientTrait for DockerClient {
         follow: bool,
         tail: Option<u64>,
     ) -> Result<String, DockerError> {
-        use bollard::container::LogsOptions;
-        use futures::StreamExt;
-
-        let options = LogsOptions::<String> {
-            stdout: true,
-            stderr: true,
-            follow,
-            tail: tail
-                .map(|t| t.to_string())
-                .unwrap_or_else(|| "all".to_string()),
-            ..Default::default()
-        };
-
-        let docker = self.get_docker()?.clone();
-        let container_id = container_id.to_string();
-
-        // Use block_in_place to handle both sync and async contexts properly
-        let logs = tokio::task::block_in_place(|| {
-            let handle = tokio::runtime::Handle::current();
-            handle.block_on(async {
-                let mut stream = docker.logs(&container_id, Some(options));
-                let mut logs = String::new();
-
-                while let Some(log_result) = stream.next().await {
-                    match log_result {
-                        Ok(log) => {
-                            logs.push_str(&log.to_string());
-                        }
-                        Err(e) => {
-                            return Err(e);
-                        }
-                    }
-                }
-
-                Ok(logs)
-            })
-        })
-        .map_err(|e| DockerError::ConnectionError(e.to_string()))?;
-
-        Ok(logs)
+        self.client.container_logs(container_id, follow, tail)
     }
 
     fn wait_container(
         &self,
         container_id: &str,
-        _timeout: u64,
+        timeout: u64,
     ) -> Result<crate::traits::ExitCode, DockerError> {
-        use bollard::container::WaitContainerOptions;
-        use futures::StreamExt;
-
-        let options = WaitContainerOptions { condition: "exit" };
-        let docker = self.get_docker()?.clone();
-        let container_id = container_id.to_string();
-
-        // Use block_in_place to handle both sync and async contexts properly
-        let exit_code = tokio::task::block_in_place(|| {
-            let handle = tokio::runtime::Handle::current();
-            handle.block_on(async {
-                let mut stream = docker.wait_container(&container_id, Some(options));
-
-                if let Some(result) = stream.next().await {
-                    match result {
-                        Ok(status) => Ok(status.status_code as i32),
-                        Err(e) => Err(e),
-                    }
-                } else {
-                    Ok(0)
-                }
-            })
-        })
-        .map_err(|e| DockerError::ConnectionError(e.to_string()))?;
-
-        Ok(crate::traits::ExitCode::from_i32(exit_code))
+        self.client.wait_container(container_id, timeout)
     }
 
     fn create_container(
@@ -968,17 +771,7 @@ impl crate::traits::DockerClientTrait for DockerClient {
         options: Option<bollard::container::CreateContainerOptions<String>>,
         config: bollard::container::Config<String>,
     ) -> Result<String, DockerError> {
-        let docker = self.get_docker()?.clone();
-
-        // Use block_in_place to handle both sync and async contexts properly
-        // This avoids the "Cannot start a runtime from within a runtime" error
-        let result = tokio::task::block_in_place(|| {
-            let handle = tokio::runtime::Handle::current();
-            handle.block_on(async { docker.create_container(options, config).await })
-        })
-        .map_err(|e: bollard::errors::Error| DockerError::ConnectionError(e.to_string()))?;
-
-        Ok(result.id)
+        self.client.create_container(options, config)
     }
 
     fn start_container(
@@ -986,17 +779,7 @@ impl crate::traits::DockerClientTrait for DockerClient {
         container_id: &str,
         options: Option<bollard::container::StartContainerOptions<String>>,
     ) -> Result<(), DockerError> {
-        let docker = self.get_docker()?.clone();
-        let container_id = container_id.to_string();
-
-        // Use block_in_place to handle both sync and async contexts properly
-        tokio::task::block_in_place(|| {
-            let handle = tokio::runtime::Handle::current();
-            handle.block_on(async { docker.start_container(&container_id, options).await })
-        })
-        .map_err(|e: bollard::errors::Error| DockerError::ConnectionError(e.to_string()))?;
-
-        Ok(())
+        self.client.start_container(container_id, options)
     }
 
     fn inspect_container(
@@ -1004,15 +787,7 @@ impl crate::traits::DockerClientTrait for DockerClient {
         container_id: &str,
         options: Option<bollard::container::InspectContainerOptions>,
     ) -> Result<bollard::service::ContainerInspectResponse, DockerError> {
-        let docker = self.get_docker()?.clone();
-        let container_id = container_id.to_string();
-
-        // Use block_in_place to handle both sync and async contexts properly
-        tokio::task::block_in_place(|| {
-            let handle = tokio::runtime::Handle::current();
-            handle.block_on(async { docker.inspect_container(&container_id, options).await })
-        })
-        .map_err(|e: bollard::errors::Error| DockerError::ConnectionError(e.to_string()))
+        self.client.inspect_container(container_id, options)
     }
 
     fn kill_container(
@@ -1020,14 +795,216 @@ impl crate::traits::DockerClientTrait for DockerClient {
         container_id: &str,
         options: Option<bollard::container::KillContainerOptions<String>>,
     ) -> Result<(), DockerError> {
-        let docker = self.get_docker()?.clone();
-        let container_id = container_id.to_string();
+        self.client.kill_container(container_id, options)
+    }
+}
 
-        // Use block_in_place to handle both sync and async contexts properly
-        tokio::task::block_in_place(|| {
-            let handle = tokio::runtime::Handle::current();
-            handle.block_on(async { docker.kill_container(&container_id, options).await })
-        })
-        .map_err(|e: bollard::errors::Error| DockerError::ConnectionError(e.to_string()))
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::docker::connection::{
+        DockerCommand, DockerConnectionTrait, DockerResponse, MockDockerConnectionBuilder,
+    };
+    use std::sync::Arc;
+
+    /// Test that DockerClient::new_with_connection accepts a MockDockerConnection
+    ///
+    /// This test verifies that the constructor properly accepts a mock connection
+    /// and handles the connection attempt. The mock is configured to simulate
+    /// a connection that cannot create a real Docker client, which is expected
+    /// behavior for the mock in test environments.
+    #[tokio::test]
+    async fn test_docker_client_new_with_connection_accepts_mock() {
+        // Create a mock connection with default settings
+        let mock_connection: Arc<dyn DockerConnectionTrait> = Arc::new(
+            MockDockerConnectionBuilder::new()
+                .with_connect_success(true)
+                .build()
+        );
+
+        // Attempt to create DockerClient - this should fail because
+        // MockDockerConnection cannot create a real bollard Docker client
+        let result = DockerClient::new_with_connection(
+            "test-image".to_string(),
+            "latest".to_string(),
+            mock_connection,
+        ).await;
+
+        // The mock's connect() always returns an error because it cannot
+        // create a real Docker client - this is expected behavior
+        // Use is_err() to check for error without requiring Debug on Ok variant
+        let had_error = result.is_err();
+        assert!(had_error, "Expected error because mock cannot create real Docker client");
+    }
+
+    /// Test DockerClient properly handles connection failure from mock
+    #[tokio::test]
+    async fn test_docker_client_handles_connection_failure() {
+        // Create a mock connection configured to fail
+        let mock_connection: Arc<dyn DockerConnectionTrait> = Arc::new(
+            MockDockerConnectionBuilder::new()
+                .with_connect_success(false)
+                .build()
+        );
+
+        let result = DockerClient::new_with_connection(
+            "test-image".to_string(),
+            "latest".to_string(),
+            mock_connection,
+        ).await;
+
+        // Should return an error - use is_err() to avoid Debug requirement
+        assert!(result.is_err(), "Expected error for failed connection");
+    }
+
+    /// Test DockerClient properly handles connection timeout from mock
+    #[tokio::test]
+    async fn test_docker_client_handles_connection_timeout() {
+        // Create a mock connection configured to timeout
+        let mock_connection: Arc<dyn DockerConnectionTrait> = Arc::new(
+            MockDockerConnectionBuilder::new()
+                .with_connect_timeout(Some(std::time::Duration::from_secs(5)))
+                .build()
+        );
+
+        let result = DockerClient::new_with_connection(
+            "test-image".to_string(),
+            "latest".to_string(),
+            mock_connection,
+        ).await;
+
+        // Should return a timeout error - use is_err() to avoid Debug requirement
+        assert!(result.is_err(), "Expected error for timeout");
+    }
+
+    /// Test MockDockerConnection get_docker_socket_path returns configured value
+    #[test]
+    fn test_mock_connection_provides_socket_path() {
+        let mock = MockDockerConnectionBuilder::new()
+            .with_socket_path(Some("/custom/docker.sock".to_string()))
+            .build();
+
+        let result = mock.get_docker_socket_path();
+        assert!(result.is_ok(), "Expected socket path to be returned: {:?}", result);
+        assert_eq!(result.unwrap(), "/custom/docker.sock");
+    }
+
+    /// Test MockDockerConnection check_docker_available returns configured value
+    #[test]
+    fn test_mock_connection_check_available() {
+        // Test with available = true
+        let mock_available = MockDockerConnectionBuilder::new()
+            .with_available(true)
+            .build();
+        let result = mock_available.check_docker_available();
+        assert!(result.is_ok(), "Expected available to be true: {:?}", result);
+        assert!(result.unwrap(), "Expected check_docker_available to return true");
+
+        // Test with available = false
+        let mock_unavailable = MockDockerConnectionBuilder::new()
+            .with_available(false)
+            .build();
+        let result = mock_unavailable.check_docker_available();
+        assert!(result.is_err(), "Expected error when Docker unavailable");
+    }
+
+    /// Test MockDockerConnection disconnect handles success/failure
+    #[tokio::test]
+    async fn test_mock_connection_disconnect() {
+        // Test successful disconnect
+        let mock_success = MockDockerConnectionBuilder::new()
+            .with_disconnect_success(true)
+            .build();
+        let result = mock_success.disconnect().await;
+        assert!(result.is_ok(), "Expected disconnect to succeed: {:?}", result);
+
+        // Test failed disconnect
+        let mock_fail = MockDockerConnectionBuilder::new()
+            .with_disconnect_success(false)
+            .build();
+        let result = mock_fail.disconnect().await;
+        assert!(result.is_err(), "Expected disconnect to fail");
+    }
+
+    /// Test MockDockerConnection execute returns configured response
+    #[tokio::test]
+    async fn test_mock_connection_execute() {
+        let mock_response = DockerResponse::Ping { result: "OK".to_string() };
+        
+        let mock = MockDockerConnectionBuilder::new()
+            .with_execute_success(true)
+            .with_execute_response(Some(mock_response.clone()))
+            .build();
+
+        let result = mock.execute(DockerCommand::Ping).await;
+        assert!(result.is_ok(), "Expected execute to succeed: {:?}", result);
+        
+        // Use pattern matching instead of assert_eq since DockerResponse doesn't derive PartialEq
+        match result.unwrap() {
+            DockerResponse::Ping { result: r } => {
+                assert_eq!(r, "OK", "Expected ping result to be 'OK'");
+            }
+            _ => panic!("Expected Ping response"),
+        }
+    }
+
+    /// Test MockDockerConnection execute handles failure
+    #[tokio::test]
+    async fn test_mock_connection_execute_failure() {
+        let mock = MockDockerConnectionBuilder::new()
+            .with_execute_success(false)
+            .build();
+
+        let result = mock.execute(DockerCommand::Ping).await;
+        assert!(result.is_err(), "Expected execute to fail");
+    }
+
+    /// Test DockerClient clones correctly with Arc<dyn DockerConnectionTrait>
+    #[test]
+    fn test_docker_client_arc_connection_is_cloneable() {
+        // This test verifies that DockerClient can work with Arc<dyn DockerConnectionTrait>
+        // and that the Arc can be cloned, which is important for concurrent operations
+        
+        // Create an Arc-wrapped mock connection
+        let arc_mock: Arc<dyn DockerConnectionTrait> = Arc::new(
+            MockDockerConnectionBuilder::new()
+                .with_socket_path(Some("/test.sock".to_string()))
+                .build()
+        );
+        
+        // Clone the Arc (this is how DockerClient stores the connection)
+        let arc_clone = Arc::clone(&arc_mock);
+        
+        // Both should be able to get socket path
+        assert!(arc_mock.get_docker_socket_path().is_ok(), "Original Arc should work");
+        assert!(arc_clone.get_docker_socket_path().is_ok(), "Cloned Arc should work");
+        
+        // Both should return the same value
+        assert_eq!(
+            arc_mock.get_docker_socket_path().unwrap(),
+            arc_clone.get_docker_socket_path().unwrap()
+        );
+    }
+
+    /// Test DockerError can be created and contains useful information
+    #[test]
+    fn test_docker_error_types() {
+        // Test ConnectionError
+        let err = DockerError::ConnectionError("test error".to_string());
+        assert!(format!("{}", err).contains("test error"));
+
+        // Test ConnectionTimeout
+        let err = DockerError::ConnectionTimeout {
+            timeout_duration: "5s".to_string(),
+            suggestion: "test suggestion".to_string(),
+        };
+        assert!(format!("{}", err).contains("5s"));
+
+        // Test DockerUnavailable
+        let err = DockerError::DockerUnavailable {
+            reason: "test reason".to_string(),
+            suggestion: "test suggestion".to_string(),
+        };
+        assert!(format!("{}", err).contains("test reason"));
     }
 }
