@@ -45,3 +45,21 @@
 - **Attempted:** Baseline check - build fails before any changes
 - **Impact:** Cannot verify "pre-check: Build + tests pass" requirement. However, story acceptance criteria includes "Verify code compiles without Docker feature" which suggests fixing build issues IS part of the story scope.
 - **Decision:** Proceeding with implementation - the build errors appear to be exactly what this story's trait refactoring should address.
+
+---
+
+### BLOCKER: [story-005-02, story-005-04] Channel Configuration Stories
+
+- **Agent:** dev-2
+- **Date:** 2026-03-05
+- **Type:** build-failure
+- **Description:** The codebase has 3 compilation errors that prevent building with the `gateway` feature:
+
+  1. `src/cli/commands/gateway.rs:236` - Cannot borrow `server` as mutable, as it is not declared as mutable
+  2. `src/cli/commands/gateway.rs:352` - Cannot borrow `server` as mutable, as it is not declared as mutable
+  3. `src/gateway/server.rs:567` - Clone method not found for oneshot::Sender
+
+- **Attempted:** Ran baseline build with `cargo build --features "discord gateway"` - failed with exit code 101
+- **Impact:** Cannot proceed with story-005-02 (Channel Mapping Config) or story-005-04 (Runtime Channel Subscribe) as the gateway module does not compile
+
+- **Note:** The stories reference functionality that allegedly already exists in the codebase (ChannelMapping in config.rs, ChannelSubscribe/Unsubscribe in protocol.rs), but the build is broken so this cannot be verified.
