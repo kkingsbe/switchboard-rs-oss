@@ -16,3 +16,12 @@
 - Both stories implemented according to the gateway architecture plan
 - All code follows Rust best practices as per skills library
 - Sprint work verified complete, .sprint_complete signal created
+
+### 2026-03-05T14:00:00Z — Sprint 20, Stories: [story-005-02, story-005-04]
+
+- **BLOCKED**: Both stories (story-005-02 Channel Mapping Config, story-005-04 Runtime Channel Subscribe/Unsubscribe) are blocked by pre-existing compilation errors in the gateway module
+- **Build Status**: `cargo build --features "discord gateway"` passes, but `cargo test --lib --features "discord gateway"` fails with 14+ compilation errors
+- **Root Cause**: Missing `#[cfg(feature = "gateway")]` guards in src/cli/mod.rs causing conditional compilation issues; also duplicate Router definitions and missing discord_intents field
+- **Previous Blocker Already Documented**: The BLOCKERS.md already had this blocker documented (from earlier today)
+- **No Alternative Work**: All available stories for dev-2 are in the gateway area which has the same build issues
+- **Impact**: Cannot proceed with implementation until gateway build errors are resolved by whoever owns that area

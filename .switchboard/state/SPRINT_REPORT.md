@@ -2,6 +2,43 @@
 
 ---
 
+## Sprint 20 — 2026-03-05 to 2026-03-19
+
+### Progress — 2026-03-05T13:00:05Z
+
+| Agent | Assigned | Complete | In Review | Remaining |
+|-------|----------|----------|-----------|------------|
+| dev-1 | 5 pts (story-004-07) | 0 pts | 0 | 5 pts |
+| dev-2 | 4 pts (story-005-02, 005-04) | 0 pts | 0 | 4 pts |
+
+**Current Sprint 20 Stories (IN PROGRESS):**
+- story-004-07: Discord Gateway Connection (5 pts) - dev-1 - Unchecked in DEV_TODO
+- story-005-02: Channel Mapping Config (2 pts) - dev-2 - Unchecked in DEV_TODO
+- story-005-04: Runtime Channel Subscribe (2 pts) - dev-2 - Unchecked in DEV_TODO
+
+**Blockers:** 3 active
+- story-005-02, story-005-04: Build failures (3 compilation errors in gateway module) - blocker for both dev-2 stories
+- Pre-existing Docker Test Failures (5-6 tests failing)
+
+**Review queue:** 1 pending (story-004-05 APPROVED 2026-03-05T10:20:00Z)
+**Sprint health:** On track - Development actively in progress
+
+**Dev Done Signals:**
+- .dev_done_1: ❌ NOT EXISTS (dev-1 still working)
+- .dev_done_2: ❌ NOT EXISTS (dev-2 still working)
+
+**Dev Log Activity:**
+- dev-1: Last log at 13:00:00Z ✅ (active)
+- dev-2: Last log at 12:15:00Z ✅ (active ~45 min ago)
+
+**Skills in use:**
+- rust-engineer (v1.0.0) — for Discord Gateway implementation
+- rust-best-practices (v1.1.0) — for Rust idioms and code quality
+
+**Phase:** Active Feature Sprint (Phase 7) — Stories ready, development in progress, no stale sprint detected.
+
+---
+
 ## 🚀 SPRINT 18 COMPLETE ✅ — 2026-03-05
 
 ### Metrics

@@ -44,6 +44,7 @@ use tokio::signal::unix::{signal, SignalKind};
 pub mod commands;
 pub mod discord;
 pub mod process;
+#[cfg(feature = "discord")]
 pub use discord::{
     is_discord_configured, load_discord_config_from_toml, DiscordFullConfig, DiscordTomlSection,
 };
@@ -150,6 +151,7 @@ pub enum Commands {
     Status,
 
     /// Start the Discord Gateway service
+    #[cfg(feature = "gateway")]
     Gateway(commands::gateway::GatewayCommand),
 }
 
@@ -290,6 +292,7 @@ pub async fn run() -> Result<ColorMode, Box<dyn std::error::Error>> {
         Commands::Validate(args) => run_validate(args, cli.config).await,
         Commands::Skills(args) => commands::skills::run_skills(args, cli.config).await,
         Commands::Status => run_status(cli.config),
+        #[cfg(feature = "gateway")]
         Commands::Gateway(args) => run_gateway(args).await,
     };
 
@@ -447,6 +450,7 @@ pub async fn run_up(
 /// - Configuration file not found
 /// - Configuration parsing or validation fails
 /// - Server fails to start
+#[cfg(feature = "gateway")]
 pub async fn run_gateway(
     args: commands::gateway::GatewayCommand,
 ) -> Result<(), Box<dyn std::error::Error>> {

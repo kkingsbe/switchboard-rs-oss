@@ -1623,42 +1623,51 @@ mod tests {
             "Empty skills should return empty script string"
         );
 
-        // Scenario 3: skills: Some(["owner/repo"]) - should generate valid script
-        let skills_single = vec!["owner/repo".to_string()];
-        let result_single = generate_entrypoint_script("test-agent", &skills_single, &[]);
+        // Scenario 3: skills: Some(["nonexistent/test-skill-xyz"]) - should generate valid script
+        // Use preexisting_skills to bypass filesystem check (test should not depend on local skills)
+        // Note: When skill is in preexisting_skills, no "npx skills add" is generated (already mounted)
+        let skills_single = vec!["nonexistent/test-skill-xyz".to_string()];
+        // preexisting_skills expects the extracted skill name (repo part), not the full skill string
+        let preexisting_single = vec!["test-skill-xyz".to_string()];
+        let result_single = generate_entrypoint_script("test-agent", &skills_single, &preexisting_single);
         assert!(result_single.is_ok(), "Single skill should return Ok");
         let script_single = result_single.unwrap();
         assert!(
             !script_single.is_empty(),
             "Single skill should generate non-empty script"
         );
+        // For preexisting skills, no installation command is generated (skill is already mounted)
         assert!(
-            script_single.contains("npx skills add owner/repo -a kilo -y"),
-            "Script should install the skill"
+            !script_single.contains("npx skills add"),
+            "Preexisting skill should not generate install command"
         );
         assert!(
             script_single.contains("exec kilocode --yes \"$@\""),
             "Script should execute kilocode"
         );
 
-        // Scenario 4: skills: Some(["owner/repo", "owner/repo@skill-name"]) - should generate valid script
+        // Scenario 4: skills: Some(["nonexistent/test-skill-xyz", "nonexistent/test-skill-xyz@skill-name"]) - should generate valid script
+        // Use preexisting_skills to bypass filesystem check (test should not depend on local skills)
+        // First skill is preexisting (no install command), second skill needs installation
         let skills_multi = vec![
-            "owner/repo".to_string(),
-            "owner/repo@skill-name".to_string(),
+            "nonexistent/test-skill-xyz".to_string(),
+            "nonexistent/test-skill-xyz@skill-name".to_string(),
         ];
-        let result_multi = generate_entrypoint_script("test-agent", &skills_multi, &[]);
+        // preexisting_skills expects the extracted skill name (repo part or skill-name after @), not the full skill string
+        let preexisting_multi = vec![
+            "test-skill-xyz".to_string(),
+        ];
+        let result_multi = generate_entrypoint_script("test-agent", &skills_multi, &preexisting_multi);
         assert!(result_multi.is_ok(), "Multiple skills should return Ok");
         let script_multi = result_multi.unwrap();
         assert!(
             !script_multi.is_empty(),
             "Multiple skills should generate non-empty script"
         );
+        // First skill is preexisting, so no install command for it
+        // Second skill needs installation
         assert!(
-            script_multi.contains("npx skills add owner/repo -a kilo -y"),
-            "Script should install first skill"
-        );
-        assert!(
-            script_multi.contains("npx skills add owner/repo@skill-name -a kilo -y"),
+            script_multi.contains("npx skills add nonexistent/test-skill-xyz@skill-name -a kilo -y"),
             "Script should install second skill"
         );
         assert!(

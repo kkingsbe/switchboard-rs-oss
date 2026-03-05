@@ -1,3 +1,31 @@
+### story-004-07: Wire up Discord Gateway Connection
+
+- **Implemented by:** dev-1
+- **Sprint:** 20
+- **Commits:** 3937ecc
+- **Story file:** `.switchboard/state/stories/story-004-07-discord-gateway.md`
+- **Files changed:** src/gateway/server.rs, src/gateway/config.rs
+- **Build Result:** ✅ PASS (`cargo build --features "discord gateway"`)
+- **Test Result:** ✅ PASS (585 tests)
+- **Clippy:** ✅ PASS (no warnings)
+- **Status:** ✅ APPROVED
+- **Reviewed by:** code-reviewer
+- **Review date:** 2026-03-05T14:58:00Z
+
+**Acceptance Criteria:**
+- [x] Gateway connects to Discord using twilight-gateway — MET: DiscordGateway spawned in server.rs:463-484, connects when token provided
+- [x] Gateway listens for MessageCreate events — MET: Event processor handles MessageCreate at server.rs:491-526, routes to projects
+- [x] Handle reconnection on disconnect — MET: twilight-gateway handles reconnection automatically in src/discord/gateway.rs
+
+**Findings:**
+- **SHOULD FIX:** None
+- **NICE TO HAVE:** Consider adding integration test with actual Discord bot to verify end-to-end message flow
+
+**Summary:**
+Discord Gateway integration complete. GatewayServer::run() now spawns DiscordGateway when token is provided, processes MessageCreate events, and routes them to subscribed projects via the MessageRouter. Uses existing DiscordGateway from src/discord/gateway.rs (twilight-gateway). All 585 tests pass. Build and clippy clean.
+
+---
+
 ### story-004-05: Message protocol types for gateway<->project communication
 
 - **Status:** ✅ APPROVED

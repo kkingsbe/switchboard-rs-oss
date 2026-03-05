@@ -48,6 +48,27 @@
 
 ---
 
+### BLOCKER: [Sprint 20] Gateway Config Missing discord_intents
+
+- **Agent:** dev-1, dev-2
+- **Date:** 2026-03-05T14:35:00Z
+- **Type:** test-compilation-failure
+- **Description:** Tests fail to compile due to missing `discord_intents` field in GatewayConfig. 8 compilation errors in test code:
+  - `src/gateway/config.rs:817` - missing `discord_intents` in GatewayConfig initializer
+  - `src/gateway/config.rs:836` - missing `discord_intents` in GatewayConfig initializer
+  - `src/gateway/config.rs:859` - missing `discord_intents` in GatewayConfig initializer
+  - `src/gateway/config.rs:882` - missing `discord_intents` in GatewayConfig initializer
+  - `src/gateway/config.rs:905` - missing `discord_intents` in GatewayConfig initializer
+  - `src/gateway/config.rs:928` - missing `discord_intents` in GatewayConfig initializer
+  - `src/gateway/config.rs:951` - missing `discord_intents` in GatewayConfig initializer
+  - `src/gateway/config.rs:974` - missing `discord_intents` in GatewayConfig initializer
+
+- **Status:** Build passes, tests fail to compile
+- **Impact:** Dev-1 (story-004-07) and Dev-2 (stories 005-02, 005-04) are blocked from completing AGENT QA
+- **Resolution:** The `discord_intents` field needs to be added to GatewayConfig - this is part of story-004-07 scope
+
+---
+
 ### BLOCKER: [story-005-02, story-005-04] Channel Configuration Stories
 
 - **Agent:** dev-2
@@ -59,7 +80,9 @@
   2. `src/cli/commands/gateway.rs:352` - Cannot borrow `server` as mutable, as it is not declared as mutable
   3. `src/gateway/server.rs:567` - Clone method not found for oneshot::Sender
 
-- **Attempted:** Ran baseline build with `cargo build --features "discord gateway"` - failed with exit code 101
-- **Impact:** Cannot proceed with story-005-02 (Channel Mapping Config) or story-005-04 (Runtime Channel Subscribe) as the gateway module does not compile
+- **Status:** RESOLVED - Build now passes (2026-03-05)
+- **Note:** Original blocking errors have been resolved. Current blocker is missing discord_intents field (see above).
 
-- **Note:** The stories reference functionality that allegedly already exists in the codebase (ChannelMapping in config.rs, ChannelSubscribe/Unsubscribe in protocol.rs), but the build is broken so this cannot be verified.
+---
+
+### BLOCKER: [Pre-existing Docker Test Failures]
