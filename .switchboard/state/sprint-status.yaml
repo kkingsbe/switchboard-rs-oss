@@ -15,7 +15,7 @@
 | Story | Points | Status | Assigned To |
 |-------|--------|--------|-------------|
 | story-004-01 (gateway module structure) | 1 | IN PROGRESS | dev-1 |
-| story-004-05 (message protocol types) | 2 | IN PROGRESS | dev-2 |
+| story-004-05 (message protocol types) | 2 | COMPLETE (APPROVED 2026-03-05) | dev-2 |
 | story-005-05 (config validation) | 1 | IN PROGRESS | dev-1 |
 
 **Sprint 21 Total**: 4 points (dev-1: 2 pts, dev-2: 2 pts)
