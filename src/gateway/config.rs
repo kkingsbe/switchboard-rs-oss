@@ -750,6 +750,33 @@ endpoint = "ws://localhost:8080"
     }
 
     #[test]
+    fn validate_should_return_error_when_channel_id_not_numeric() {
+        let temp_dir = TempDir::new().unwrap();
+        let config_file = temp_dir.path().join("gateway.toml");
+
+        let toml_content = r#"
+discord_token = "test_token"
+
+[[channels]]
+channel_id = "abc123xyz"
+project_name = "test-project"
+endpoint = "ws://localhost:8080"
+"#;
+
+        fs::write(&config_file, toml_content).unwrap();
+
+        let result = GatewayConfig::load(Some(config_file.to_str().unwrap()));
+        assert!(result.is_err());
+        match result {
+            Err(GatewayConfigError::ValidationError(msg)) => {
+                assert!(msg.contains("invalid channel_id"));
+                assert!(msg.contains("must be numeric"));
+            }
+            _ => panic!("Expected ValidationError for non-numeric channel_id"),
+        }
+    }
+
+    #[test]
     fn validate_should_return_error_when_channel_missing_project_name() {
         let temp_dir = TempDir::new().unwrap();
         let config_file = temp_dir.path().join("gateway.toml");
@@ -943,6 +970,30 @@ endpoint = "ws://localhost:8080"
                 assert!(msg.contains("channel_id"));
             }
             _ => panic!("Expected ValidationError for empty channel_id"),
+        }
+    }
+
+    #[test]
+    fn test_validation_fails_when_channel_id_not_numeric() {
+        let config = GatewayConfig {
+            discord_token: "valid_token".to_string(),
+            server: ServerConfig::default(),
+            logging: LoggingConfig::default(),
+            channels: vec![ChannelMapping {
+                channel_id: "abc123xyz".to_string(),
+                project_name: "test-project".to_string(),
+                endpoint: "ws://localhost:8080".to_string(),
+            }],
+        };
+
+        let result = config.validate();
+        assert!(result.is_err());
+        match result {
+            Err(GatewayConfigError::ValidationError(msg)) => {
+                assert!(msg.contains("invalid channel_id"));
+                assert!(msg.contains("must be numeric"));
+            }
+            _ => panic!("Expected ValidationError for non-numeric channel_id"),
         }
     }
 
