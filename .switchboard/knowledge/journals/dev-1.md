@@ -40,4 +40,22 @@
 
 - Subtask delegation worked well: one code-mode subtask handled the full implementation including tests
 - No reverts were needed - implementation worked on first attempt
-- Key learning: Always check existing code first before implementing - protocol types were already there!
+### 2026-03-05 — Sprint 21, Stories: [story-004-01, story-005-05]
+
+- Both stories were already fully implemented (gateway module structure and config validation)
+- Build passes with `cargo build --features "discord gateway"`
+- All 585 tests pass with `cargo test --lib`
+- 9 comprehensive unit tests exist for validation in src/gateway/config.rs
+- Committed test fixes for discord_intents field
+- Stories queued for code review
+
+### 2026-03-05T17:28:00Z — Sprint 21, Stories: [story-004-01, story-005-05]
+
+- Sprint 21 verification phase completed successfully
+- Build: cargo build --features "discord gateway" passed
+- Tests: 585 tests passed (cargo test --lib)
+- Created .dev_done_1 marker file for Sprint 21 completion
+- All assigned stories (gateway module structure, config validation) were already marked complete in DEV_TODO1.md
+- .sprint_complete already existed (dated 2026-03-05), indicating sprint was already finished before this session
+- Dev-2 had already created .dev_done_2 for their completed story (message protocol types)
+- No blockers encountered

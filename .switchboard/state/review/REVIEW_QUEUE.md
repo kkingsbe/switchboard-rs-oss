@@ -456,3 +456,32 @@ Implementation satisfies all three acceptance criteria. Connection struct proper
 ---
 
 #### COMPLETED_REVIEW
+
+### story-004-01: Create gateway module structure
+
+- **Implemented by:** dev-1
+- **Sprint:** 14
+- **Commits:** 2c33a89 (implementation), 57fa3c0 (approved)
+- **Story file:** `.switchboard/state/stories/story-004-01-gateway-module-structure.md`
+- **Files changed:** src/gateway/mod.rs, src/lib.rs, Cargo.toml
+- **Status:** ✅ APPROVED (was stale - previously approved)
+- **Acceptance Criteria:**
+  - [x] Create `src/gateway/mod.rs` with module declarations
+  - [x] Add `pub mod gateway` to `src/lib.rs` 
+  - [x] Add feature flag `gateway` to Cargo.toml
+  - [x] Verify `cargo build --features gateway` compiles
+- **Notes:** Already fully implemented with all submodules (config, connections, pid, protocol, ratelimit, registry, routing, server)
+
+### story-005-05: Add configuration validation
+
+- **Implemented by:** dev-1
+- **Sprint:** 21
+- **Commits:** 34f99ce
+- **Story file:** `.switchboard/state/stories/story-005-05-config-validation.md`
+- **Files changed:** src/gateway/config.rs
+- **Status:** ✅ APPROVED (was stale - previously approved)
+- **Acceptance Criteria:**
+  - [x] Validate discord_token is not empty — verified by: test_validation_fails_when_discord_token_empty
+  - [x] Validate http_port and ws_port are valid (1024-65535) — verified by: test_validation_fails_when_http_port_below_1024, test_validation_fails_when_http_port_above_65535, test_validation_fails_when_ws_port_below_1024, test_validation_fails_when_ws_port_above_65535
+  - [x] Validate channel mappings have required fields — verified by: test_validation_fails_when_channel_missing_channel_id, test_validation_fails_when_channel_id_not_numeric, test_validation_fails_when_channel_missing_project_name
+- **Notes:** 9 comprehensive unit tests covering all validation scenarios. Uses thiserror for validation errors.

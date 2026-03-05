@@ -147,7 +147,15 @@ all agents are stuck.
 **Condition:** `.stories_ready` exists AND recent DEV_TODO activity
 **Action:** Run Progress Report.
 
-### 8. Between Feature Sprints
+### 8. All Stories Complete — Missed Project Completion Signal
+**Condition:** No `.project_complete`, no `.stories_ready`, no `.sprint_complete`,
+AND `sprint-status.yaml` shows ALL stories as `complete` or `already-implemented`
+**Action:** The pipeline has finished all work but the completion signal was never
+created (likely due to a race condition or the Sprint Planner stopping between
+cleanup and project-complete detection). Create `.switchboard/state/.project_complete`.
+Write Project Completion Report. Commit: `chore(sm): project complete (recovered)`.
+
+### 9. Between Feature Sprints
 **Condition:** No `.stories_ready`, `.solutioning_done` exists
 **Action:** Sprint Planner will handle this. Log: "Waiting for Sprint Planner."
 

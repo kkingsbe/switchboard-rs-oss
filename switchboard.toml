@@ -51,6 +51,13 @@ timeout = "15m"
 prompt_file = ".switchboard/workflows/bmad/prompts/SCRUM_MASTER.md"
 env = { AGENT_COUNT = "4" }
 
+[[agent]]
+name = "sb-chronicler"
+schedule = "*/30 * * * *"
+prompt_file = ".switchboard/workflows/bmad/prompts/WORK_CHRONICLER.md"
+timeout = "5m"
+readonly = true
+
 [discord]
 enabled = true
 token_env = "${DISCORD_TOKEN}"
