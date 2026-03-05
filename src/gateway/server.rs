@@ -21,6 +21,7 @@ use uuid::Uuid;
 
 use crate::gateway::config::{GatewayConfig, ServerConfig};
 use crate::gateway::protocol::GatewayMessage;
+use crate::gateway::registry::ChannelRegistry;
 
 /// Error types for the gateway HTTP server.
 #[derive(Debug, thiserror::Error)]
@@ -65,6 +66,8 @@ pub struct AppState {
     /// Broadcast channel for WebSocket message distribution.
     #[allow(dead_code)]
     tx: broadcast::Sender<String>,
+    /// Channel registry for managing subscriptions.
+    registry: ChannelRegistry,
 }
 
 impl AppState {
@@ -77,9 +80,9 @@ impl AppState {
     /// # Returns
     ///
     /// * `Self` - The new application state.
-    pub fn new(config: ServerConfig) -> Self {
+    pub fn new(config: ServerConfig, registry: ChannelRegistry) -> Self {
         let (tx, _) = broadcast::channel(100);
-        Self { config, tx }
+        Self { config, tx, registry }
     }
 }
 
@@ -123,8 +126,11 @@ async fn ws_handler(
 ///
 /// * `socket` - The WebSocket connection.
 /// * `state` - Application state.
-async fn handle_socket(socket: WebSocket, _state: Arc<AppState>) {
+async fn handle_socket(socket: WebSocket, state: Arc<AppState>) {
     let (mut sender, mut receiver) = socket.split();
+
+    // Track the project_id for this connection (set after registration)
+    let mut project_id: Option<String> = None;
 
     // Handle incoming messages
     while let Some(msg_result) = receiver.next().await {
@@ -153,11 +159,16 @@ async fn handle_socket(socket: WebSocket, _state: Arc<AppState>) {
 
                                     // Generate a unique session ID
                                     let session_id = Uuid::new_v4().to_string();
+                                    // Use project_name as project_id
+                                    let current_project_id = project_name.clone();
 
                                     info!(
                                         "Registered project: {} with session_id: {}",
                                         project_name, session_id
                                     );
+
+                                    // Store the project_id for this connection
+                                    project_id = Some(current_project_id.clone());
 
                                     // Send RegisterAck response
                                     let ack_msg = GatewayMessage::RegisterAck {
@@ -168,7 +179,77 @@ async fn handle_socket(socket: WebSocket, _state: Arc<AppState>) {
                                         let _ = sender.send(Message::Text(json)).await;
                                     }
                                 }
-                                // For non-register messages, echo back for backward compatibility
+                                GatewayMessage::ChannelSubscribe { channels } => {
+                                    // Check if project is registered
+                                    let pid = match &project_id {
+                                        Some(pid) => pid.clone(),
+                                        None => {
+                                            // Send error - project not registered
+                                            let error_msg = GatewayMessage::RegisterError {
+                                                error: "project not registered".to_string(),
+                                            };
+                                            if let Ok(json) = serde_json::to_string(&error_msg) {
+                                                let _ = sender.send(Message::Text(json)).await;
+                                            }
+                                            continue;
+                                        }
+                                    };
+
+                                    // Add channel subscriptions
+                                    let mut success_count = 0;
+                                    for channel in &channels {
+                                        match state.registry.add_channel_subscription(&pid, channel).await {
+                                            Ok(_) => success_count += 1,
+                                            Err(e) => {
+                                                warn!("Failed to subscribe to channel {}: {}", channel, e);
+                                            }
+                                        }
+                                    }
+
+                                    // Send acknowledgment
+                                    let ack_msg = GatewayMessage::ChannelSubscribeAck {
+                                        status: format!("ok: subscribed to {} channels", success_count),
+                                    };
+                                    if let Ok(json) = serde_json::to_string(&ack_msg) {
+                                        let _ = sender.send(Message::Text(json)).await;
+                                    }
+                                }
+                                GatewayMessage::ChannelUnsubscribe { channels } => {
+                                    // Check if project is registered
+                                    let pid = match &project_id {
+                                        Some(pid) => pid.clone(),
+                                        None => {
+                                            // Send error - project not registered
+                                            let error_msg = GatewayMessage::RegisterError {
+                                                error: "project not registered".to_string(),
+                                            };
+                                            if let Ok(json) = serde_json::to_string(&error_msg) {
+                                                let _ = sender.send(Message::Text(json)).await;
+                                            }
+                                            continue;
+                                        }
+                                    };
+
+                                    // Remove channel subscriptions
+                                    let mut success_count = 0;
+                                    for channel in &channels {
+                                        match state.registry.remove_channel_subscription(&pid, channel).await {
+                                            Ok(_) => success_count += 1,
+                                            Err(e) => {
+                                                warn!("Failed to unsubscribe from channel {}: {}", channel, e);
+                                            }
+                                        }
+                                    }
+
+                                    // Send acknowledgment
+                                    let ack_msg = GatewayMessage::ChannelUnsubscribeAck {
+                                        status: format!("ok: unsubscribed from {} channels", success_count),
+                                    };
+                                    if let Ok(json) = serde_json::to_string(&ack_msg) {
+                                        let _ = sender.send(Message::Text(json)).await;
+                                    }
+                                }
+                                // For other messages, echo back for backward compatibility
                                 _ => {
                                     if sender.send(Message::Text(text)).await.is_err() {
                                         warn!("Failed to send message to client, connection may be closed");
@@ -232,11 +313,12 @@ fn create_router(state: AppState) -> Router {
 /// # Arguments
 ///
 /// * `config` - The server configuration containing host and port.
+/// * `registry` - The channel registry for managing subscriptions.
 ///
 /// # Returns
 ///
 /// * `Result<(), GatewayServerError>` - Ok if the server ran successfully, or an error.
-pub async fn serve(config: ServerConfig) -> Result<(), GatewayServerError> {
+pub async fn serve(config: ServerConfig, registry: ChannelRegistry) -> Result<(), GatewayServerError> {
     let host = config.host.clone();
     let port = config.http_port;
 
@@ -250,7 +332,7 @@ pub async fn serve(config: ServerConfig) -> Result<(), GatewayServerError> {
         })?;
 
     // Create application state
-    let state = AppState::new(config);
+    let state = AppState::new(config, registry);
 
     // Create the router
     let app = create_router(state);
@@ -362,7 +444,9 @@ impl GatewayServer {
     ///
     /// * `Result<(), GatewayServerError>` - Ok on successful shutdown, or error.
     pub async fn run(&self) -> Result<(), GatewayServerError> {
-        serve(self.server_config.clone()).await
+        // Create a new registry for this server instance
+        let registry = ChannelRegistry::new();
+        serve(self.server_config.clone(), registry).await
     }
 }
 
@@ -392,7 +476,8 @@ mod tests {
             http_port: 8080,
             ws_port: 9000,
         };
-        let state = AppState::new(config);
+        let registry = ChannelRegistry::new();
+        let state = AppState::new(config, registry);
         let app = create_router(state);
 
         // Make a request to /health
@@ -417,7 +502,8 @@ mod tests {
             http_port: 9745,
             ws_port: 9000,
         };
-        let state = AppState::new(config.clone());
+        let registry = ChannelRegistry::new();
+        let state = AppState::new(config.clone(), registry);
 
         assert_eq!(state.config.host, "0.0.0.0");
         assert_eq!(state.config.http_port, 9745);
@@ -437,7 +523,8 @@ mod tests {
             http_port: 8080,
             ws_port: 9000,
         };
-        let state = AppState::new(config);
+        let registry = ChannelRegistry::new();
+        let state = AppState::new(config, registry);
         // Verify broadcast channel is created
         let _ = state.tx.clone();
     }
@@ -449,7 +536,8 @@ mod tests {
             http_port: 8080,
             ws_port: 9000,
         };
-        let state = AppState::new(config);
+        let registry = ChannelRegistry::new();
+        let state = AppState::new(config, registry);
         // Creating the router should not panic - it includes /ws route now
         let _app = create_router(state);
         // If we get here without panicking, the test passes
@@ -543,5 +631,58 @@ mod tests {
             }
             _ => panic!("Expected Message variant"),
         }
+    }
+
+    // ==================== Channel Subscribe/Unsubscribe Tests ====================
+
+    /// Test that ChannelSubscribe message is correctly deserialized
+    #[test]
+    fn test_channel_subscribe_deserialization() {
+        let json = r#"{"type":"channel_subscribe","channels":["channel1","channel2"]}"#;
+        let msg: GatewayMessage = serde_json::from_str(json).expect("Failed to parse ChannelSubscribe message");
+        match msg {
+            GatewayMessage::ChannelSubscribe { channels } => {
+                assert_eq!(channels.len(), 2);
+                assert_eq!(channels[0], "channel1");
+                assert_eq!(channels[1], "channel2");
+            }
+            _ => panic!("Expected ChannelSubscribe variant"),
+        }
+    }
+
+    /// Test that ChannelUnsubscribe message is correctly deserialized
+    #[test]
+    fn test_channel_unsubscribe_deserialization() {
+        let json = r#"{"type":"channel_unsubscribe","channels":["channel1"]}"#;
+        let msg: GatewayMessage = serde_json::from_str(json).expect("Failed to parse ChannelUnsubscribe message");
+        match msg {
+            GatewayMessage::ChannelUnsubscribe { channels } => {
+                assert_eq!(channels.len(), 1);
+                assert_eq!(channels[0], "channel1");
+            }
+            _ => panic!("Expected ChannelUnsubscribe variant"),
+        }
+    }
+
+    /// Test that ChannelSubscribeAck message is correctly serialized
+    #[test]
+    fn test_channel_subscribe_ack_serialization() {
+        let msg = GatewayMessage::ChannelSubscribeAck {
+            status: "ok: subscribed to 2 channels".to_string(),
+        };
+        let json = serde_json::to_string(&msg).expect("Failed to serialize ChannelSubscribeAck");
+        assert!(json.contains("\"type\":\"channel_subscribe_ack\""));
+        assert!(json.contains("\"status\":\"ok: subscribed to 2 channels\""));
+    }
+
+    /// Test that ChannelUnsubscribeAck message is correctly serialized
+    #[test]
+    fn test_channel_unsubscribe_ack_serialization() {
+        let msg = GatewayMessage::ChannelUnsubscribeAck {
+            status: "ok: unsubscribed from 1 channels".to_string(),
+        };
+        let json = serde_json::to_string(&msg).expect("Failed to serialize ChannelUnsubscribeAck");
+        assert!(json.contains("\"type\":\"channel_unsubscribe_ack\""));
+        assert!(json.contains("\"status\":\"ok: unsubscribed from 1 channels\""));
     }
 }
