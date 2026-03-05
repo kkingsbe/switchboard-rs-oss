@@ -1,6 +1,6 @@
 {
   "pid": 46632,
-  "last_heartbeat": "2026-03-05T09:48:44.218010900+00:00",
+  "last_heartbeat": "2026-03-05T09:50:44.243079400+00:00",
   "state": "running",
   "agents": [
     {
@@ -21,7 +21,7 @@
     {
       "name": "sb-code-reviewer",
       "schedule": "20,50 * * * *",
-      "current_run": null
+      "current_run": "starting"
     },
     {
       "name": "sb-scrum-master",

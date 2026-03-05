@@ -14,7 +14,10 @@
 
 | Story | Points | Status | Assigned To |
 |-------|--------|--------|-------------|
-| (Planning in progress) | - | PENDING | - |
+| story-004-06 (Registration Protocol) | 3 | IN PROGRESS | dev-1 |
+| story-005-01 (ChannelRegistry) | 3 | IN PROGRESS | dev-2 |
+
+**Sprint 19 Total**: 6 points (dev-1: 3 pts, dev-2: 3 pts)
 
 ---
 
