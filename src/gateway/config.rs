@@ -273,6 +273,13 @@ impl GatewayConfig {
                     idx
                 )));
             }
+            // Validate channel_id is numeric (Discord snowflake)
+            if channel.channel_id.parse::<u64>().is_err() {
+                return Err(GatewayConfigError::ValidationError(format!(
+                    "channel at index {} has invalid channel_id '{}' - must be numeric",
+                    idx, channel.channel_id
+                )));
+            }
             if channel.project_name.is_empty() {
                 return Err(GatewayConfigError::ValidationError(format!(
                     "channel at index {} has empty project_name",
