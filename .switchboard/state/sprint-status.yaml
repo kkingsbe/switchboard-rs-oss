@@ -2,23 +2,37 @@
 
 ## Current Sprint
 
-**Sprint**: 20  
+**Sprint**: 21  
 **Start Date**: 2026-03-05  
 **End Date**: 2026-03-19
 
 ---
 
-## Sprint 20 Stories (Current)
+## Sprint 21 Stories (Current)
 
 ### In Progress
 
 | Story | Points | Status | Assigned To |
 |-------|--------|--------|-------------|
-| story-004-07 (Discord Gateway Connection) | 5 | COMPLETE (APPROVED 2026-03-05) | dev-1 |
-| story-005-02 (Channel Mapping Config) | 2 | IN PROGRESS | dev-2 |
-| story-005-04 (Runtime Channel Subscribe) | 2 | IN PROGRESS | dev-2 |
+| story-004-01 (gateway module structure) | 1 | IN PROGRESS | dev-1 |
+| story-004-05 (message protocol types) | 2 | IN PROGRESS | dev-2 |
+| story-005-05 (config validation) | 1 | IN PROGRESS | dev-1 |
 
-**Sprint 20 Total**: 9 points (dev-1: 5 pts, dev-2: 4 pts)
+**Sprint 21 Total**: 4 points (dev-1: 2 pts, dev-2: 2 pts)
+
+---
+
+## Sprint 20 Stories (Archived)
+
+### Completed
+
+| Story | Points | Status | Assigned To |
+|-------|--------|--------|-------------|
+| story-004-07 (Discord Gateway Connection) | 5 | COMPLETE (APPROVED 2026-03-05) | dev-1 |
+| story-005-02 (Channel Mapping Config) | 2 | COMPLETE (APPROVED 2026-03-05) | dev-2 |
+| story-005-04 (Runtime Channel Subscribe) | 2 | COMPLETE (APPROVED 2026-03-05) | dev-2 |
+
+**Sprint 20 Total**: 9 points (dev-1: 5 pts, dev-2: 4 pts) - ALL COMPLETE ✅
 
 
 ## Sprint 19 Stories (Archived)

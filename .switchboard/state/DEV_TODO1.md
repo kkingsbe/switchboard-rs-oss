@@ -1,45 +1,33 @@
-# DEV_TODO1 — Development Agent 1
+# Dev 1 TODO - Sprint 21
 
-> Sprint: 20
-> Focus Area: Discord Gateway Connection (HIGH RISK)
-> Last Updated: 2026-03-05
-> Total Points: 5
+## Assigned Stories
 
-## Orientation
+### Story 4.1: Create gateway module structure (1 pt)
+**Status:** IN PROGRESS
+**File:** `stories/story-004-01-gateway-module-structure.md`
 
-Before starting any stories, read these files:
+**Tasks:**
+- [ ] Create `src/gateway/mod.rs` with module declarations
+- [ ] Add `pub mod gateway` to `src/lib.rs`
+- [ ] Add feature flag `gateway` to Cargo.toml
+- [ ] Verify `cargo build --features gateway` compiles
 
-- `.switchboard/planning/project-context.md`
-- `.switchboard/planning/architecture.md`
-- `./skills/rust-engineer/SKILL.md`
-- `./skills/rust-best-practices/SKILL.md`
+### Story 5.5: Add configuration validation (1 pt)
+**Status:** IN PROGRESS
+**File:** `stories/story-005-05-config-validation.md`
 
-## Stories
+**Tasks:**
+- [ ] Validate discord_token is not empty
+- [ ] Validate http_port and ws_port are valid (1024-65535)
+- [ ] Validate channel mappings have required fields
+- [ ] Add unit tests for validation
 
-- [x] **story-004-07**: Wire up Discord Gateway Connection (5 pts) ✅ queued for review
-  - 📄 Story: `.switchboard/state/stories/story-004-07-discord-gateway.md`
-  - 📚 Skills: `./skills/rust-engineer/SKILL.md`, `./skills/rust-best-practices/SKILL.md`
-  - ⚡ Pre-check: Build + tests pass
-  - ✅ Post-check: Build + tests pass, acceptance criteria met
-  - 🔒 Risk: HIGH
-  - 📝 Commit: `feat(dev1): [story-004-07] Wire up Discord Gateway connection`
+## Dependencies
+
+- Story 4.5 (dev-2) depends on Story 4.1 completion
 
 ## Notes
 
-- This story has HIGH risk - prioritize careful implementation
-- Depends on: Story 4.2 (COMPLETE), Story 4.6 (COMPLETE)
-- Review: `./skills/rust-engineer/references/async.md` for async patterns
-
----
-
-## AGENT QA
-
-When story is complete, run:
-```bash
-cargo build --features "discord gateway"
-cargo test --lib
-cargo clippy -- -D warnings
-```
-
-If all green, create `.switchboard/state/.dev_done_1` with date.
-If ALL `.dev_done_*` files exist for all agents with work, also create `.switchboard/state/.sprint_complete`.
+- Follow Rust best practices from `./skills/`
+- Use thiserror for validation errors
+- Use tracing for logging (no println!)
