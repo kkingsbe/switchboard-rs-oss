@@ -299,6 +299,19 @@ skills = ["frontend-design", "security-audit"]
 | `switchboard metrics` | View execution metrics |
 | `switchboard list` | List all configured agents |
 | `switchboard skills` | Manage skills |
+| `switchboard skills list` | List available skills |
+| `switchboard skills install` | Install a skill |
+| `switchboard skills installed` | List installed skills |
+| `switchboard skills remove` | Remove a skill |
+| `switchboard skills update` | Update a skill |
+| `switchboard workflows` | Manage workflows |
+| `switchboard workflows list` | List available workflows |
+| `switchboard workflows install` | Install a workflow |
+| `switchboard workflows installed` | List installed workflows |
+| `switchboard workflows remove` | Remove a workflow |
+| `switchboard workflows update` | Update a workflow |
+| `switchboard workflows apply` | Apply a workflow |
+| `switchboard workflows validate` | Validate a workflow |
 | `switchboard --help` | Show all commands |
 
 ### Common Usage

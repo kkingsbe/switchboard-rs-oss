@@ -260,7 +260,7 @@ async fn run_gateway_detached(
     _config: GatewayConfig,
     _host: String,
     _http_port: u32,
-    config_path: String,
+    _config_path: String,
 ) -> Result<(), Box<dyn std::error::Error>> {
     #[cfg(unix)]
     {
@@ -300,8 +300,8 @@ async fn run_gateway_detached(
             "Detached mode is not fully supported on this platform. Running in foreground."
         );
 
-        let server = GatewayServer::new(config.server.clone(), config);
-        tracing::info!("Starting gateway server on {}:{}", host, http_port);
+        let server = GatewayServer::new(_config.server.clone(), _config);
+        tracing::info!("Starting gateway server on {}:{}", _host, _http_port);
         server.run().await?;
         tracing::info!("Gateway server stopped");
         Ok(())
@@ -455,7 +455,7 @@ async fn run_gateway_status(args: GatewayStatusArgs) -> Result<(), Box<dyn std::
 /// Run the gateway down subcommand.
 ///
 /// This function stops the gateway server by reading the PID file,
-/// sending SIGTERM to the process, and waiting for graceful shutdown.
+/// sending terminate signal to the process, and waiting for graceful shutdown.
 ///
 /// # Arguments
 ///
@@ -471,8 +471,9 @@ async fn run_gateway_down(args: GatewayDownArgs) -> Result<(), Box<dyn std::erro
     use std::fs::File;
     use std::io::BufRead;
     use std::io::BufReader;
-    use std::process::Command;
     use std::time::Duration;
+
+    use crate::gateway::process::get_process_control;
 
     let pid_path = PidFile::default_path();
 
@@ -496,89 +497,126 @@ async fn run_gateway_down(args: GatewayDownArgs) -> Result<(), Box<dyn std::erro
         .parse()
         .map_err(|_| GatewayCommandError::NotRunning)?;
 
-    // Check if process is actually running
+    // Check if process is actually running using cross-platform process control
+    let process_control = get_process_control();
+
+    if !process_control.is_running(pid) {
+        // Process doesn't exist
+        tracing::debug!("Process {} not found, cleaning up PID file", pid);
+        let _ = PidFile::cleanup(&pid_path);
+        return Err(GatewayCommandError::NotRunning.into());
+    }
+
+    // Process exists, send terminate signal
+    println!("Sending terminate signal to gateway (PID: {})...", pid);
+
+    // On Unix, try graceful termination first
     #[cfg(unix)]
     {
-        // Check if process exists by sending signal 0
-        let result = Command::new("kill").arg("-0").arg(pid.to_string()).output();
+        use std::process::Command;
+        use crate::gateway::process::UnixProcess;
 
-        match result {
-            Ok(output) if output.status.success() => {
-                // Process exists, send SIGTERM
-                println!("Sending SIGTERM to gateway (PID: {})...", pid);
+        // Try SIGTERM first
+        let _ = Command::new("kill")
+            .arg("-TERM")
+            .arg(pid.to_string())
+            .output();
 
-                let kill_result = Command::new("kill")
-                    .arg("-TERM")
-                    .arg(pid.to_string())
-                    .output();
+        // Wait for the process to exit
+        let timeout_secs = args.timeout;
+        let poll_interval = Duration::from_secs(1);
+        let mut elapsed = 0u64;
 
-                match kill_result {
-                    Ok(_) => {
-                        // Wait for the process to exit
-                        let timeout_secs = args.timeout;
-                        let poll_interval = Duration::from_secs(1);
-                        let mut elapsed = 0u64;
+        while elapsed < timeout_secs {
+            if !process_control.is_running(pid) {
+                // Process has exited
+                println!("Gateway stopped successfully");
 
-                        while elapsed < timeout_secs {
-                            let check =
-                                Command::new("kill").arg("-0").arg(pid.to_string()).output();
-
-                            match check {
-                                Ok(output) if !output.status.success() => {
-                                    // Process has exited
-                                    println!("Gateway stopped successfully");
-
-                                    // Clean up PID file
-                                    if let Err(e) = PidFile::cleanup(&pid_path) {
-                                        tracing::warn!("Failed to clean up PID file: {}", e);
-                                    }
-
-                                    return Ok(());
-                                }
-                                _ => {
-                                    // Process still running, wait
-                                    tokio::time::sleep(poll_interval).await;
-                                    elapsed += 1;
-                                }
-                            }
-                        }
-
-                        // Timeout reached
-                        if args.force {
-                            println!("Gateway did not stop gracefully, forcing kill...");
-                            let _ = Command::new("kill").arg("-9").arg(pid.to_string()).output();
-
-                            // Wait a bit more for the process to be killed
-                            tokio::time::sleep(Duration::from_secs(1)).await;
-
-                            // Clean up PID file
-                            if let Err(e) = PidFile::cleanup(&pid_path) {
-                                tracing::warn!("Failed to clean up PID file: {}", e);
-                            }
-
-                            println!("Gateway force stopped");
-                            Ok(())
-                        } else {
-                            Err(GatewayCommandError::Timeout.into())
-                        }
-                    }
-                    Err(e) => Err(GatewayCommandError::SignalError(format!(
-                        "Failed to send SIGTERM: {}",
-                        e
-                    ))
-                    .into()),
+                // Clean up PID file
+                if let Err(e) = PidFile::cleanup(&pid_path) {
+                    tracing::warn!("Failed to clean up PID file: {}", e);
                 }
+
+                return Ok(());
             }
-            _ => {
-                // Process doesn't exist or we can't check
-                Err(GatewayCommandError::NotRunning.into())
+
+            // Process still running, wait
+            tokio::time::sleep(poll_interval).await;
+            elapsed += 1;
+        }
+
+        // Timeout reached - try force kill
+        if args.force {
+            println!("Gateway did not stop gracefully, forcing kill...");
+            let _ = UnixProcess::force_kill(pid);
+
+            // Wait a bit more for the process to be killed
+            tokio::time::sleep(Duration::from_secs(1)).await;
+
+            // Clean up PID file
+            if let Err(e) = PidFile::cleanup(&pid_path) {
+                tracing::warn!("Failed to clean up PID file: {}", e);
             }
+
+            println!("Gateway force stopped");
+            Ok(())
+        } else {
+            Err(GatewayCommandError::Timeout.into())
         }
     }
 
     #[cfg(not(unix))]
     {
-        return Err("Signal handling is only supported on Unix systems".into());
+        // On non-Unix (Windows), use the process control trait
+        match process_control.terminate(pid) {
+            Ok(_) => {
+                // Wait for the process to exit
+                let timeout_secs = args.timeout;
+                let poll_interval = Duration::from_millis(500);
+                let mut elapsed = 0u64;
+
+                while elapsed < timeout_secs {
+                    if !process_control.is_running(pid) {
+                        // Process has exited
+                        println!("Gateway stopped successfully");
+
+                        // Clean up PID file
+                        if let Err(e) = PidFile::cleanup(&pid_path) {
+                            tracing::warn!("Failed to clean up PID file: {}", e);
+                        }
+
+                        return Ok(());
+                    }
+
+                    // Process still running, wait
+                    tokio::time::sleep(poll_interval).await;
+                    elapsed += 1;
+                }
+
+                // Timeout reached
+                if args.force {
+                    println!("Gateway did not stop gracefully, forcing kill...");
+                    // On Windows, terminate is already forceful
+                    // Wait a bit more
+                    tokio::time::sleep(Duration::from_secs(1)).await;
+
+                    // Clean up PID file
+                    if let Err(e) = PidFile::cleanup(&pid_path) {
+                        tracing::warn!("Failed to clean up PID file: {}", e);
+                    }
+
+                    println!("Gateway force stopped");
+                    Ok(())
+                } else {
+                    Err(GatewayCommandError::Timeout.into())
+                }
+            }
+            Err(e) => Err(GatewayCommandError::SignalError(format!(
+                "Failed to terminate process: {}",
+                e
+            ))
+            .into()),
+        }
     }
 }
 

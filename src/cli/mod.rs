@@ -13,7 +13,7 @@
 //! - All command handlers are fully implemented
 
 use crate::commands::logs::{run as logs_run, LogsArgs};
-use crate::commands::{metrics, BuildCommand, SkillsCommand, ValidateCommand};
+use crate::commands::{metrics, BuildCommand, SkillsCommand, ValidateCommand, WorkflowsCommand};
 use crate::config::{Config, ConfigError};
 use crate::docker::run::types::ContainerConfig;
 use crate::docker::{check_docker_available, run_agent, DockerClient};
@@ -146,6 +146,9 @@ pub enum Commands {
 
     /// Manage Kilo skills
     Skills(SkillsCommand),
+
+    /// Manage Switchboard workflows
+    Workflows(WorkflowsCommand),
 
     /// Check scheduler health and status
     Status,
@@ -291,6 +294,7 @@ pub async fn run() -> Result<ColorMode, Box<dyn std::error::Error>> {
         Commands::Down(args) => run_down(args, cli.config).await,
         Commands::Validate(args) => run_validate(args, cli.config).await,
         Commands::Skills(args) => commands::skills::run_skills(args, cli.config).await,
+        Commands::Workflows(args) => commands::workflows::run_workflows(args, cli.config).await,
         Commands::Status => run_status(cli.config),
         #[cfg(feature = "gateway")]
         Commands::Gateway(args) => run_gateway(args).await,

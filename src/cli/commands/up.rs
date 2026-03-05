@@ -13,7 +13,7 @@ use crate::traits::DockerClientTrait;
 #[cfg(windows)]
 use crate::cli::process::default_executor;
 #[cfg(windows)]
-use crate::traits::{ProcessExecutorTrait, RealProcessExecutor};
+use crate::traits::ProcessExecutorTrait;
 
 #[cfg(feature = "discord")]
 use crate::config::env::resolve_config_value;

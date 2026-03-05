@@ -32,9 +32,11 @@ pub mod logs;
 pub mod metrics;
 pub mod skills;
 pub mod validate;
+pub mod workflows;
 
 pub use build::BuildCommand;
 pub use list::list_agents;
 pub use metrics::metrics;
 pub use skills::{run_skills, SkillsCommand};
 pub use validate::ValidateCommand;
+pub use workflows::{run_workflows, WorkflowsCommand};

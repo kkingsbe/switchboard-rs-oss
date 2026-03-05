@@ -100,9 +100,21 @@ impl SkillsManager {
     /// }
     /// ```
     pub fn check_npx_available(&mut self) -> Result<(), SkillsError> {
-        // Use the executor to check if npx is available
-        // This allows for mocking in tests
-        let result = self.executor.execute("npx", &["--version".to_string()]);
+        // On Windows, npx is a .cmd batch file that requires cmd /c to execute properly.
+        // We use Command directly here instead of the executor to handle this platform-specific issue.
+        #[cfg(target_os = "windows")]
+        let result: Result<std::process::Output, std::io::Error> = {
+            let mut cmd = Command::new("cmd");
+            cmd.args(["/c", "npx", "--version"]);
+            cmd.output()
+        };
+
+        #[cfg(not(target_os = "windows"))]
+        let result: Result<std::process::Output, std::io::Error> = {
+            let mut cmd = Command::new("npx");
+            cmd.arg("--version");
+            cmd.output()
+        };
 
         match result {
             Ok(output) => {

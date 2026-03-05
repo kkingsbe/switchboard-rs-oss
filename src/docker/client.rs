@@ -123,7 +123,7 @@ pub async fn connect_to_docker(
             // Windows named pipe - only compile on Windows
             #[cfg(target_os = "windows")]
             {
-                let path = socket_path.strip_prefix("npipe://").ok_or_else(|| {
+                let _path = socket_path.strip_prefix("npipe://").ok_or_else(|| {
                     anyhow::anyhow!(
                         "socket_path '{}' does not start with 'npipe://'",
                         socket_path
@@ -452,8 +452,8 @@ impl DockerClient {
         image_tag: String,
         connection: Arc<dyn DockerConnectionTrait>,
     ) -> Result<Self, DockerError> {
-        // Connect to Docker using the connection trait
-        let docker = connection.connect().map_err(|e| {
+        // Connect to Docker using the connection trait (now async)
+        let docker = connection.connect().await.map_err(|e| {
             let error_msg = e.to_string();
             let helpful_msg = if error_msg.contains("permission denied")
                 || error_msg.contains("Permission denied")

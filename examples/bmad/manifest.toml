@@ -1,0 +1,63 @@
+name = "bmad"
+description = "BMAD implementation workflow with architect, dev agents, code reviewer, and scrum master"
+version = "1.0.0"
+
+[defaults]
+schedule = "0 9 * * *"
+timeout = "30m"
+readonly = false
+overlap_mode = "skip"
+
+[[prompts]]
+name = "ARCHITECT.md"
+description = "Architect agent for system design and sprint planning"
+role = "architect"
+
+[[prompts]]
+name = "CODE_REVIEWER.md"
+description = "Code reviewer agent for pull request reviews"
+role = "developer"
+
+[[prompts]]
+name = "DEV_PARALLEL.md"
+description = "Parallel development agent for implementing stories"
+role = "developer"
+
+[[prompts]]
+name = "SCRUM_MASTER.md"
+description = "Scrum master agent for sprint management and progress tracking"
+role = "scrum_master"
+
+[[agents]]
+name = "architect"
+prompt_file = "ARCHITECT.md"
+schedule = "15 */2 * * *"
+timeout = "30m"
+env = { AGENT_COUNT = "2" }
+
+[[agents]]
+name = "scrum-master"
+prompt_file = "SCRUM_MASTER.md"
+schedule = "0 * * * *"
+timeout = "15m"
+env = { AGENT_COUNT = "2" }
+
+[[agents]]
+name = "dev-1"
+prompt_file = "DEV_PARALLEL.md"
+schedule = "*/30 * * * *"
+timeout = "30m"
+env = { AGENT_ID = "1" }
+
+[[agents]]
+name = "dev-2"
+prompt_file = "DEV_PARALLEL.md"
+schedule = "10,40 * * * *"
+timeout = "30m"
+env = { AGENT_ID = "2" }
+
+[[agents]]
+name = "code-reviewer"
+prompt_file = "CODE_REVIEWER.md"
+schedule = "20 */1 * * *"
+timeout = "20m"

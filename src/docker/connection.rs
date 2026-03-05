@@ -176,7 +176,7 @@ pub trait DockerConnectionTrait: Send + Sync {
     /// # Errors
     ///
     /// Returns `DockerError` if the socket path cannot be determined.
-    fn get_docker_socket_path(&self) -> Result<String, DockerError>;
+    fn get_docker_socket_path(&self) -> Pin<Box<dyn Future<Output = Result<String, DockerError>> + Send + '_>>;
 
     /// Connect to Docker daemon
     ///
@@ -185,7 +185,7 @@ pub trait DockerConnectionTrait: Send + Sync {
     /// # Errors
     ///
     /// Returns `DockerError` if connection fails.
-    fn connect(&self) -> Result<Docker, DockerError>;
+    fn connect(&self) -> Pin<Box<dyn Future<Output = Result<Docker, DockerError>> + Send + '_>>;
 
     /// Disconnect from Docker daemon
     ///
@@ -205,7 +205,7 @@ pub trait DockerConnectionTrait: Send + Sync {
     /// # Errors
     ///
     /// Returns `DockerError` if Docker is not available.
-    fn check_docker_available(&self) -> Result<bool, DockerError>;
+    fn check_docker_available(&self) -> Pin<Box<dyn Future<Output = Result<bool, DockerError>> + Send + '_>>;
 
     /// Execute a Docker command
     ///
@@ -245,33 +245,17 @@ impl Default for RealDockerConnection {
 }
 
 impl DockerConnectionTrait for RealDockerConnection {
-    fn get_docker_socket_path(&self) -> Result<String, DockerError> {
-        // Use tokio::runtime to run the async function synchronously
-        // This is necessary because the trait method is synchronous
-        let rt = tokio::runtime::Runtime::new().map_err(|e| {
-            DockerError::ConnectionError(format!("Failed to create runtime: {}", e))
-        })?;
-
-        rt.block_on(async {
+    fn get_docker_socket_path(&self) -> Pin<Box<dyn Future<Output = Result<String, DockerError>> + Send + '_>> {
+        Box::pin(async move {
             crate::docker::get_docker_socket_path(None)
                 .await
-                .map_err(|e| {
-                    DockerError::ConnectionError(format!("Failed to get socket path: {}", e))
-                })
-                .and_then(|opt| {
-                    opt.ok_or_else(|| {
-                        DockerError::ConnectionError("No socket path found".to_string())
-                    })
-                })
+                .map_err(|e| DockerError::ConnectionError(format!("Failed to get socket path: {}", e)))?
+                .ok_or_else(|| DockerError::ConnectionError("No socket path found".to_string()))
         })
     }
 
-    fn connect(&self) -> Result<Docker, DockerError> {
-        let rt = tokio::runtime::Runtime::new().map_err(|e| {
-            DockerError::ConnectionError(format!("Failed to create runtime: {}", e))
-        })?;
-
-        rt.block_on(async {
+    fn connect(&self) -> Pin<Box<dyn Future<Output = Result<Docker, DockerError>> + Send + '_>> {
+        Box::pin(async move {
             crate::docker::connect_to_docker(None).await.map_err(|e| {
                 DockerError::ConnectionError(format!("Failed to connect to Docker: {}", e))
             })
@@ -287,12 +271,8 @@ impl DockerConnectionTrait for RealDockerConnection {
         })
     }
 
-    fn check_docker_available(&self) -> Result<bool, DockerError> {
-        let rt = tokio::runtime::Runtime::new().map_err(|e| {
-            DockerError::ConnectionError(format!("Failed to create runtime: {}", e))
-        })?;
-
-        rt.block_on(async {
+    fn check_docker_available(&self) -> Pin<Box<dyn Future<Output = Result<bool, DockerError>> + Send + '_>> {
+        Box::pin(async move {
             match crate::docker::check_docker_available().await {
                 Ok(_) => Ok(true),
                 Err(e) => Err(e),
@@ -424,34 +404,38 @@ impl Default for MockDockerConnectionBuilder {
 }
 
 impl DockerConnectionTrait for MockDockerConnection {
-    fn get_docker_socket_path(&self) -> Result<String, DockerError> {
-        self.socket_path.clone().ok_or_else(|| {
-            DockerError::ConnectionError("Mock: No socket path configured".to_string())
+    fn get_docker_socket_path(&self) -> Pin<Box<dyn Future<Output = Result<String, DockerError>> + Send + '_>> {
+        Box::pin(async move {
+            self.socket_path.clone().ok_or_else(|| {
+                DockerError::ConnectionError("Mock: No socket path configured".to_string())
+            })
         })
     }
 
-    fn connect(&self) -> Result<Docker, DockerError> {
-        // Check if timeout is configured - return timeout error if so
-        if let Some(timeout) = self.connect_timeout {
-            return Err(DockerError::ConnectionTimeout {
-                timeout_duration: format!("{:?}", timeout),
-                suggestion:
-                    "Consider increasing the connection timeout or checking Docker daemon status"
-                        .to_string(),
-            });
-        }
+    fn connect(&self) -> Pin<Box<dyn Future<Output = Result<Docker, DockerError>> + Send + '_>> {
+        Box::pin(async move {
+            // Check if timeout is configured - return timeout error if so
+            if let Some(timeout) = self.connect_timeout {
+                return Err(DockerError::ConnectionTimeout {
+                    timeout_duration: format!("{:?}", timeout),
+                    suggestion:
+                        "Consider increasing the connection timeout or checking Docker daemon status"
+                            .to_string(),
+                });
+            }
 
-        if self.connect_success {
-            // For mock, we can't actually connect to Docker, so we return an error
-            // indicating this is a mock implementation
-            Err(DockerError::ConnectionError(
-                "Mock: Cannot create actual Docker connection in mock".to_string(),
-            ))
-        } else {
-            Err(DockerError::ConnectionError(
-                "Mock: Connection failed".to_string(),
-            ))
-        }
+            if self.connect_success {
+                // For mock, we can't actually connect to Docker, so we return an error
+                // indicating this is a mock implementation
+                Err(DockerError::ConnectionError(
+                    "Mock: Cannot create actual Docker connection in mock".to_string(),
+                ))
+            } else {
+                Err(DockerError::ConnectionError(
+                    "Mock: Connection failed".to_string(),
+                ))
+            }
+        })
     }
 
     fn disconnect(&self) -> Pin<Box<dyn Future<Output = Result<(), DockerError>> + Send>> {
@@ -471,15 +455,17 @@ impl DockerConnectionTrait for MockDockerConnection {
         })
     }
 
-    fn check_docker_available(&self) -> Result<bool, DockerError> {
-        if self.available {
-            Ok(true)
-        } else {
-            Err(DockerError::DockerUnavailable {
-                reason: "Mock: Docker not available".to_string(),
-                suggestion: "Configure mock to return available".to_string(),
-            })
-        }
+    fn check_docker_available(&self) -> Pin<Box<dyn Future<Output = Result<bool, DockerError>> + Send + '_>> {
+        Box::pin(async move {
+            if self.available {
+                Ok(true)
+            } else {
+                Err(DockerError::DockerUnavailable {
+                    reason: "Mock: Docker not available".to_string(),
+                    suggestion: "Configure mock to return available".to_string(),
+                })
+            }
+        })
     }
 
     fn execute(

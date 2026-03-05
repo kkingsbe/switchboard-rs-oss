@@ -55,3 +55,4 @@ pub mod scheduler;
 pub mod skills;
 pub mod traits;
 pub mod ui;
+pub mod workflows;
