@@ -1,23 +1,29 @@
 ### story-004-05: Message protocol types for gateway<->project communication
 
-- **Implemented by:** dev-1
-- **Sprint:** 18
-- **Commits:** aec71499 (code already exists in repo)
-- **Story file:** `.switchboard/state/stories/story-004-05-message-protocol-types.md`
+- **Status:** ✅ APPROVED
+- **Reviewed by:** code-reviewer
+- **Review date:** 2026-03-05T10:20:00Z
+- **Commits:** de723d4 (original implementation), code evolved through subsequent stories
 - **Files changed:** src/gateway/protocol.rs
 - **Build Result:** ✅ PASS (`cargo build --features "discord gateway"`)
-- **Test Result:** ✅ PASS (20 gateway::protocol tests)
-- **Status:** PENDING_REVIEW
+- **Test Result:** ✅ PASS (12 gateway::protocol tests)
+- **Clippy:** ✅ PASS (no warnings)
 
 **Acceptance Criteria:**
 - [x] Define `GatewayMessage` enum with variants: Register, RegisterAck, Message, Heartbeat, HeartbeatAck — MET: src/gateway/protocol.rs:14-102
-- [x] Implement serde serialization/deserialization — MET: tests verify JSON round-trip for all variants
+- [x] Implement serde serialization/deserialization — MET: Uses #[serde(tag = "type")] with 12 passing round-trip tests
 - [x] Document protocol in code comments — MET: Each variant has comprehensive doc comments
 
-**Notes:**
-- Implementation already exists and is complete
-- 20 unit tests verify serialization/deserialization
-- Uses thiserror for errors per skill conventions
+**Findings:**
+- **SHOULD FIX (Architecture Alignment):** Field types differ from architecture.md §6 spec:
+  - RegisterAck.session_id is `String` vs spec's `Uuid`
+  - Heartbeat has `timestamp: u64` vs spec's `session_id: Uuid`
+  - HeartbeatAck has `timestamp: u64` vs spec's `server_time: i64`
+  - Recommendation: Align with architecture spec for consistency across the codebase
+- **NICE TO HAVE:** Consider adding integration tests to verify protocol works end-to-end with WebSocket transport
+
+**Summary:**
+GatewayMessage enum implemented with all required variants plus additional channel subscribe/unsubscribe variants for future use. Serde serialization works correctly with 12 comprehensive unit tests verifying round-trip behavior. Code follows Rust best practices (descriptive test names, doc comments, proper module organization). Build and clippy pass. The field type deviations from architecture spec are noted but do not block approval since acceptance criteria are satisfied.
 
 ---
 
