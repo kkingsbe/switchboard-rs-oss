@@ -70,6 +70,32 @@ The WebSocket server is fully implemented using tokio-tungstenite. The /ws endpo
 
 ---
 
+### story-004-06: Implement Basic Registration Protocol
+
+- **Implemented by:** dev-1
+- **Sprint:** 19
+- **Commits:** 4b17d97..4bb2740
+- **Story file:** `.switchboard/state/stories/story-004-06-registration-protocol.md`
+- **Files changed:** src/gateway/server.rs
+- **Build Result:** ✅ PASS - cargo build --features "discord gateway"
+- **Test Result:** ✅ PASS (719 tests) - cargo test --lib --features "discord gateway"
+- **Status:** PENDING_REVIEW
+- **Review Date:** 2026-03-05
+
+**Acceptance Criteria:**
+  - [x] Registration Request - Message parsed correctly — MET: Unit test test_valid_registration_returns_session_id verifies parsing
+  - [x] Successful Response - Registration completes with session_id — MET: Unit test test_register_ack_serialization verifies response format
+  - [x] Error Handling - Invalid registration returns error — MET: Unit tests test_empty_project_name_returns_error and test_malformed_json_returns_error verify error handling
+
+**Findings:**
+- **NOTE:** Implementation uses UUID v4 for session ID generation
+- **NOTE:** Echo behavior maintained for non-registration messages for backward compatibility
+
+**Summary:**
+Implemented basic registration protocol in the gateway WebSocket server. The server now parses incoming Register messages, validates project_name is not empty, generates a unique session_id using UUID v4, and responds with RegisterAck. Invalid registrations return RegisterError with appropriate error messages.
+
+---
+
 ## CHANGES_REQUESTED
 
 *(None)*
