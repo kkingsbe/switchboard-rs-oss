@@ -4,6 +4,23 @@
 
 ## Sprint 17 — 2026-03-04 to 2026-03-18
 
+### Progress — 2026-03-05T04:00:00Z
+
+| Agent | Assigned | Complete | In Review | Remaining |
+|-------|----------|----------|-----------|-----------|
+| dev-1 | 5 pts | 0 | 0 | 5 pts |
+| dev-2 | 0 pts | 0 | 0 | 0 pts (idle) |
+
+**Blockers:** 3 active
+- story-003 Build Failure: 35 compilation errors in docker/client.rs (NEW this sprint)
+- Pre-existing Docker Test Failures: 6 tests failing
+- Pre-existing Test Failures: 5 tests failing
+
+**Review queue:** 0 pending
+**Sprint health:** AT RISK - Active story has build failures blocking progress
+
+---
+
 ### Progress — 2026-03-05T02:00:07Z
 
 | Agent | Assigned | Complete | In Review | Remaining |
