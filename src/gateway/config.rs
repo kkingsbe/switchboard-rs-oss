@@ -843,6 +843,7 @@ endpoint = "ws://localhost:8080"
     fn test_validation_fails_when_discord_token_empty() {
         let config = GatewayConfig {
             discord_token: String::new(),
+            discord_intents: 512 | 16384,
             server: ServerConfig::default(),
             logging: LoggingConfig::default(),
             channels: vec![],
@@ -862,6 +863,7 @@ endpoint = "ws://localhost:8080"
     fn test_validation_fails_when_http_port_below_1024() {
         let config = GatewayConfig {
             discord_token: "valid_token".to_string(),
+            discord_intents: 512 | 16384,
             server: ServerConfig {
                 host: "0.0.0.0".to_string(),
                 http_port: 80,
@@ -885,6 +887,7 @@ endpoint = "ws://localhost:8080"
     fn test_validation_fails_when_http_port_above_65535() {
         let config = GatewayConfig {
             discord_token: "valid_token".to_string(),
+            discord_intents: 512 | 16384,
             server: ServerConfig {
                 host: "0.0.0.0".to_string(),
                 http_port: 70000,
@@ -908,6 +911,7 @@ endpoint = "ws://localhost:8080"
     fn test_validation_fails_when_ws_port_below_1024() {
         let config = GatewayConfig {
             discord_token: "valid_token".to_string(),
+            discord_intents: 512 | 16384,
             server: ServerConfig {
                 host: "0.0.0.0".to_string(),
                 http_port: 8080,
@@ -931,6 +935,7 @@ endpoint = "ws://localhost:8080"
     fn test_validation_fails_when_ws_port_above_65535() {
         let config = GatewayConfig {
             discord_token: "valid_token".to_string(),
+            discord_intents: 512 | 16384,
             server: ServerConfig {
                 host: "0.0.0.0".to_string(),
                 http_port: 8080,
@@ -954,6 +959,7 @@ endpoint = "ws://localhost:8080"
     fn test_validation_fails_when_channel_missing_channel_id() {
         let config = GatewayConfig {
             discord_token: "valid_token".to_string(),
+            discord_intents: 512 | 16384,
             server: ServerConfig::default(),
             logging: LoggingConfig::default(),
             channels: vec![ChannelMapping {
@@ -977,6 +983,7 @@ endpoint = "ws://localhost:8080"
     fn test_validation_fails_when_channel_id_not_numeric() {
         let config = GatewayConfig {
             discord_token: "valid_token".to_string(),
+            discord_intents: 512 | 16384,
             server: ServerConfig::default(),
             logging: LoggingConfig::default(),
             channels: vec![ChannelMapping {
@@ -1001,6 +1008,7 @@ endpoint = "ws://localhost:8080"
     fn test_validation_fails_when_channel_missing_project_name() {
         let config = GatewayConfig {
             discord_token: "valid_token".to_string(),
+            discord_intents: 512 | 16384,
             server: ServerConfig::default(),
             logging: LoggingConfig::default(),
             channels: vec![ChannelMapping {
@@ -1024,6 +1032,7 @@ endpoint = "ws://localhost:8080"
     fn test_validation_passes_with_valid_config() {
         let config = GatewayConfig {
             discord_token: "valid_token_123".to_string(),
+            discord_intents: 512 | 16384,
             server: ServerConfig {
                 host: "0.0.0.0".to_string(),
                 http_port: 8080,
