@@ -2,25 +2,23 @@
 
 ## Current Sprint
 
-**Sprint**: 16  
+**Sprint**: 17  
 **Start Date**: 2026-03-04  
 **End Date**: 2026-03-18
 
 ---
 
-## Sprint 16 Stories (Current)
+## Sprint 17 Stories (Current)
 
-### Completed
+### In Progress
 
 | Story | Points | Status | Assigned To |
 |-------|--------|--------|-------------|
-| story-004-03 (HTTP Server Health Check) | 3 | COMPLETE (APPROVED) | dev-1 |
-| story-004-06 (Registration Protocol) | 3 | COMPLETE (APPROVED) | dev-1 |
-| story-006-01 (Project Connection Management) | 3 | CHANGES_REQUESTED → IN PROGRESS | dev-2 |
+| story-003-refactor-docker-mod | 5 | In Progress | dev-1 |
 
 ---
 
-## Sprint 15 Stories (Archived)
+## Sprint 16 Stories (Archived)
 
 ### In Progress
 
@@ -167,7 +165,7 @@
 |-------|--------|--------|-------------|
 | story-001-docker-connection-trait | 3 | Not Started | dev-1 |
 | story-002-process-executor-trait | 2 | Complete | dev-2 |
-| story-003-refactor-docker-mod | 5 | Not Started | dev-1 |
+| ~~story-003-refactor-docker-mod~~ | 5 | → Sprint 17 | dev-1 |
 
 **Sprint 1 Total**: 10 points (2 pts complete, 8 pts remaining)
 

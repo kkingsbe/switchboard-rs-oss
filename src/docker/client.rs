@@ -6,6 +6,9 @@
 //! - DockerClient struct with all methods
 //! - DockerClientTrait implementations
 
+use crate::docker::connection::{
+    DockerConnectionTrait, RealDockerConnection,
+};
 use bollard::Docker;
 use std::path::Path;
 use std::sync::Arc;
@@ -389,7 +392,9 @@ impl From<std::io::Error> for DockerError {
 /// # }
 /// ```
 pub struct DockerClient {
-    /// The Docker client trait object for dependency injection
+    /// The Docker connection trait object for connection management
+    connection: Arc<dyn DockerConnectionTrait>,
+    /// The Docker client trait object for Docker operations
     client: Arc<dyn DockerClientTrait>,
     /// The bollard Docker client (for backward compatibility)
     docker: Option<Docker>,
@@ -402,6 +407,7 @@ pub struct DockerClient {
 impl Clone for DockerClient {
     fn clone(&self) -> Self {
         DockerClient {
+            connection: Arc::clone(&self.connection),
             client: Arc::clone(&self.client),
             docker: self.docker.clone(),
             _image_name: self._image_name.clone(),
@@ -434,41 +440,40 @@ impl DockerClient {
     /// Returns `DockerError::ConnectionError` if the connection to Docker daemon fails.
     /// Returns `DockerError::DockerUnavailable` if Docker is not available (ping fails).
     pub async fn new(image_name: String, image_tag: String) -> Result<Self, DockerError> {
-        Self::new_with_executor(image_name, image_tag, None).await
+        // Create a RealDockerConnection for the default constructor
+        let connection: Arc<dyn DockerConnectionTrait> = Arc::new(RealDockerConnection::new());
+        Self::new_with_connection(image_name, image_tag, connection).await
     }
 
-    /// Create a new DockerClient instance with a custom ProcessExecutor
+    /// Create a new DockerClient instance with a custom DockerConnectionTrait
     ///
-    /// This constructor allows injecting a custom process executor for testing
-    /// or custom process execution behavior.
+    /// This constructor allows injecting a custom connection implementation for testing
+    /// or custom connection behavior.
     ///
     /// # Arguments
     ///
     /// * `image_name` - The Docker image name (e.g., "switchboard-agent")
     /// * `image_tag` - The Docker image tag (e.g., "latest")
-    /// * `executor` - Optional process executor. If None, a default RealProcessExecutor is used.
+    /// * `connection` - A connection implementation (RealDockerConnection or MockDockerConnection)
     ///
     /// # Errors
     ///
     /// Returns `DockerError::ConnectionError` if the connection to Docker daemon fails.
     /// Returns `DockerError::DockerUnavailable` if Docker is not available (ping fails).
-    pub async fn new_with_executor(
+    pub async fn new_with_connection(
         image_name: String,
         image_tag: String,
-        executor: Option<Arc<dyn ProcessExecutorTrait>>,
+        connection: Arc<dyn DockerConnectionTrait>,
     ) -> Result<Self, DockerError> {
-        let docker = connect_to_docker(executor.clone()).await.map_err(|e| {
+        // Connect to Docker using the connection trait
+        let docker = connection.connect().map_err(|e| {
             let error_msg = e.to_string();
             let helpful_msg = if error_msg.contains("permission denied")
                 || error_msg.contains("Permission denied")
                 || error_msg.contains("access denied")
             {
                 format!(
-                    "Docker connection error: {}\n\n\
-                        Permission denied. Is the current user in the docker group?\n\n\
-                        To fix this, run:\n\
-                        sudo usermod -aG docker $USER\n\n\
-                        Then log out and log back in for the changes to take effect.",
+                    "Docker connection error: {}\n\n\n                        Permission denied. Is the current user in the docker group?\n\n\n                        To fix this, run:\n\n                        sudo usermod -aG docker $USER\n\n\n                        Then log out and log back in for the changes to take effect.",
                     error_msg
                 )
             } else if error_msg.contains("connection refused")
@@ -476,20 +481,12 @@ impl DockerClient {
                 || error_msg.contains("No such file")
             {
                 format!(
-                    "Docker connection error: {}\n\n\
-                        Is Docker daemon running?\n\n\
-                        On Linux, try running:\n\
-                        sudo systemctl start docker\n\n\
-                        On macOS or Windows, make sure Docker Desktop is running.",
+                    "Docker connection error: {}\n\n\n                        Is Docker daemon running?\n\n\n                        On Linux, try running:\n\n                        sudo systemctl start docker\n\n\n                        On macOS or Windows, make sure Docker Desktop is running.",
                     error_msg
                 )
             } else {
                 format!(
-                    "Docker connection error: {}\n\n\
-                        Is Docker daemon running and accessible?\n\n\
-                        On Linux, try: sudo systemctl start docker\n\
-                        On macOS/Windows: Start Docker Desktop\n\
-                        Permission issue? Run: sudo usermod -aG docker $USER",
+                    "Docker connection error: {}\n\n\n                        Is Docker daemon running and accessible?\n\n\n                        On Linux, try: sudo systemctl start docker\n\n\n                        On macOS/Windows: Start Docker Desktop\n\n\n                        Permission issue? Run: sudo usermod -aG docker $USER",
                     error_msg
                 )
             };
@@ -530,6 +527,7 @@ impl DockerClient {
             Arc::new(RealDockerClient::from_docker(docker.clone()));
 
         Ok(DockerClient {
+            connection,
             client,
             docker: Some(docker),
             _image_name: image_name,
@@ -537,6 +535,7 @@ impl DockerClient {
         })
     }
 
+    /// Create a new DockerClient instance with a custom ProcessExecutor
     /// Create a DockerClient from a RealDockerClient instance
     ///
     /// This constructor allows for dependency injection by accepting an existing
@@ -555,7 +554,10 @@ impl DockerClient {
     pub fn from_real_client(real_client: crate::traits::RealDockerClient) -> Self {
         let docker = real_client.docker().clone();
         let client: Arc<dyn DockerClientTrait> = Arc::new(real_client);
+        // Create a default RealDockerConnection for backward compatibility
+        let connection: Arc<dyn DockerConnectionTrait> = Arc::new(RealDockerConnection::new());
         DockerClient {
+            connection,
             client,
             docker: Some(docker),
             _image_name: String::new(),

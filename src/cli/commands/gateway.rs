@@ -169,6 +169,20 @@ fn init_file_logging(
 /// - Configuration validation fails
 /// - Server fails to start
 pub async fn run_gateway(args: GatewayCommand) -> Result<(), Box<dyn std::error::Error>> {
+    // Check if we're running as a detached child process
+    if std::env::var("SWITCHBOARD_DETACHED_CHILD").is_ok() {
+        // We are the child process that was spawned for detached mode
+        match args.subcommand {
+            GatewaySubcommand::Up(up_args) => {
+                // Run as child - this will write PID file and run server
+                return run_gateway_as_child(up_args).await;
+            }
+            _ => {
+                // For other subcommands, proceed normally
+            }
+        }
+    }
+
     match args.subcommand {
         GatewaySubcommand::Up(up_args) => run_gateway_up(up_args).await,
         GatewaySubcommand::Status(status_args) => run_gateway_status(status_args).await,
@@ -208,6 +222,11 @@ async fn run_gateway_up(args: GatewayUpArgs) -> Result<(), Box<dyn std::error::E
         ws_port
     );
 
+    // Handle detached mode
+    if args.detach {
+        return run_gateway_detached(config, host, http_port, args.config).await;
+    }
+
     // Create and start the gateway server
     let server = GatewayServer::new(config.server.clone(), config);
 
@@ -215,6 +234,125 @@ async fn run_gateway_up(args: GatewayUpArgs) -> Result<(), Box<dyn std::error::E
 
     // Run the server (handles graceful shutdown internally)
     server.run().await?;
+
+    tracing::info!("Gateway server stopped");
+    Ok(())
+}
+
+/// Run the gateway in detached (background) mode.
+///
+/// This function daemonizes the process on Unix systems by spawning a child process,
+/// redirecting stdio to /dev/null, writing the PID file, and running
+/// the server in the background.
+///
+/// # Arguments
+///
+/// * `config` - The gateway configuration
+/// * `host` - The host address
+/// * `http_port` - The HTTP port
+/// * `config_path` - The path to the config file
+///
+/// # Returns
+///
+/// Returns `Ok(())` on success (parent returns immediately, child runs server),
+/// or an error if daemonization fails.
+async fn run_gateway_detached(
+    config: GatewayConfig,
+    host: String,
+    http_port: u32,
+    config_path: String,
+) -> Result<(), Box<dyn std::error::Error>> {
+    #[cfg(unix)]
+    {
+        use std::os::unix::process::CommandExt;
+
+        // Get current executable path
+        let exe_path = std::env::current_exe()?;
+
+        // Build the command to spawn a detached child
+        let mut cmd = std::process::Command::new(&exe_path);
+        cmd.arg("gateway")
+            .arg("up")
+            .arg("--config")
+            .arg(&config_path)
+            // Use internal flag to indicate this is the child process
+            .env("SWITCHBOARD_DETACHED_CHILD", "1");
+
+        // Set up detached process on Unix
+        cmd.stdin(std::process::Stdio::null())
+            .stdout(std::process::Stdio::null())
+            .stderr(std::process::Stdio::null())
+            .process_group(0); // Create new process group
+
+        // Spawn the child process
+        let child = cmd.spawn()?;
+        let child_pid = child.id();
+
+        println!("Gateway started in detached mode (PID: {})", child_pid);
+        Ok(())
+    }
+
+    #[cfg(not(unix))]
+    {
+        // On non-Unix systems, we can't easily daemonize
+        // For now, just run in foreground with a warning
+        tracing::warn!("Detached mode is not fully supported on this platform. Running in foreground.");
+        
+        let server = GatewayServer::new(config.server.clone(), config);
+        tracing::info!("Starting gateway server on {}:{}", host, http_port);
+        server.run().await?;
+        tracing::info!("Gateway server stopped");
+        Ok(())
+    }
+}
+
+/// Internal function to run gateway as a detached child process.
+/// This is called when SWITCHBOARD_DETACHED_CHILD environment variable is set.
+async fn run_gateway_as_child(
+    args: GatewayUpArgs,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let config_path = &args.config;
+
+    // Validate config path exists
+    let path = Path::new(config_path);
+    if !path.exists() {
+        return Err(GatewayCommandError::InvalidPath(format!(
+            "Configuration file not found: {}",
+            config_path
+        ))
+        .into());
+    }
+
+    // Load gateway configuration
+    tracing::info!("Loading gateway configuration from: {}", config_path);
+    let config = GatewayConfig::load(Some(config_path))?;
+
+    // Initialize file logging
+    let _guards = init_file_logging(&config.logging.file)?;
+
+    let http_port = config.server.http_port;
+    let host = config.server.host.clone();
+
+    tracing::info!(
+        "Gateway configuration loaded: http_port={}, ws_port={}",
+        http_port,
+        config.server.ws_port
+    );
+
+    // Write PID file before starting the server
+    let pid_path = PidFile::default_path();
+    PidFile::write_pid(&pid_path)?;
+
+    // Create and start the gateway server
+    let server = GatewayServer::new(config.server.clone(), config);
+
+    tracing::info!("Starting gateway server on {}:{}", host, http_port);
+
+    // Run the server
+    server.run().await?;
+
+    // Clean up PID file on shutdown
+    let _ = PidFile::cleanup(&pid_path);
 
     tracing::info!("Gateway server stopped");
     Ok(())
