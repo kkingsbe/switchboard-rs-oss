@@ -546,6 +546,49 @@ pub async fn run_up(
         println!("    docker build -t {}:{} .", image_name, image_tag);
     }
 
+    // DAEMON MODE: This is the internal path for the spawned child process
+    // Run scheduler directly without tokio::spawn
+    if args.daemon {
+        if let Some(ref mut sched) = scheduler {
+            if registered_count > 0 {
+                // Create .switchboard directory if it doesn't exist
+                let switchboard_dir = Path::new(".switchboard");
+                if !switchboard_dir.exists() {
+                    if let Err(e) = std::fs::create_dir_all(switchboard_dir) {
+                        eprintln!("  ⚠ Warning: Failed to create .switchboard directory: {}", e);
+                        return Err(e.into());
+                    }
+                }
+
+                // Write PID file
+                let pid_file_path = Path::new(".switchboard/scheduler.pid");
+                let current_pid = std::process::id();
+                if let Err(e) = std::fs::write(&pid_file_path, current_pid.to_string()) {
+                    eprintln!("  ⚠ Warning: Failed to write PID file: {}", e);
+                    return Err(e.into());
+                }
+
+                println!("✓ Scheduler started in daemon mode (PID: {})", current_pid);
+                println!("  Logs directory: {}", log_dir);
+
+                // Run scheduler - this runs indefinitely until stopped
+                // NOT in tokio::spawn, runs directly on the current async task
+                if let Err(e) = sched.start().await {
+                    eprintln!("✗ Scheduler error: {}", e);
+                    // Clean up PID file on error
+                    let _ = fs::remove_file(&pid_file_path);
+                    return Err(e.into());
+                }
+
+                // Clean up PID file on exit
+                let _ = fs::remove_file(&pid_file_path);
+            } else {
+                println!("\n⚠ No agents registered, daemon not started");
+            }
+        }
+        return Ok(());
+    }
+
     // Foreground mode: start the scheduler and wait for Ctrl+C
     if !args.detach {
         if let Some(ref mut sched) = scheduler {
@@ -646,292 +689,77 @@ pub async fn run_up(
             }
         }
     } else {
-        // Detach mode: start the scheduler in the background
-        if let Some(mut sched) = scheduler {
-            if registered_count > 0 {
-                println!("\n✓ Starting scheduler in detached mode");
-
-                // Get current process ID
-                let current_pid = std::process::id();
-
-                // Create .switchboard directory if it doesn't exist
-                let switchboard_dir = Path::new(".switchboard");
-                if !switchboard_dir.exists() {
-                    if let Err(e) = std::fs::create_dir_all(switchboard_dir) {
-                        eprintln!(
-                            "  ⚠ Warning: Failed to create .switchboard directory: {}",
-                            e
-                        );
-                        return Err(e.into());
+        // Detach mode: spawn a new child process with --daemon flag
+        // This allows the parent process to return immediately
+        if registered_count > 0 {
+            // Check for existing scheduler using PID file
+            let pid_file_path = Path::new(".switchboard/scheduler.pid");
+            if pid_file_path.exists() {
+                // Try to read the PID and check if the process is running
+                if let Ok(pid_content) = fs::read_to_string(pid_file_path) {
+                    if let Ok(pid) = pid_content.trim().parse::<u32>() {
+                        if is_process_running(pid) {
+                            return Err("Scheduler is already running. Use 'switchboard down' first.".into());
+                        }
                     }
                 }
+            }
 
-                // Write PID file
-                let pid_file_path = switchboard_dir.join("scheduler.pid");
-                if let Err(e) = std::fs::write(&pid_file_path, current_pid.to_string()) {
-                    eprintln!("  ⚠ Warning: Failed to write PID file: {}", e);
+            // Create .switchboard directory if it doesn't exist
+            let switchboard_dir = Path::new(".switchboard");
+            if !switchboard_dir.exists() {
+                if let Err(e) = std::fs::create_dir_all(switchboard_dir) {
+                    eprintln!("  ⚠ Warning: Failed to create .switchboard directory: {}", e);
                     return Err(e.into());
                 }
-
-                println!("  ✓ PID file created: .switchboard/scheduler.pid");
-
-                // Spawn the scheduler as a background task
-                let pid_file_path_for_cleanup = pid_file_path.clone();
-                let task = tokio::spawn(async move {
-                    // Use scopeguard to ensure PID file is cleaned up regardless of how the task exits
-                    // This handles cases like: scheduler start failure, panic, or unexpected termination
-                    let _guard = scopeguard::guard(pid_file_path_for_cleanup.clone(), |path| {
-                        tracing::debug!("Cleaning up PID file: {}", path.display());
-                        if let Err(e) = std::fs::remove_file(&path) {
-                            tracing::error!("Failed to remove PID file: {}", e);
-                        } else {
-                            tracing::debug!("PID file removed: {}", path.display());
-                        }
-                    });
-
-                    // Start the scheduler
-                    if let Err(e) = sched.start().await {
-                        tracing::error!("Failed to start scheduler: {}", e);
-                        return;
-                    }
-
-                    tracing::info!("Scheduler started in detached mode");
-
-                    // Spawn Discord listener concurrently (if discord feature is enabled and configured)
-                    #[cfg(feature = "discord")]
-                    {
-                        if is_discord_configured() {
-                            tracing::info!(
-                                "Discord configuration detected, starting Discord listener..."
-                            );
-
-                            // Create shutdown channel for graceful Discord shutdown
-                            let (shutdown_tx, shutdown_rx) = broadcast::channel(1);
-
-                            let discord_handle = tokio::spawn(async move {
-                                if let Err(e) =
-                                    crate::discord::start_discord_listener_with_shutdown(
-                                        Some(shutdown_rx),
-                                        None,
-                                    )
-                                    .await
-                                {
-                                    tracing::warn!("Discord listener failed to start: {}. Scheduler will continue running.", e);
-                                }
-                            });
-                            tracing::info!("Discord listener spawned (optional)");
-
-                            // Wait for shutdown signal
-                            #[cfg(unix)]
-                            {
-                                // On Unix, handle SIGTERM and SIGINT in addition to ctrl_c()
-                                let mut sigterm = match signal(SignalKind::terminate()) {
-                                    Ok(s) => s,
-                                    Err(e) => {
-                                        tracing::error!("Failed to create SIGTERM handler: {}", e);
-                                        // Signal Discord to shut down
-                                        let _ = shutdown_tx.send(());
-                                        let _ = discord_handle.await;
-                                        return;
-                                    }
-                                };
-                                let mut sigint = match signal(SignalKind::interrupt()) {
-                                    Ok(s) => s,
-                                    Err(e) => {
-                                        tracing::error!("Failed to create SIGINT handler: {}", e);
-                                        // Signal Discord to shut down
-                                        let _ = shutdown_tx.send(());
-                                        let _ = discord_handle.await;
-                                        return;
-                                    }
-                                };
-
-                                tokio::select! {
-                                    // Wait for Ctrl+C signal
-                                    _ = tokio::signal::ctrl_c() => {
-                                        tracing::info!("Received Ctrl+C, stopping scheduler...");
-                                    }
-                                    // Wait for SIGTERM
-                                    _ = sigterm.recv() => {
-                                        tracing::info!("Received SIGTERM, stopping scheduler...");
-                                    }
-                                    // Wait for SIGINT
-                                    _ = sigint.recv() => {
-                                        tracing::info!("Received SIGINT, stopping scheduler...");
-                                    }
-                                }
-
-                                // Signal Discord to shut down gracefully
-                                let _ = shutdown_tx.send(());
-
-                                // Wait for Discord to finish (with timeout)
-                                match tokio::time::timeout(
-                                    std::time::Duration::from_secs(5),
-                                    discord_handle,
-                                )
-                                .await
-                                {
-                                    Ok(_) => {
-                                        tracing::info!("Discord listener shut down gracefully")
-                                    }
-                                    Err(_) => tracing::warn!("Discord listener shutdown timed out"),
-                                }
-                            }
-
-                            #[cfg(windows)]
-                            {
-                                // On Windows, only ctrl_c() is available
-                                tokio::select! {
-                                    // Wait for Ctrl+C signal
-                                    _ = tokio::signal::ctrl_c() => {
-                                        tracing::info!("Received Ctrl+C, stopping scheduler...");
-                                    }
-                                }
-
-                                // Signal Discord to shut down gracefully
-                                let _ = shutdown_tx.send(());
-
-                                // Wait for Discord to finish (with timeout)
-                                match tokio::time::timeout(
-                                    std::time::Duration::from_secs(5),
-                                    discord_handle,
-                                )
-                                .await
-                                {
-                                    Ok(_) => {
-                                        tracing::info!("Discord listener shut down gracefully")
-                                    }
-                                    Err(_) => tracing::warn!("Discord listener shutdown timed out"),
-                                }
-                            }
-                        } else {
-                            tracing::debug!(
-                                "Discord configuration not found, skipping Discord listener"
-                            );
-
-                            // Wait for shutdown signal without Discord
-                            #[cfg(unix)]
-                            {
-                                // On Unix, handle SIGTERM and SIGINT in addition to ctrl_c()
-                                let mut sigterm = match signal(SignalKind::terminate()) {
-                                    Ok(s) => s,
-                                    Err(e) => {
-                                        tracing::error!("Failed to create SIGTERM handler: {}", e);
-                                        return;
-                                    }
-                                };
-                                let mut sigint = match signal(SignalKind::interrupt()) {
-                                    Ok(s) => s,
-                                    Err(e) => {
-                                        tracing::error!("Failed to create SIGINT handler: {}", e);
-                                        return;
-                                    }
-                                };
-
-                                tokio::select! {
-                                    // Wait for Ctrl+C signal
-                                    _ = tokio::signal::ctrl_c() => {
-                                        tracing::info!("Received Ctrl+C, stopping scheduler...");
-                                    }
-                                    // Wait for SIGTERM
-                                    _ = sigterm.recv() => {
-                                        tracing::info!("Received SIGTERM, stopping scheduler...");
-                                    }
-                                    // Wait for SIGINT
-                                    _ = sigint.recv() => {
-                                        tracing::info!("Received SIGINT, stopping scheduler...");
-                                    }
-                                }
-                            }
-
-                            #[cfg(windows)]
-                            {
-                                // On Windows, only ctrl_c() is available
-                                tokio::select! {
-                                    // Wait for Ctrl+C signal
-                                    _ = tokio::signal::ctrl_c() => {
-                                        tracing::info!("Received Ctrl+C, stopping scheduler...");
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    #[cfg(not(feature = "discord"))]
-                    {
-                        // Wait for shutdown signal
-                        #[cfg(unix)]
-                        {
-                            // On Unix, handle SIGTERM and SIGINT in addition to ctrl_c()
-                            let mut sigterm = match signal(SignalKind::terminate()) {
-                                Ok(s) => s,
-                                Err(e) => {
-                                    tracing::error!("Failed to create SIGTERM handler: {}", e);
-                                    return;
-                                }
-                            };
-                            let mut sigint = match signal(SignalKind::interrupt()) {
-                                Ok(s) => s,
-                                Err(e) => {
-                                    tracing::error!("Failed to create SIGINT handler: {}", e);
-                                    return;
-                                }
-                            };
-
-                            tokio::select! {
-                                // Wait for Ctrl+C signal
-                                _ = tokio::signal::ctrl_c() => {
-                                    tracing::info!("Received Ctrl+C, stopping scheduler...");
-                                }
-                                // Wait for SIGTERM
-                                _ = sigterm.recv() => {
-                                    tracing::info!("Received SIGTERM, stopping scheduler...");
-                                }
-                                // Wait for SIGINT
-                                _ = sigint.recv() => {
-                                    tracing::info!("Received SIGINT, stopping scheduler...");
-                                }
-                            }
-                        }
-
-                        #[cfg(windows)]
-                        {
-                            // On Windows, only ctrl_c() is available
-                            tokio::select! {
-                                // Wait for Ctrl+C signal
-                                _ = tokio::signal::ctrl_c() => {
-                                    tracing::info!("Received Ctrl+C, stopping scheduler...");
-                                }
-                            }
-                        }
-                    }
-
-                    // Stop the scheduler
-                    if let Err(e) = sched.stop().await {
-                        tracing::error!("Error stopping scheduler: {}", e);
-                    } else {
-                        tracing::info!("Scheduler stopped gracefully");
-                    }
-
-                    // PID file will be cleaned up by the scopeguard when this function exits
-                });
-
-                // In detach mode, wait for the task to complete to keep the scheduler running
-                // This prevents the main function from returning and shutting down the tokio runtime
-                println!("  ✓ Scheduler is running in the background");
-                println!("  Process ID: {}", current_pid);
-                println!("  Logs directory: {}", log_dir);
-                println!("\n  To stop the scheduler:");
-                println!("    Press Ctrl+C");
-                println!("    switchboard down  (when implemented)");
-                println!("    kill {}", current_pid);
-
-                // Await the task to keep the scheduler running indefinitely
-                if let Err(e) = task.await {
-                    tracing::error!("Scheduler task error: {}", e);
-                }
-            } else {
-                println!("\n⚠ No agents registered, scheduler not started");
             }
+
+            // Get current executable path
+            let current_exe = std::env::current_exe()
+                .map_err(|e| format!("Failed to get current executable: {}", e))?;
+
+            // Build the spawn command
+            let mut cmd = std::process::Command::new(&current_exe);
+            cmd.arg("up").arg("--daemon");
+
+            // Pass config path to the daemon
+            cmd.arg("--config").arg(&config_path);
+
+            // Detach the child process - redirect stdin/stdout/stderr
+            use std::process::Stdio;
+            cmd.stdin(Stdio::null());
+            cmd.stdout(Stdio::null());
+            cmd.stderr(Stdio::null());
+
+            #[cfg(windows)]
+            {
+                use std::os::windows::process::CommandExt;
+                // CREATE_NEW_PROCESS_GROUP flag (0x08000000) - detaches from console
+                cmd.creation_flags(0x08000000);
+            }
+
+            #[cfg(unix)]
+            {
+                use std::os::unix::process::CommandExt;
+                // Start a new session on Unix - detaches from controlling terminal
+                cmd.session_start();
+            }
+
+            // Spawn the child process
+            let child = cmd.spawn()
+                .map_err(|e| format!("Failed to spawn detached process: {}", e))?;
+
+            // Parent exits immediately - child runs independently
+            println!("\n✓ Scheduler started in detached mode");
+            println!("  PID: {}", child.id());
+            println!("  Logs directory: {}", log_dir);
+            println!("\n  To stop the scheduler:");
+            println!("    switchboard down");
+            println!("    kill {}", child.id());
+
+            return Ok(());
+        } else {
+            println!("\n⚠ No agents registered, scheduler not started");
         }
     }
 

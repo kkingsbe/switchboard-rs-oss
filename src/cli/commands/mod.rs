@@ -7,6 +7,8 @@
 pub mod gateway;
 pub mod list;
 pub mod project;
+pub mod ps;
+pub mod restart;
 pub mod skills;
 pub mod up;
 pub mod workflow_init;

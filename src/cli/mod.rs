@@ -161,6 +161,12 @@ pub enum Commands {
     /// Check scheduler health and status
     Status,
 
+    /// List switchboard processes (similar to docker-compose ps)
+    Ps,
+
+    /// Restart the scheduler (stop and start)
+    Restart(RestartCommand),
+
     /// Start the Discord Gateway service
     #[cfg(feature = "gateway")]
     Gateway(commands::gateway::GatewayCommand),
@@ -172,6 +178,10 @@ pub struct UpCommand {
     /// Run in background
     #[arg(short, long)]
     pub detach: bool,
+
+    /// INTERNAL: Run as daemon (used by spawned process)
+    #[arg(long, hide = true)]
+    pub daemon: bool,
 }
 
 /// Immediately execute a single agent
@@ -188,6 +198,10 @@ pub struct LogsCommand {
     /// Name of the agent to view logs for (optional)
     #[arg(value_name = "AGENT_NAME")]
     pub agent_name: Option<String>,
+
+    /// Show scheduler logs (explicit)
+    #[arg(short, long)]
+    pub scheduler: bool,
 
     /// Stream logs as they are generated
     #[arg(short, long)]
@@ -220,6 +234,14 @@ pub struct DownCommand {
     /// Clean up .switchboard directory (logs, PID files, etc.)
     #[arg(short = 'c', long)]
     pub cleanup: bool,
+}
+
+/// Restart the scheduler (stop and start)
+#[derive(Parser)]
+pub struct RestartCommand {
+    /// Run in background after restart
+    #[arg(short, long)]
+    pub detach: bool,
 }
 
 /// Run the CLI application and dispatch to the appropriate command handler
@@ -306,6 +328,8 @@ pub async fn run() -> Result<ColorMode, Box<dyn std::error::Error>> {
         Commands::Project(args) => commands::project::run_project(args, cli.config).await,
         Commands::Workflow(args) => commands::workflow_init::run_workflow_init(args, cli.config).await,
         Commands::Status => run_status(cli.config),
+        Commands::Ps => commands::ps::run_ps(cli.config),
+        Commands::Restart(args) => run_restart(args, cli.config).await,
         #[cfg(feature = "gateway")]
         Commands::Gateway(args) => run_gateway(args).await,
     };
@@ -446,6 +470,29 @@ pub async fn run_up(
     config_path: Option<String>,
 ) -> Result<(), Box<dyn std::error::Error>> {
     crate::cli::commands::up::run_up(args, config_path).await
+}
+
+/// Handler for the 'restart' command - Stop and start the scheduler
+///
+/// This command restarts the scheduler by first stopping any running instance
+/// and then starting it again.
+///
+/// # Arguments
+///
+/// * `args` - The [`RestartCommand`] containing CLI arguments:
+///   - `args.detach`: If `true`, runs in detached (background) mode after restart
+/// * `config_path` - Optional path to the configuration file
+///
+/// # Returns
+///
+/// Returns `Ok(())` on success, or an error if:
+/// - Failed to stop the running scheduler
+/// - Failed to start the scheduler
+pub async fn run_restart(
+    args: RestartCommand,
+    config_path: Option<String>,
+) -> Result<(), Box<dyn std::error::Error>> {
+    crate::cli::commands::restart::run_restart(args, config_path).await
 }
 
 /// Handler for the 'gateway' command - Start the Discord Gateway service
@@ -862,6 +909,7 @@ pub async fn run_logs(
 ) -> Result<(), Box<dyn std::error::Error>> {
     let logs_args = LogsArgs {
         agent_name: args.agent_name,
+        scheduler: args.scheduler,
         follow: args.follow,
         tail: Some(args.tail),
     };
@@ -1206,6 +1254,8 @@ pub fn run_status(_config: Option<String>) -> Result<(), Box<dyn std::error::Err
     struct HeartbeatData {
         pid: u32,
         last_heartbeat: String,
+        start_time: String,
+        version: String,
         state: String,
         agents: Vec<AgentHeartbeat>,
     }
@@ -1238,6 +1288,14 @@ pub fn run_status(_config: Option<String>) -> Result<(), Box<dyn std::error::Err
             "  Last Heartbeat: {} ({} ago)",
             last_heartbeat_time.format("%Y-%m-%d %H:%M:%S UTC"),
             format_duration(heartbeat_age)
+        );
+        println!(
+            "  Start Time: {}",
+            heartbeat.start_time
+        );
+        println!(
+            "  Version: {}",
+            heartbeat.version
         );
 
         // Check if heartbeat is stale (> 2 minutes)

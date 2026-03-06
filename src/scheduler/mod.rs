@@ -826,6 +826,8 @@ pub struct Scheduler {
     heartbeat_task: Option<tokio::task::JoinHandle<()>>,
     /// PID of the scheduler process
     pid: u32,
+    /// Start time of the scheduler (RFC3339 timestamp)
+    start_time: String,
 }
 
 impl Scheduler {
@@ -847,6 +849,7 @@ impl Scheduler {
     ) -> Result<Self, SchedulerError> {
         let clock = clock.unwrap_or_else(|| Arc::new(SystemClock));
         let pid = std::process::id();
+        let start_time = Utc::now().to_rfc3339();
         let docker_client = match docker_client {
             Some(client) => client,
             None => Arc::new(RealDockerClient::new().await.map_err(|e| {
@@ -872,6 +875,7 @@ impl Scheduler {
             queue_wait_times: Arc::new(Mutex::new(Vec::new())),
             heartbeat_task: None,
             pid,
+            start_time,
         })
     }
 
@@ -1131,6 +1135,8 @@ impl Scheduler {
         let running = self.running.clone();
         let agents = self.agents.clone();
         let pid = self.pid;
+        let start_time = self.start_time.clone();
+        let version = env!("CARGO_PKG_VERSION");
 
         // Spawn the heartbeat task
         self.heartbeat_task = Some(tokio::spawn(async move {
@@ -1146,14 +1152,14 @@ impl Scheduler {
                 }
 
                 // Write heartbeat file
-                if let Err(e) = write_heartbeat(&agents, pid) {
+                if let Err(e) = write_heartbeat(&agents, pid, &start_time, version) {
                     tracing::warn!("Failed to write heartbeat: {}", e);
                 }
             }
         }));
 
         // Write initial heartbeat
-        if let Err(e) = write_heartbeat(&self.agents, self.pid) {
+        if let Err(e) = write_heartbeat(&self.agents, self.pid, &self.start_time, env!("CARGO_PKG_VERSION")) {
             tracing::warn!("Failed to write initial heartbeat: {}", e);
         }
 
@@ -1224,6 +1230,8 @@ impl Scheduler {
 fn write_heartbeat(
     agents: &Arc<Mutex<Vec<ScheduledAgent>>>,
     pid: u32,
+    start_time: &str,
+    version: &str,
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     use serde::Serialize;
 
@@ -1249,6 +1257,8 @@ fn write_heartbeat(
     struct HeartbeatData<'a> {
         pid: u32,
         last_heartbeat: &'a str,
+        start_time: &'a str,
+        version: &'a str,
         state: &'a str,
         agents: Vec<AgentHeartbeat>,
     }
@@ -1263,6 +1273,8 @@ fn write_heartbeat(
     let heartbeat_data = HeartbeatData {
         pid,
         last_heartbeat: &last_heartbeat,
+        start_time,
+        version,
         state: "running",
         agents: agent_heartbeats,
     };
