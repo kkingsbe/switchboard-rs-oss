@@ -137,6 +137,5 @@ rustup default stable
 
 ## Next Steps
 
-- [Quick Start Guide](quickstart.md) - Get started with your first scheduled task
 - [Configuration](configuration.md) - Configure Switchboard for your needs
 - [Troubleshooting](troubleshooting.md) - Detailed troubleshooting guide
