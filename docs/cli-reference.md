@@ -2,6 +2,8 @@
 
 Complete reference for Switchboard CLI commands.
 
+> **Last updated:** 2026-03-06
+
 ## Synopsis
 
 ```bash
@@ -17,6 +19,28 @@ switchboard [GLOBAL OPTIONS] <command> [command options] [arguments...]
 | `--version` | Show version information |
 
 ## Commands
+
+### up
+
+Build the agent Docker image (if needed) and start the scheduler to run all configured agents on their cron schedules.
+
+```bash
+switchboard up [options]
+```
+
+**Options:**
+- `-d, --detach` - Run scheduler in detached mode (background)
+
+**Examples:**
+```bash
+# Start scheduler (blocks terminal)
+switchboard up
+
+# Start in background
+switchboard up --detach
+```
+
+---
 
 ### run
 
@@ -212,15 +236,39 @@ switchboard validate --strict
 Manage Kilo skills. See [Skills Documentation](skills.md) for details.
 
 ```bash
-switchboard skills [command]
+switchboard skills <subcommand> [options]
 ```
 
 **Subcommands:**
-- `list` - List available skills
-- `install` - Install a skill
-- `installed` - List installed skills
-- `update` - Update installed skills
-- `remove` - Remove a skill
+
+| Subcommand | Description |
+|------------|-------------|
+| `list` | List available skills from registry |
+| `install <source>` | Install a skill from GitHub, npm, or local path |
+| `installed` | List currently installed skills |
+| `update [skill-name]` | Update installed skills to latest versions |
+| `remove <skill-name>` | Remove an installed skill |
+
+**Examples:**
+```bash
+# List all available skills
+switchboard skills list
+
+# Search for skills
+switchboard skills list --search rust
+
+# Install a skill
+switchboard skills install github:owner/skill-name
+
+# Update all skills
+switchboard skills update
+
+# Update specific skill
+switchboard skills update rust-engineer
+
+# Remove a skill
+switchboard skills remove rust-engineer
+```
 
 ---
 
@@ -229,17 +277,41 @@ switchboard skills [command]
 Manage Switchboard workflows. See [Workflows Documentation](workflows.md) for details.
 
 ```bash
-switchboard workflows [command]
+switchboard workflows <subcommand> [options]
 ```
 
 **Subcommands:**
-- `list` - List available workflows
-- `install` - Install a workflow
-- `installed` - List installed workflows
-- `update` - Update workflows
-- `remove` - Remove a workflow
-- `validate` - Validate a workflow
-- `apply` - Apply workflow to generate config
+
+| Subcommand | Description |
+|------------|-------------|
+| `list` | List available workflows from registry |
+| `install <name>` | Install a workflow from registry |
+| `installed` | List currently installed workflows |
+| `update [name]` | Update installed workflows to latest versions |
+| `remove <name>` | Remove an installed workflow |
+| `validate <path>` | Validate a workflow manifest file |
+| `apply <name>` | Apply a workflow to generate agents |
+
+**Examples:**
+```bash
+# List all available workflows
+switchboard workflows list
+
+# Install a workflow
+switchboard workflows install ai-coder
+
+# List installed workflows
+switchboard workflows installed
+
+# Update all workflows
+switchboard workflows update
+
+# Validate a workflow file
+switchboard workflows validate my-workflow.toml
+
+# Apply a workflow to generate agent configs
+switchboard workflows apply ai-coder
+```
 
 ---
 

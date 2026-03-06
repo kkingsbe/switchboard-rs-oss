@@ -2,6 +2,8 @@
 
 Switchboard uses TOML configuration files to define agents, schedules, and integrations. This document provides a complete reference for all configuration options.
 
+> **Last updated:** 2026-03-06
+
 ## File Location
 
 Switchboard looks for configuration in the following locations:
