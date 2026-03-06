@@ -2,61 +2,153 @@
 image_name = "switchboard-agent"
 image_tag = "latest"
 log_dir = ".switchboard/logs"
-timezone = "system"
+timezone = "America/New_York"
 
-[[agent]]
-name = "sb-solution-architect"
-schedule = ""
-readonly = false
-timeout = "25m"
-prompt_file = ".switchboard/workflows/bmad/prompts/SOLUTION_ARCHITECT.md"
-env = { AGENT_COUNT = "2" }
+# [[agent]]
+# name = "sb-solution-architect"
+# schedule = ""
+# readonly = false
+# timeout = "25m"
+# prompt_file = ".switchboard/workflows/bmad/prompts/SOLUTION_ARCHITECT.md"
+# env = { AGENT_COUNT = "2" }
 
-[[agent]]
-name = "sb-sprint-planner"
-schedule = "5,35 * * * *"                 # Every 30 min at :05 and :35
-readonly = false
-timeout = "25m"
-prompt_file = ".switchboard/workflows/bmad/prompts/SPRINT_PLANNER.md"
-env = { AGENT_COUNT = "2" }
+# [[agent]]
+# name = "sb-sprint-planner"
+# schedule = "5,35 * * * *"                 # Every 30 min at :05 and :35
+# readonly = false
+# timeout = "25m"
+# prompt_file = ".switchboard/workflows/bmad/prompts/SPRINT_PLANNER.md"
+# env = { AGENT_COUNT = "2" }
 
-[[agent]]
-name = "sb-dev-1"
-schedule = "*/30 * * * *"                 # Every 30 min at :00 and :30
-readonly = false
-timeout = "30m"
-prompt_file = ".switchboard/workflows/bmad/prompts/DEV_PARALLEL.md"
-env = { AGENT_ID = "1" }
+# [[agent]]
+# name = "sb-dev-1"
+# schedule = "*/30 * * * *"                 # Every 30 min at :00 and :30
+# readonly = false
+# timeout = "30m"
+# prompt_file = ".switchboard/workflows/bmad/prompts/DEV_PARALLEL.md"
+# env = { AGENT_ID = "1" }
 
-[[agent]]
-name = "sb-dev-2"
-schedule = "15,45 * * * *"               # Every 30 min at :15 and :45
-readonly = false
-timeout = "30m"
-prompt_file = ".switchboard/workflows/bmad/prompts/DEV_PARALLEL.md"
-env = { AGENT_ID = "2" }
+# [[agent]]
+# name = "sb-dev-2"
+# schedule = "15,45 * * * *"               # Every 30 min at :15 and :45
+# readonly = false
+# timeout = "30m"
+# prompt_file = ".switchboard/workflows/bmad/prompts/DEV_PARALLEL.md"
+# env = { AGENT_ID = "2" }
 
-[[agent]]
-name = "sb-code-reviewer"
-schedule = "20,50 * * * *"               # Every 30 min at :20 and :50
-readonly = false
-timeout = "20m"
-prompt_file = ".switchboard/workflows/bmad/prompts/CODE_REVIEWER.md"
+# [[agent]]
+# name = "sb-code-reviewer"
+# schedule = "20,50 * * * *"               # Every 30 min at :20 and :50
+# readonly = false
+# timeout = "20m"
+# prompt_file = ".switchboard/workflows/bmad/prompts/CODE_REVIEWER.md"
 
+# [[agent]]
+# name = "sb-scrum-master"
+# schedule = "0 * * * *"                    # Every hour on the hour
+# readonly = false
+# timeout = "15m"
+# prompt_file = ".switchboard/workflows/bmad/prompts/SCRUM_MASTER.md"
+# env = { AGENT_COUNT = "4" }
+
+# =============================================================================
+# Switchboard: Knowledge Base Maintenance Workflow
+# =============================================================================
+#
+# Three-agent pipeline that keeps ./docs/knowledge-base/ in sync with the
+# actual codebase. Runs hourly, staggered by 15 minutes to allow each stage
+# to complete before the next begins. Over the course of a day, the auditor's
+# budget cap means the backlog is chipped away incrementally — no single cycle
+# tries to document everything at once.
+#
+# Pipeline:  kb-scanner  →  kb-auditor  →  kb-writer
+#            (scan repo)    (diff docs)    (update docs)
+#
+# Signal flow:
+#   kb-scanner  creates  .switchboard/state/kb/.scan_complete
+#   kb-auditor  waits on .scan_complete, creates .audit_complete
+#   kb-writer   waits on .audit_complete, cleans up all signals when done
+#
+# Cycle timing (repeats every hour):
+#   :00  kb-scanner runs  (~10-15 min)
+#   :20  kb-auditor runs  (~10-15 min)
+#   :40  kb-writer runs   (~15-20 min)
+#   :00  next cycle — scanner overwrites stale manifest, starts fresh
+#
+# If any agent is still running when the next fires, overlap_mode=skip
+# ensures the new run is dropped. The pipeline self-heals next hour.
+#
+# State directory: .switchboard/state/kb/
+# Output directory: ./docs/knowledge-base/
+#
+# =============================================================================
+
+
+# -----------------------------------------------------------------------------
+# Agent 1: KB Scanner
+# -----------------------------------------------------------------------------
+# Crawls the repo and produces a structured manifest of documentable surface
+# area: CLI commands, config fields, features, public APIs, skills, and
+# architectural patterns. Read-only — touches nothing except its own state.
+#
+# Runs at the top of every hour. Each run produces a fresh manifest that
+# reflects the current state of the codebase (including any changes made by
+# other pipelines since the last scan).
+#
+# Output:  .switchboard/state/kb/MANIFEST.json
+# Signal:  .switchboard/state/kb/.scan_complete
+# -----------------------------------------------------------------------------
 [[agent]]
-name = "sb-scrum-master"
-schedule = "0 * * * *"                    # Every hour on the hour
-readonly = false
+name = "kb-scanner"
+schedule = "0 * * * *"
+prompt_file = ".switchboard/workflows/knowledge-base/prompts/KB_SCANNER.md"
 timeout = "15m"
-prompt_file = ".switchboard/workflows/bmad/prompts/SCRUM_MASTER.md"
-env = { AGENT_COUNT = "4" }
+readonly = false
+
+# -----------------------------------------------------------------------------
+# Agent 2: KB Auditor
+# -----------------------------------------------------------------------------
+# Compares MANIFEST.json against existing docs in ./docs/knowledge-base/.
+# Produces a prioritized audit report with a budgeted action list. Caps
+# actions to what the writer can achieve in ~15 minutes — typically 2-3
+# articles per cycle. Excess items are deferred to the next cycle.
+#
+# Input:   .switchboard/state/kb/MANIFEST.json + ./docs/knowledge-base/**
+# Output:  .switchboard/state/kb/AUDIT_REPORT.json
+# Signal:  .switchboard/state/kb/.audit_complete
+# -----------------------------------------------------------------------------
+[[agent]]
+name = "kb-auditor"
+schedule = "20 * * * *"
+prompt_file = ".switchboard/workflows/knowledge-base/prompts/KB_AUDITOR.md"
+timeout = "15m"
+readonly = false
+
+# -----------------------------------------------------------------------------
+# Agent 3: KB Writer
+# -----------------------------------------------------------------------------
+# Executes the audit report: creates new articles, updates stale ones, removes
+# docs for dead features, and regenerates the index. Only agent that writes to
+# ./docs/knowledge-base/. Cleans up all pipeline signals on completion so the
+# next hourly cycle starts clean.
+#
+# Input:   .switchboard/state/kb/AUDIT_REPORT.json + source code
+# Output:  Updated ./docs/knowledge-base/** + regenerated INDEX.md
+# Cleanup: Removes all signal files when done
+# -----------------------------------------------------------------------------
+[[agent]]
+name = "kb-writer"
+schedule = "40 * * * *"
+prompt_file = ".switchboard/workflows/knowledge-base/prompts/KB_WRITER.md"
+timeout = "20m"
+readonly = false
 
 [[agent]]
 name = "sb-chronicler"
 schedule = "*/30 * * * *"
 prompt_file = ".switchboard/workflows/bmad/prompts/WORK_CHRONICLER.md"
 timeout = "5m"
-readonly = true
+readonly = false
 
 [discord]
 enabled = true
