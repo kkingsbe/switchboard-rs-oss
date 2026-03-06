@@ -289,8 +289,37 @@ skills = ["frontend-design", "security-audit"]
 
 ## CLI Reference
 
+### Scaffolding Commands
+
+Scaffolding commands help you quickly set up new Switchboard projects and workflows with standard directory structures and templates.
+
+```bash
+# Create a new Switchboard project in current directory
+switchboard project init
+
+# Create project in specified directory
+switchboard project init --path ./my-project
+
+# Create project with specific name
+switchboard project init --name my-project
+
+# Create minimal project without examples
+switchboard project init --minimal
+
+# Create a new workflow (requires being in a project directory)
+switchboard workflow init --name my-workflow
+
+# Create workflow with specific agents
+switchboard workflow init --name my-workflow --agents architect developer
+
+# Create workflow with custom schedule
+switchboard workflow init --name my-workflow --schedule "0 9 * * *"
+```
+
 | Command | Description |
 |---------|-------------|
+| `switchboard project init` | Scaffold a new Switchboard project |
+| `switchboard workflow init` | Scaffold a new workflow |
 | `switchboard up` | Start the scheduler (runs agents on schedule) |
 | `switchboard run <name>` | Run a specific agent immediately |
 | `switchboard build` | Build the Docker image |

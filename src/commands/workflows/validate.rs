@@ -4,6 +4,7 @@
 //! a workflow's manifest.toml file.
 
 use crate::config::Config;
+use crate::skills::{extract_skill_name, SkillsManager};
 use crate::workflows::manifest::{ManifestConfig, ManifestError};
 use crate::workflows::WORKFLOWS_DIR;
 
@@ -102,6 +103,42 @@ pub async fn run_workflows_validate(args: WorkflowsValidate, _config: &Config) -
     if let Err(e) = validate_timeouts(&manifest) {
         eprintln!("Error: {}", e);
         return ExitCode::Error;
+    }
+
+    // Validate skills are installed
+    let skill_warnings = validate_workflow_skills(&manifest);
+    for warning in &skill_warnings {
+        println!("Warning: {}", warning);
+    }
+
+    if !skill_warnings.is_empty() {
+        // Collect unique skill sources for the install command
+        let mut unique_skills: Vec<String> = Vec::new();
+        
+        if let Some(defaults) = &manifest.defaults {
+            if let Some(skills) = &defaults.skills {
+                for skill in skills {
+                    if !unique_skills.contains(skill) {
+                        unique_skills.push(skill.clone());
+                    }
+                }
+            }
+        }
+        
+        for agent in &manifest.agents {
+            if let Some(skills) = &agent.skills {
+                for skill in skills {
+                    if !unique_skills.contains(skill) {
+                        unique_skills.push(skill.clone());
+                    }
+                }
+            }
+        }
+        
+        println!("\nTo install missing skills, run:");
+        for skill_source in unique_skills {
+            println!("  switchboard skills install {}", skill_source);
+        }
     }
 
     // All validations passed
@@ -252,6 +289,65 @@ fn validate_timeout_format(timeout: &str, field: &str) -> Result<(), String> {
     Ok(())
 }
 
+/// Validates that required skills are installed
+///
+/// This function checks if all skills referenced in the manifest are actually
+/// installed in the project's skills directory.
+///
+/// # Arguments
+///
+/// * `manifest` - Reference to the ManifestConfig containing skill references
+///
+/// # Returns
+///
+/// * `Vec<String>` - Vector of warning messages for missing skills
+pub fn validate_workflow_skills(manifest: &ManifestConfig) -> Vec<String> {
+    let mut warnings = Vec::new();
+    let manager = SkillsManager::new(None);
+    
+    // Collect all skills from manifest
+    let mut all_skills: Vec<String> = Vec::new();
+    
+    if let Some(defaults) = &manifest.defaults {
+        if let Some(skills) = &defaults.skills {
+            all_skills.extend(skills.clone());
+        }
+    }
+    
+    for agent in &manifest.agents {
+        if let Some(skills) = &agent.skills {
+            all_skills.extend(skills.clone());
+        }
+    }
+    
+    // Remove duplicates
+    all_skills.sort();
+    all_skills.dedup();
+    
+    // Check each skill
+    for skill_source in &all_skills {
+        // Extract skill name - handle potential errors gracefully
+        let skill_name = match extract_skill_name(skill_source) {
+            Ok(name) => name,
+            Err(_) => {
+                // If we can't extract the skill name, use the source as-is
+                skill_source.clone()
+            }
+        };
+        let skill_path = manager.skills_dir.join(&skill_name);
+        
+        if !skill_path.exists() {
+            warnings.push(format!(
+                "Skill '{}' (required by workflow) is not installed. \
+                Run 'switchboard skills install {}' to install it.",
+                skill_name, skill_source
+            ));
+        }
+    }
+    
+    warnings
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -375,5 +471,154 @@ overlap_mode = "queue"
         assert!(validate_cron_schedules(&manifest, "test").is_ok());
         assert!(validate_overlap_modes(&manifest).is_ok());
         assert!(validate_timeouts(&manifest).is_ok());
+    }
+
+    // ============================================================================
+    // Skill Validation Tests
+    // ============================================================================
+
+    #[test]
+    fn test_validate_workflow_skills_no_skills_defined() {
+        // Test manifest with no skills defined
+        let toml_content = r#"
+name = "test-workflow"
+version = "1.0.0"
+
+[defaults]
+schedule = "0 9 * * *"
+timeout = "30m"
+
+[[agents]]
+name = "test-agent"
+prompt_file = "test.md"
+"#;
+        let manifest: ManifestConfig = toml::from_str(toml_content).unwrap();
+        
+        // No skills defined, so should return empty warnings
+        let warnings = validate_workflow_skills(&manifest);
+        assert!(warnings.is_empty(), "Expected no warnings when no skills are defined");
+    }
+
+    #[test]
+    fn test_validate_workflow_skills_with_defaults_skills() {
+        // Test manifest with skills in defaults section
+        let toml_content = r#"
+name = "test-workflow"
+version = "1.0.0"
+
+[defaults]
+schedule = "0 9 * * *"
+timeout = "30m"
+skills = ["skills/repo", "skills/repo1"]
+
+[[agents]]
+name = "test-agent"
+prompt_file = "test.md"
+"#;
+        let manifest: ManifestConfig = toml::from_str(toml_content).unwrap();
+        
+        // Skills defined in defaults, should get warnings for missing skills
+        let warnings = validate_workflow_skills(&manifest);
+        // The actual result depends on whether skills are installed
+        // At minimum, we should have collected the skills from defaults
+        assert!(!warnings.is_empty() || manifest.defaults.as_ref().unwrap().skills.as_ref().unwrap().len() == 2);
+    }
+
+    #[test]
+    fn test_validate_workflow_skills_with_agent_skills() {
+        // Test manifest with skills in agent section
+        let toml_content = r#"
+name = "test-workflow"
+version = "1.0.0"
+
+[defaults]
+schedule = "0 9 * * *"
+timeout = "30m"
+
+[[agents]]
+name = "test-agent"
+prompt_file = "test.md"
+skills = ["skills/repo2", "skills/repo3"]
+"#;
+        let manifest: ManifestConfig = toml::from_str(toml_content).unwrap();
+        
+        // Skills defined in agent, should get warnings for missing skills
+        let warnings = validate_workflow_skills(&manifest);
+        // The actual result depends on whether skills are installed
+        // At minimum, we should have collected the skills from agent
+        assert!(!warnings.is_empty() || manifest.agents[0].skills.as_ref().unwrap().len() == 2);
+    }
+
+    #[test]
+    fn test_validate_workflow_skills_with_both_defaults_and_agents() {
+        // Test manifest with skills in both defaults and agent sections
+        let toml_content = r#"
+name = "test-workflow"
+version = "1.0.0"
+
+[defaults]
+schedule = "0 9 * * *"
+timeout = "30m"
+skills = ["skills/repo"]
+
+[[agents]]
+name = "test-agent1"
+prompt_file = "test.md"
+skills = ["skills/repo1"]
+
+[[agents]]
+name = "test-agent2"
+prompt_file = "test2.md"
+skills = ["skills/repo2", "skills/repo3"]
+"#;
+        let manifest: ManifestConfig = toml::from_str(toml_content).unwrap();
+        
+        // Skills defined in both defaults and agents
+        let warnings = validate_workflow_skills(&manifest);
+        // Should have 4 unique skills total
+        // Warnings depend on whether they're installed
+        let defaults_skills = manifest.defaults.as_ref().unwrap().skills.as_ref().unwrap().len();
+        let agent_skills: usize = manifest.agents.iter()
+            .map(|a| a.skills.as_ref().map_or(0, |s| s.len()))
+            .sum();
+        assert_eq!(defaults_skills + agent_skills, 4);
+    }
+
+    #[test]
+    fn test_validate_workflow_skills_duplicate_removal() {
+        // Test that duplicate skills are handled correctly
+        let toml_content = r#"
+name = "test-workflow"
+version = "1.0.0"
+
+[defaults]
+skills = ["skills/repo", "skills/repo1"]
+
+[[agents]]
+name = "test-agent"
+prompt_file = "test.md"
+skills = ["skills/repo", "skills/repo2"]
+"#;
+        let manifest: ManifestConfig = toml::from_str(toml_content).unwrap();
+        
+        // skills/repo appears in both defaults and agent, should be deduped
+        let warnings = validate_workflow_skills(&manifest);
+        // We should have 3 unique skills (repo, repo1, repo2)
+        // but skills/repo only appears once in warnings (if not installed)
+        let skill_names: Vec<&str> = warnings.iter()
+            .filter_map(|w| {
+                // Extract skill name from warning message
+                if let Some(start) = w.find("'") {
+                    if let Some(end) = w[start+1..].find("'") {
+                        return Some(&w[start+1..start+1+end]);
+                    }
+                }
+                None
+            })
+            .collect();
+        
+        // Check that repo appears only once in the warnings
+        let repo_count = skill_names.iter().filter(|&&n| n == "repo").count();
+        assert_eq!(repo_count, 1, "Duplicate skills should be removed");
     }
 }

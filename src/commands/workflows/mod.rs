@@ -3,6 +3,7 @@ pub mod install;
 pub mod installed;
 pub mod list;
 pub mod remove;
+pub mod skills;
 pub mod types;
 pub mod update;
 pub mod validate;

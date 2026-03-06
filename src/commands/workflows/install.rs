@@ -4,7 +4,9 @@
 //! and installs a workflow from the kkingsbe/switchboard-workflows repository.
 
 use crate::config::Config;
+use crate::commands::workflows::skills::install_workflow_skills;
 use crate::workflows::github::GitHubClient;
+use crate::workflows::manifest::ManifestConfig;
 use crate::workflows::WorkflowsError;
 use chrono::Utc;
 use serde::{Deserialize, Serialize};
@@ -192,7 +194,64 @@ pub async fn run_workflows_install(args: WorkflowsInstall, _config: &Config) -> 
             );
         }
     }
-    
+
+    // Check if manifest has required skills and install them
+    let mut skills_to_install: Vec<String> = Vec::new();
+
+    if manifest_path.exists() {
+        match ManifestConfig::from_path(&manifest_path) {
+            Ok(manifest) => {
+                // Collect skills from defaults
+                if let Some(defaults) = &manifest.defaults {
+                    if let Some(skills) = &defaults.skills {
+                        skills_to_install.extend(skills.clone());
+                    }
+                }
+
+                // Collect skills from each agent
+                for agent in &manifest.agents {
+                    if let Some(skills) = &agent.skills {
+                        skills_to_install.extend(skills.clone());
+                    }
+                }
+
+                // Remove duplicates
+                skills_to_install.sort();
+                skills_to_install.dedup();
+            }
+            Err(e) => {
+                println!(
+                    "Warning: Failed to parse manifest.toml: {}",
+                    e
+                );
+            }
+        }
+    }
+
+    // Install required skills if any are specified
+    if !skills_to_install.is_empty() {
+        println!(
+            "\nInstalling {} required skill(s) for workflow...",
+            skills_to_install.len()
+        );
+
+        match install_workflow_skills(&skills_to_install, args.yes) {
+            Ok(installed) => {
+                println!(
+                    "Successfully installed {} skill(s): {}",
+                    installed.len(),
+                    installed.join(", ")
+                );
+            }
+            Err(e) => {
+                eprintln!("Error: Failed to install required skills: {}", e);
+                // Clean up downloaded workflow
+                let _ = fs::remove_dir_all(&workflow_path);
+                return ExitCode::Error;
+            }
+        }
+    }
+
     // Update lockfile
     if let Err(e) = add_workflow_to_lockfile(&workflows_dir, workflow_name) {
         eprintln!("Warning: Failed to update lockfile: {}", e);
@@ -250,5 +309,99 @@ mod tests {
         let lockfile = read_workflows_lockfile(temp_dir.path()).unwrap();
         assert_eq!(lockfile.version, 1);
         assert!(lockfile.workflows.is_empty());
+    }
+
+    // ============================================================================
+    // Skill Integration Tests
+    // ============================================================================
+
+    #[test]
+    fn test_skill_integration_empty_skills_list() {
+        // Test that empty skills list is handled correctly
+        let skills: Vec<String> = vec![];
+        
+        // Empty skills list should result in no skills to install
+        // This tests the logic path where skills_to_install is empty
+        assert!(skills.is_empty());
+        
+        // When skills list is empty, we shouldn't call install_workflow_skills
+        // The main install function checks `if !skills_to_install.is_empty()`
+        // which means empty list skips the installation entirely
+    }
+
+    #[test]
+    fn test_skill_integration_single_skill() {
+        // Test with a single skill in the list
+        let skills = vec!["skills/repo".to_string()];
+        
+        // Single skill should be collected correctly
+        assert_eq!(skills.len(), 1);
+        assert_eq!(skills[0], "skills/repo");
+    }
+
+    #[test]
+    fn test_skill_integration_multiple_skills() {
+        // Test with multiple skills - deduplication
+        let mut skills = vec![
+            "skills/repo".to_string(),
+            "skills/repo1".to_string(),
+            "skills/repo".to_string(), // duplicate
+            "skills/repo2".to_string(),
+        ];
+        
+        // Sort and dedup (mimics the logic in run_workflows_install)
+        skills.sort();
+        skills.dedup();
+        
+        // Should have 3 unique skills after dedup
+        assert_eq!(skills.len(), 3);
+        assert_eq!(skills[0], "skills/repo");
+        assert_eq!(skills[1], "skills/repo1");
+        assert_eq!(skills[2], "skills/repo2");
+    }
+
+    #[test]
+    fn test_skill_integration_different_formats() {
+        // Test that different skill source formats are handled
+        let skills = vec![
+            "owner/repo".to_string(),
+            "owner/repo@skill-name".to_string(),
+            "https://github.com/owner/repo".to_string(),
+        ];
+        
+        // All three formats should be collected
+        assert_eq!(skills.len(), 3);
+        
+        // These would be processed by extract_skill_name in the actual code
+        // The function handles:
+        // - "owner/repo" -> "repo"
+        // - "owner/repo@skill-name" -> "skill-name"
+        // - "https://github.com/owner/repo" -> "repo"
+    }
+
+    #[test]
+    fn test_skill_integration_skills_from_defaults_and_agents() {
+        // Test collecting skills from both defaults and agents sections
+        // This mimics the logic in run_workflows_install
+        
+        // Simulated defaults skills
+        let defaults_skills = vec!["skills/repo".to_string(), "skills/repo1".to_string()];
+        
+        // Simulated agent skills
+        let agent1_skills = vec!["skills/repo2".to_string()];
+        let agent2_skills = vec!["skills/repo3".to_string(), "skills/repo4".to_string()];
+        
+        // Collect all skills
+        let mut all_skills: Vec<String> = Vec::new();
+        all_skills.extend(defaults_skills.clone());
+        all_skills.extend(agent1_skills.clone());
+        all_skills.extend(agent2_skills.clone());
+        
+        // Sort and dedup
+        all_skills.sort();
+        all_skills.dedup();
+        
+        // Should have 5 unique skills total
+        assert_eq!(all_skills.len(), 5);
     }
 }

@@ -53,6 +53,9 @@ pub enum WorkflowsSubcommand {
     /// Install a workflow from the switchboard-workflows registry.
     /// Workflows are always installed to the project-level workflows directory.
     ///
+    /// Required skills defined in the workflow's manifest.toml will be automatically
+    /// installed during the installation process.
+    ///
     /// # Examples
     ///
     /// Install a workflow:
@@ -83,6 +86,9 @@ pub enum WorkflowsSubcommand {
     ///
     /// If a specific workflow name is provided, only that workflow is updated.
     /// If no workflow name is provided, all installed workflows are updated.
+    ///
+    /// Required skills defined in the workflow's manifest.toml will be automatically
+    /// updated to their latest versions during the update process.
     ///
     /// # Examples
     ///

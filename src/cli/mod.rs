@@ -13,6 +13,8 @@
 //! - All command handlers are fully implemented
 
 use crate::commands::logs::{run as logs_run, LogsArgs};
+use crate::commands::project::ProjectCommand;
+use crate::commands::workflow_init::WorkflowInitCommand;
 use crate::commands::{metrics, BuildCommand, SkillsCommand, ValidateCommand, WorkflowsCommand};
 use crate::config::{Config, ConfigError};
 use crate::docker::run::types::ContainerConfig;
@@ -149,6 +151,12 @@ pub enum Commands {
 
     /// Manage Switchboard workflows
     Workflows(WorkflowsCommand),
+
+    /// Manage Switchboard projects
+    Project(ProjectCommand),
+
+    /// Initialize a Switchboard workflow
+    Workflow(WorkflowInitCommand),
 
     /// Check scheduler health and status
     Status,
@@ -295,6 +303,8 @@ pub async fn run() -> Result<ColorMode, Box<dyn std::error::Error>> {
         Commands::Validate(args) => run_validate(args, cli.config).await,
         Commands::Skills(args) => commands::skills::run_skills(args, cli.config).await,
         Commands::Workflows(args) => commands::workflows::run_workflows(args, cli.config).await,
+        Commands::Project(args) => commands::project::run_project(args, cli.config).await,
+        Commands::Workflow(args) => commands::workflow_init::run_workflow_init(args, cli.config).await,
         Commands::Status => run_status(cli.config),
         #[cfg(feature = "gateway")]
         Commands::Gateway(args) => run_gateway(args).await,

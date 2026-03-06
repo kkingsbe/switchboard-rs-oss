@@ -30,9 +30,11 @@ pub mod build;
 pub mod list;
 pub mod logs;
 pub mod metrics;
+pub mod project;
 pub mod skills;
 pub mod validate;
 pub mod workflows;
+pub mod workflow_init;
 
 pub use build::BuildCommand;
 pub use list::list_agents;

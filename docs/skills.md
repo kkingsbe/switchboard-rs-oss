@@ -328,3 +328,65 @@ Failed to execute npx skills add: Permission denied
 3. **Review skill sources** - Only install skills from trusted sources
 4. **Use appropriate timeouts** - Complex skills may need longer timeouts
 5. **Monitor skill installations** - Check logs if agents fail to start
+
+## Workflow Skills Integration
+
+When you install a workflow that requires skills, they are automatically installed to your project's `./skills/` directory.
+
+### How It Works
+
+1. When you run `switchboard workflows install <workflow-name>`, Switchboard:
+   - Downloads the workflow from the registry
+   - Parses the workflow's `manifest.toml`
+   - Extracts required skills from `[defaults].skills` and `[[agents]].skills`
+   - Installs each skill that isn't already present
+   - Updates the skills lockfile
+
+2. When you run `switchboard workflows update`, Switchboard:
+   - Updates the workflow files
+   - Updates all required skills to their latest versions
+
+### Required Skills
+
+Skills can be specified at two levels in `manifest.toml`:
+
+#### Default Skills (applies to all agents)
+
+```toml
+[defaults]
+skills = ["owner/repo@skill-name"]
+```
+
+#### Per-Agent Skills
+
+```toml
+[[agents]]
+name = "architect"
+prompt_file = "ARCHITECT.md"
+skills = ["owner/repo@agent-skill"]
+```
+
+## Validation
+
+Running `switchboard workflows validate <workflow-name>` will check if all required skills are installed and warn you if any are missing.
+
+## Troubleshooting
+
+### Skill Installation Fails
+
+If a skill fails to install during workflow installation, the workflow installation will be aborted. To resolve:
+
+1. Install Node.js from https://nodejs.org
+2. Try installing the workflow again: `switchboard workflows install <workflow-name>`
+
+### Missing Skills Warning
+
+If you see warnings about missing skills:
+
+```bash
+# Install the missing skill manually
+switchboard skills install owner/repo@skill-name
+
+# Or let the workflow install handle it
+switchboard workflows install workflow-name
+```

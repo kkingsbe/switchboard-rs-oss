@@ -1,0 +1,277 @@
+{
+  "generated_at": "2026-03-06T16:24:00Z",
+  "manifest_timestamp": "2026-03-06T14:25:00Z",
+  "summary": {
+    "total_manifest_items": 71,
+    "existing_articles": 8,
+    "actions_planned": 11,
+    "actions_this_cycle": 5,
+    "deferred_to_next_cycle": 6
+  },
+  "actions": [
+    {
+      "action": "update",
+      "priority": 10,
+      "target_file": "docs/cli-reference.md",
+      "title": "CLI Command Reference",
+      "reason": "21 of 22 CLI commands missing from documentation. Existing article only covers 'run' command.",
+      "missing_items": [
+        "cli:switchboard-up",
+        "cli:switchboard-build",
+        "cli:switchboard-list",
+        "cli:switchboard-logs",
+        "cli:switchboard-metrics",
+        "cli:switchboard-down",
+        "cli:switchboard-validate",
+        "cli:switchboard-status",
+        "cli:switchboard-gateway",
+        "cli:switchboard-skills-list",
+        "cli:switchboard-skills-install",
+        "cli:switchboard-skills-installed",
+        "cli:switchboard-skills-update",
+        "cli:switchboard-skills-remove",
+        "cli:switchboard-workflows-list",
+        "cli:switchboard-workflows-install",
+        "cli:switchboard-workflows-installed",
+        "cli:switchboard-workflows-update",
+        "cli:switchboard-workflows-remove",
+        "cli:switchboard-workflows-validate",
+        "cli:switchboard-workflows-apply"
+      ],
+      "source_refs": [
+        "src/cli/mod.rs:124",
+        "src/cli/mod.rs:130",
+        "src/cli/mod.rs:133",
+        "src/cli/mod.rs:136",
+        "src/cli/mod.rs:139",
+        "src/cli/mod.rs:142",
+        "src/cli/mod.rs:145",
+        "src/cli/mod.rs:154",
+        "src/cli/mod.rs:158",
+        "src/commands/skills/types.rs:49",
+        "src/commands/skills/types.rs:72",
+        "src/commands/skills/types.rs:90",
+        "src/commands/skills/types.rs:108",
+        "src/commands/skills/types.rs:132",
+        "src/commands/workflows/mod.rs"
+      ],
+      "target_length": "150-200 lines",
+      "sections": ["Synopsis", "Global Flags", "Commands", "Subcommands (skills)", "Subcommands (workflows)", "Examples"],
+      "deferred": false
+    },
+    {
+      "action": "update",
+      "priority": 7,
+      "target_file": "docs/configuration.md",
+      "title": "Configuration Reference",
+      "reason": "Multiple config fields from manifest not documented. Missing: agent-specific overlap_mode, max_queue_size, skills, discord.conversation fields, discord.llm fields.",
+      "missing_items": [
+        "config:agent.overlap_mode",
+        "config:agent.max_queue_size",
+        "config:agent.skills",
+        "config:discord.conversation.max_history",
+        "config:discord.conversation.ttl_minutes",
+        "config:discord.llm.provider",
+        "config:discord.llm.api_key_env",
+        "config:discord.llm.model",
+        "config:discord.llm.max_tokens",
+        "config:discord.llm.system_prompt_file"
+      ],
+      "source_refs": [
+        "switchboard.sample.toml:102",
+        "switchboard.sample.toml:106",
+        "switchboard.sample.toml:111",
+        "switchboard.sample.toml:329",
+        "switchboard.sample.toml:334",
+        "switchboard.sample.toml:300",
+        "switchboard.sample.toml:306",
+        "switchboard.sample.toml:310",
+        "switchboard.sample.toml:314",
+        "switchboard.sample.toml:320"
+      ],
+      "target_length": "120-150 lines",
+      "sections": ["File Location", "Validation", "Settings Section", "Agent Section", "Discord Section", "Discord LLM Section", "Discord Conversation Section"],
+      "deferred": false
+    },
+    {
+      "action": "create",
+      "priority": 8,
+      "target_file": "docs/discord-tools.md",
+      "title": "Discord Bot Tools Reference",
+      "covers_items": [
+        "api:file_bug",
+        "api:file_task",
+        "api:get_status",
+        "api:list_inbox",
+        "api:read_outbox",
+        "api:read_todos",
+        "api:read_backlog",
+        "api:add_to_backlog",
+        "api:read_file",
+        "api:list_directory"
+      ],
+      "description": "Complete reference for all Discord bot tools available to the concierge agent.",
+      "source_refs": ["src/discord/tools/definitions.rs"],
+      "target_length": "80-100 lines",
+      "sections": ["Overview", "Tool Definitions", "Parameters", "Usage Examples"],
+      "deferred": false
+    },
+    {
+      "action": "create",
+      "priority": 10,
+      "target_file": "docs/cron-scheduling.md",
+      "title": "Cron Scheduling Guide",
+      "covers_items": ["feature:cron-scheduling"],
+      "description": "Guide to scheduling agents using cron expressions with tokio-cron-scheduler.",
+      "source_refs": ["src/scheduler/mod.rs", "src/scheduler/cron_helper.rs"],
+      "target_length": "80-120 lines",
+      "sections": ["Overview", "Cron Expression Format", "Configuration", "Timezone Support", "Examples", "Troubleshooting"],
+      "deferred": false
+    },
+    {
+      "action": "create",
+      "priority": 10,
+      "target_file": "docs/metrics.md",
+      "title": "Metrics Collection Guide",
+      "covers_items": ["feature:metrics-collection"],
+      "description": "Guide to tracking and displaying agent execution metrics.",
+      "source_refs": ["src/metrics/mod.rs", "src/metrics/collector.rs", "src/metrics/store.rs"],
+      "target_length": "60-80 lines",
+      "sections": ["Overview", "Metrics Types", "Viewing Metrics", "Configuration"],
+      "deferred": false
+    },
+    {
+      "action": "create",
+      "priority": 10,
+      "target_file": "docs/docker-isolation.md",
+      "title": "Docker Isolation Guide",
+      "covers_items": ["feature:docker-isolation"],
+      "description": "Guide to running agents in isolated Docker containers with custom workspaces.",
+      "source_refs": ["src/docker/mod.rs", "src/docker/client.rs", "src/docker/run/run.rs"],
+      "target_length": "80-100 lines",
+      "sections": ["Overview", "Container Configuration", "Image Management", "Workspace Mounting", "Skill Installation"],
+      "deferred": true,
+      "deferred_reason": "Lower priority - core functionality already works, writer budget exceeded"
+    },
+    {
+      "action": "create",
+      "priority": 10,
+      "target_file": "docs/overlap-mode.md",
+      "title": "Overlap Mode Configuration",
+      "covers_items": ["feature:overlap-mode"],
+      "description": "Guide to handling concurrent agent executions with skip and queue modes.",
+      "source_refs": ["src/scheduler/mod.rs"],
+      "target_length": "50-70 lines",
+      "sections": ["Overview", "Skip Mode", "Queue Mode", "Configuration", "Examples"],
+      "deferred": true,
+      "deferred_reason": "Lower priority - can be merged into configuration.md or cron-scheduling.md"
+    },
+    {
+      "action": "create",
+      "priority": 4,
+      "target_file": "docs/discord-gateway.md",
+      "title": "Discord Gateway Protocol",
+      "covers_items": ["feature:discord-gateway", "api:gateway-protocol"],
+      "description": "Reference for the HTTP/WebSocket gateway protocol for Discord message relay.",
+      "source_refs": ["src/gateway/mod.rs", "src/gateway/server.rs", "src/gateway/protocol.rs"],
+      "target_length": "60-80 lines",
+      "sections": ["Overview", "Protocol Messages", "WebSocket Events", "HTTP Endpoints"],
+      "deferred": true,
+      "deferred_reason": "Lower priority - niche feature, writer budget exceeded"
+    },
+    {
+      "action": "create",
+      "priority": 4,
+      "target_file": "docs/gateway-protocol.md",
+      "title": "External Gateway Protocol",
+      "covers_items": ["api:gateway-protocol"],
+      "description": "WebSocket and HTTP protocol for external project<->gateway communication.",
+      "source_refs": ["src/gateway/protocol.rs"],
+      "target_length": "60-80 lines",
+      "sections": ["Protocol Overview", "Message Types", "Connection Flow", "Error Handling"],
+      "deferred": true,
+      "deferred_reason": "Lower priority - niche feature for external integrations"
+    },
+    {
+      "action": "create",
+      "priority": 3,
+      "target_file": "docs/architecture-overview.md",
+      "title": "Architecture Overview",
+      "covers_items": ["arch:module-structure", "arch:container-model", "arch:patterns"],
+      "description": "High-level architecture for contributors understanding the codebase.",
+      "source_refs": [
+        "src/cli/mod.rs",
+        "src/config/mod.rs",
+        "src/scheduler/mod.rs",
+        "src/docker/mod.rs",
+        "src/skills/mod.rs",
+        "src/workflows/mod.rs",
+        "src/discord/mod.rs",
+        "src/gateway/mod.rs",
+        "src/metrics/mod.rs"
+      ],
+      "target_length": "80-100 lines",
+      "sections": ["Design Patterns", "Core Modules", "Extension Points", "Data Flow"],
+      "deferred": true,
+      "deferred_reason": "Lower priority - architecture docs have low immediate value, writer budget exceeded"
+    },
+    {
+      "action": "update",
+      "priority": 3,
+      "target_file": "docs/installation.md",
+      "title": "Installation Guide",
+      "reason": "May be missing newer prerequisites or installation methods. Verify against manifest setup section.",
+      "missing_items": ["setup:prerequisites", "setup:install_methods", "setup:env_vars"],
+      "source_refs": ["src/setup"],
+      "deferred": true,
+      "deferred_reason": "Low priority - existing installation doc is likely adequate"
+    }
+  ],
+  "index_update_needed": true,
+  "index_reason": "5 new articles planned (discord-tools, cron-scheduling, metrics) and 6 deferred - INDEX.md must be regenerated to include all docs/",
+  "existing_articles_status": [
+    {
+      "file": "docs/README.md",
+      "status": "current",
+      "covers": ["index"]
+    },
+    {
+      "file": "docs/cli-reference.md",
+      "status": "outdated",
+      "reason": "Only covers 'run' command - 21 commands missing",
+      "covers": ["cli:run"]
+    },
+    {
+      "file": "docs/configuration.md",
+      "status": "outdated",
+      "reason": "Missing many config fields from manifest",
+      "covers": ["config:partial"]
+    },
+    {
+      "file": "docs/discord.md",
+      "status": "current",
+      "reason": "Discord Concierge well documented",
+      "covers": ["feature:discord-concierge"]
+    },
+    {
+      "file": "docs/installation.md",
+      "status": "current",
+      "covers": ["feature:installation"]
+    },
+    {
+      "file": "docs/skills.md",
+      "status": "current",
+      "covers": ["feature:skills-system"]
+    },
+    {
+      "file": "docs/troubleshooting.md",
+      "status": "current",
+      "covers": ["troubleshooting"]
+    },
+    {
+      "file": "docs/workflows.md",
+      "status": "current",
+      "covers": ["feature:workflows"]
+    }
+  ]
+}

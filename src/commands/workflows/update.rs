@@ -4,8 +4,10 @@
 //! installed workflows to their latest versions by re-downloading from
 //! the kkingsbe/switchboard-workflows repository.
 
+use crate::commands::workflows::skills::update_workflow_skills;
 use crate::config::Config;
 use crate::workflows::github::GitHubClient;
+use crate::workflows::manifest::ManifestConfig;
 use crate::workflows::WorkflowsError;
 use chrono::Utc;
 use serde::{Deserialize, Serialize};
@@ -255,26 +257,87 @@ async fn update_single_workflow(
     // Download the workflow from GitHub
     let client = GitHubClient::new();
 
-    match client.download_workflow(workflow_name, &workflow_path).await {
+    let download_result: Result<(), WorkflowsError> = match client.download_workflow(workflow_name, &workflow_path).await {
         Ok(files_downloaded) => {
             println!(
                 "Downloaded {} files for workflow '{}'",
                 files_downloaded, workflow_name
             );
-            ExitCode::Success
+            Ok(())
         }
         Err(WorkflowsError::NotFound(_)) => {
             eprintln!(
                 "Error: Workflow '{}' not found in registry. It may have been removed from the source repository.",
                 workflow_name
             );
-            ExitCode::Error
+            return ExitCode::Error;
         }
         Err(e) => {
             eprintln!("Error: Failed to download workflow '{}': {}", workflow_name, e);
-            ExitCode::Error
+            return ExitCode::Error;
+        }
+    };
+
+    // Download manifest.toml (optional but try anyway)
+    let manifest_path = workflow_path.join("manifest.toml");
+    let _ = client.download_manifest_to_file(workflow_name, &manifest_path).await;
+
+    // Check if manifest has required skills and update them
+    let mut skills_to_update: Vec<String> = Vec::new();
+
+    if manifest_path.exists() {
+        match ManifestConfig::from_path(&manifest_path) {
+            Ok(manifest) => {
+                // Collect skills from defaults
+                if let Some(defaults) = &manifest.defaults {
+                    if let Some(skills) = &defaults.skills {
+                        skills_to_update.extend(skills.clone());
+                    }
+                }
+
+                // Collect skills from each agent
+                for agent in &manifest.agents {
+                    if let Some(skills) = &agent.skills {
+                        skills_to_update.extend(skills.clone());
+                    }
+                }
+
+                // Remove duplicates
+                skills_to_update.sort();
+                skills_to_update.dedup();
+            }
+            Err(e) => {
+                println!(
+                    "Warning: Failed to parse manifest.toml: {}",
+                    e
+                );
+            }
         }
     }
+
+    // Update required skills if any are specified
+    if !skills_to_update.is_empty() {
+        println!(
+            "\nUpdating {} required skill(s) for workflow...",
+            skills_to_update.len()
+        );
+
+        match update_workflow_skills(&skills_to_update) {
+            Ok(updated) => {
+                println!(
+                    "Successfully updated {} skill(s): {}",
+                    updated.len(),
+                    updated.join(", ")
+                );
+            }
+            Err(e) => {
+                // Print warning but continue - workflow update was successful
+                eprintln!("Warning: Failed to update required skills: {}", e);
+            }
+        }
+    }
+
+    download_result.map(|_| ExitCode::Success).unwrap_or(ExitCode::Error)
 }
 
 #[cfg(test)]

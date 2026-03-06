@@ -1,0 +1,177 @@
+# Story 4.6: Implement Basic Registration Protocol
+
+> Epic: Epic 04 — Discord Gateway - Basic Gateway with Single Project
+> Points: 3
+> Sprint: 6
+> Type: feature
+> Risk: Medium
+> Created: 2026-03-03
+> Status: not-started
+
+## User Story
+
+As a project developer,
+I want to register my project with the gateway,
+So that I can receive Discord messages.
+
+## Acceptance Criteria
+
+1. Project sends `{"type": "register", "project_name": "...", "channels": [...]}`
+   - **Test:** Message parsed correctly
+   - Verify: JSON deserialization works with project_name and channels fields
+
+2. Gateway responds with `{"type": "register_ack", "status": "ok", "session_id": "..."}`
+   - **Test:** Registration completes successfully
+   - Verify: Session ID is generated and returned to the project
+
+3. Invalid registration returns `{"type": "register_error", "error": "..."}`
+   - **Test:** Error case handled gracefully
+   - Verify: Invalid project_name or missing channels returns appropriate error
+
+## Technical Context
+
+### Architecture Reference
+
+Per architecture.md §5.2-5.4 - gateway components:
+
+- **§5.2 gateway::server:**
+  - **Purpose:** HTTP and WebSocket server for gateway
+  - **Public API:**
+    - `GatewayServer::new(config: GatewayConfig) -> Self`
+    - `GatewayServer::run().await`
+  - **Dependencies:** axum, tokio-tungstenite, tower
+  - **Data flow:** WebSocket connections → project session management
+
+- **§5.3 gateway::registry:**
+  - **Purpose:** Track channel-to-project mappings
+  - **Public API:**
+    - `ChannelRegistry::register(project: ProjectConnection, channels: Vec<String>)`
+    - `ChannelRegistry::unregister(project_id: &ProjectId)`
+    - `ChannelRegistry::projects_for_channel(channel_id: &str) -> &[ProjectId]`
+  - **Dependencies:** tokio::sync::RwLock
+  - **Data flow:** Maintained in memory, updated on project connect/disconnect
+
+- **§5.4 gateway::protocol:**
+  - **Purpose:** Define message types for gateway<->project communication
+  - **Public API:** Enums and structs for register, message, heartbeat
+  - **Dependencies:** serde, serde_json
+
+### Project Conventions
+
+From project-context.md:
+- **Build:** `cargo build --features "discord gateway"`
+- **Async:** Use tokio for async. Follow patterns in `src/discord/gateway.rs`
+- **Error Handling:** Use `thiserror` for error types. Never use `unwrap()` in production
+- **Logging:** Use `tracing` for logging
+
+### Existing Code Context
+
+Current gateway module structure:
+```
+src/gateway/
+├── mod.rs        # Already exists - module exports
+├── config.rs    # Already exists - GatewayConfig
+├── protocol.rs  # Already exists - GatewayMessage enum
+├── registry.rs  # Already exists - ChannelRegistry
+└── server.rs     # Already exists - HTTP server with WebSocket support
+```
+
+**GatewayMessage in protocol.rs** - Already exists with:
+- `Register { project_id: String }` - Needs update for project_name + channels
+- `RegisterAck { project_id: String, assigned_channel: u64 }` - Needs update for session_id + status
+- `Message { payload: String, channel_id: u64 }`
+- `Heartbeat { timestamp: u64 }`
+- `HeartbeatAck { timestamp: u64 }`
+
+**WebSocket server in server.rs** - Already exists:
+- HTTP server running on configured port
+- WebSocket endpoint structure exists
+- Health check endpoint at `/health`
+- Needs registration handler added
+
+**Note:** The protocol.rs implementation differs slightly from acceptance criteria:
+- Acceptance criteria: `project_name`, `channels` array, `session_id`, `status`
+- Current implementation: `project_id`, `assigned_channel`
+- Story needs to update the protocol to match acceptance criteria
+
+Key existing code patterns to follow:
+- Use `#[tokio::main]` for async main
+- Use `tracing::info!`, `tracing::debug!` for logging
+- Use `thiserror` for error types (see server.rs)
+- Return structured JSON errors
+
+```rust
+// Example from src/gateway/server.rs for error handling
+#[derive(Debug, Error)]
+pub enum GatewayServerError {
+    #[error("Failed to bind to address {address}: {source}")]
+    BindError {
+        address: SocketAddr,
+        #[source]
+        source: std::io::Error,
+    },
+}
+```
+
+## Implementation Plan
+
+1. **Update `src/gateway/protocol.rs`**
+   - Modify `GatewayMessage::Register` to include `project_name: String` and `channels: Vec<String>`
+   - Modify `GatewayMessage::RegisterAck` to include `status: String` and `session_id: String`
+   - Add `GatewayMessage::RegisterError` variant with `error: String` field
+   - Update serialization to match acceptance criteria format
+
+2. **Add registration handler to `src/gateway/server.rs`**
+   - Add WebSocket message handler for registration
+   - Parse incoming Register messages
+   - Generate unique session_id for each registration
+   - Validate project_name (non-empty) and channels (non-empty array)
+   - Store project in registry with subscribed channels
+   - Send RegisterAck response on success
+   - Send RegisterError response on validation failure
+
+3. **Update `src/gateway/registry.rs`** if needed
+   - Ensure `ChannelRegistry` can store project_name and channels
+   - Verify session management
+
+4. **Write tests** — Unit tests for:
+   - Register message serialization/deserialization
+   - RegisterAck message format
+   - RegisterError message format
+   - Registration validation (empty project_name, empty channels)
+
+5. **Run build + tests** — Verify everything compiles
+
+### Skills to Read
+
+- [`skills/rust-best-practices/SKILL.md`](skills/rust-best-practices/SKILL.md) — Rust best practices (error handling, async)
+- [`skills/rust-engineer/SKILL.md`](skills/rust-engineer/SKILL.md) — Async patterns with tokio
+
+### Dependencies
+
+- Story 4.4 (WebSocket Server) — Complete ✓
+- Story 4.5 (Message Protocol) — Complete ✓
+
+## Scope Boundaries
+
+### This Story Includes
+- Register message handling in WebSocket handler
+- Session ID generation and management
+- Basic validation (project_name, channels)
+- RegisterAck response with session_id
+- RegisterError response for invalid registrations
+
+### This Story Does NOT Include
+- Discord gateway connection (Story 4.7)
+- Message routing by channel (Story 5.3)
+- Authentication beyond project names (Story 5.x)
+- Heartbeat protocol (Story 4.9)
+
+### Files in Scope
+- `src/gateway/protocol.rs` — modify (update Register/RegisterAck messages)
+- `src/gateway/server.rs` — modify (add registration handler)
+
+### Files NOT in Scope
+- `src/gateway/registry.rs` — Already exists (may need minor updates)
+- `src/gateway/config.rs` — Already exists
+- `src/cli/commands/gateway.rs` — Story 4.8

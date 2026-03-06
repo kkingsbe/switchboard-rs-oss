@@ -190,6 +190,49 @@ impl ManifestConfig {
 
         Ok(())
     }
+
+    /// Validates that skill entries have correct format
+    /// Returns error for invalid skill source formats
+    pub fn validate_skill_sources(&self) -> Result<(), ManifestError> {
+        // Check defaults skills
+        if let Some(defaults) = &self.defaults {
+            if let Some(skills) = &defaults.skills {
+                for skill in skills {
+                    validate_skill_format(skill)?;
+                }
+            }
+        }
+        
+        // Check per-agent skills
+        for agent in &self.agents {
+            if let Some(skills) = &agent.skills {
+                for skill in skills {
+                    validate_skill_format(skill)?;
+                }
+            }
+        }
+        
+        Ok(())
+    }
+}
+
+/// Validates a single skill source format
+/// Accepts: owner/repo, owner/repo@skill-name, https://github.com/owner/repo
+fn validate_skill_format(skill: &str) -> Result<(), ManifestError> {
+    // Simple validation - just check it's not empty and doesn't contain spaces
+    if skill.trim().is_empty() {
+        return Err(ManifestError::ValidationError(
+            "Skill source cannot be empty".to_string()
+        ));
+    }
+    
+    if skill.contains(' ') {
+        return Err(ManifestError::ValidationError(
+            format!("Skill source '{}' cannot contain spaces", skill)
+        ));
+    }
+    
+    Ok(())
 }
 
 impl ManifestAgent {

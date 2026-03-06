@@ -46,11 +46,21 @@ pub enum WorkflowsError {
     /// Manifest error
     #[error("Manifest error: {0}")]
     ManifestError(String),
+
+    /// Skill installation error
+    #[error("Skill installation error: {0}")]
+    SkillError(String),
 }
 
 impl From<crate::workflows::manifest::ManifestError> for WorkflowsError {
     fn from(err: crate::workflows::manifest::ManifestError) -> Self {
         WorkflowsError::ManifestError(err.to_string())
+    }
+}
+
+impl From<crate::skills::SkillsError> for WorkflowsError {
+    fn from(err: crate::skills::SkillsError) -> Self {
+        WorkflowsError::SkillError(err.to_string())
     }
 }
 

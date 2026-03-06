@@ -151,6 +151,7 @@ schedule = "0 9 * * *"    # Default cron schedule
 timeout = "30m"           # Default timeout
 readonly = false
 overlap_mode = "skip"    # skip | queue | parallel
+skills = ["owner/repo@skill-name"]  # Skills applied to all agents
 
 [[prompts]]
 name = "PROMPT.md"
@@ -163,6 +164,51 @@ prompt_file = "PROMPT.md"
 schedule = "*/30 * * * *"
 timeout = "30m"
 env = { KEY = "value" }
+skills = ["owner/repo@agent-skill"]  # Agent-specific skills
+```
+
+## Skills Integration
+
+Workflows can declare required skills that are automatically installed when the workflow is installed. This ensures all agents have the capabilities they need to execute their tasks.
+
+### How It Works
+
+1. When you install a workflow with `switchboard workflows install <name>`, any skills defined in the manifest are automatically installed
+2. Skills are installed to your project's `./skills/` directory
+3. When updating workflows with `switchboard workflows update`, skills are also updated to their latest versions
+
+### Declaring Skills
+
+Skills can be specified at two levels:
+
+**Default Skills** (applies to all agents in the workflow):
+```toml
+[defaults]
+skills = ["vercel-labs/agent-skills@frontend-design"]
+```
+
+**Per-Agent Skills** (overrides defaults for specific agents):
+```toml
+[[agents]]
+name = "code-reviewer"
+prompt_file = "CODE_REVIEW.md"
+skills = ["vercel-labs/agent-skills@security-audit"]
+```
+
+### Validation
+
+The `switchboard workflows validate` command checks if all required skills are installed and warns you about any missing skills.
+
+### Troubleshooting
+
+**Missing skills after installation:**
+```bash
+# Manually install the missing skill
+switchboard skills install owner/repo@skill-name
+
+# Or reinstall the workflow
+switchboard workflows remove workflow-name
+switchboard workflows install workflow-name
 ```
 
 ## Registry

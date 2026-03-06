@@ -7,7 +7,7 @@ pub mod update;
 
 pub use update::{handle_skills_update, reinstall_skill_from_source, update_skill_timestamp};
 
-pub use installed::{format_skill_entry, format_skills_list, get_agent_assignment_display};
+pub use installed::{format_skill_entry_table, format_skills_list, get_agent_assignment_display};
 
 pub use types::*;
 
