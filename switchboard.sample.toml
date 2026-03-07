@@ -333,6 +333,31 @@ max_history = 30
 # This prevents unbounded memory growth
 ttl_minutes = 120
 
+# -----------------------------------------------------------------------------
+# Discord Configuration - Gateway Auto-Connect Settings
+# -----------------------------------------------------------------------------
+# The gateway auto-connect feature allows switchboard projects to automatically
+# connect to a gateway WebSocket server and receive Discord messages forwarded
+# from the gateway. This enables a distributed architecture where multiple
+# projects can share a single Discord bot connection.
+
+[discord.gateway]
+# Enable/disable gateway auto-connect (default: false)
+# Set to true to automatically connect to the gateway on startup
+enabled = false
+
+# Gateway WebSocket URL (default: "ws://localhost:9000")
+# The WebSocket URL of the gateway server to connect to
+url = "ws://localhost:9000"
+
+# Project name for registration
+# This name identifies your project to the gateway
+project_name = "my-project"
+
+# Discord channel IDs to subscribe to
+# Messages from these channels will be forwarded to this project
+channels = ["1474550134388949272"]
+
 # =============================================================================
 # EXAMPLE: Full Discord Configuration
 # =============================================================================

@@ -17,6 +17,7 @@ Welcome to the Switchboard documentation. This index provides an overview of all
 | Document | Description |
 |----------|-------------|
 | [CLI Command Reference](cli-reference.md) | Complete CLI command documentation |
+| [API Reference](api-reference.md) | Complete REST API documentation |
 | [Cron Scheduling Guide](cron-scheduling.md) | Scheduling agents with cron expressions |
 | [Metrics Collection Guide](metrics.md) | Tracking agent execution metrics |
 

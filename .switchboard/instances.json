@@ -1,0 +1,13 @@
+{
+  "instances": [
+    {
+      "instance_id": "default",
+      "port": 18500,
+      "host": "127.0.0.1",
+      "started_at": "2026-03-07T19:59:43.111363700+00:00",
+      "config_path": "switchboard.toml",
+      "status": "running",
+      "pid": null
+    }
+  ]
+}

@@ -1,12 +1,12 @@
 //! Config Parser - Parse and validate switchboard.toml configuration files
 //!
-//! This module handles (1206 lines, 30 tests):
+//! This module handles:
 //! - TOML file parsing and deserialization
-//! - Configuration data structures (Settings, Agent, Config, OverlapMode)
+//! - Configuration data structures (Settings, Agent, Config, ApiConfig, RateLimitConfig, OverlapMode)
 //! - Config file loading from disk
 //! - Validation logic for agent configurations
 //! - Overlap mode configuration (Skip and Queue modes)
-//! - Comprehensive test coverage (30 tests)
+//! - REST API server configuration
 
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
@@ -736,6 +736,95 @@ impl Default for Settings {
     }
 }
 
+/// Rate limiting configuration for the REST API
+#[derive(Debug, Clone, Deserialize, Serialize, PartialEq)]
+pub struct RateLimitConfig {
+    /// Enable rate limiting
+    #[serde(default = "default_rate_limit_enabled")]
+    pub enabled: bool,
+    /// Number of requests allowed per minute
+    #[serde(default = "default_requests_per_minute")]
+    pub requests_per_minute: u32,
+}
+
+impl Default for RateLimitConfig {
+    fn default() -> Self {
+        RateLimitConfig {
+            enabled: default_rate_limit_enabled(),
+            requests_per_minute: default_requests_per_minute(),
+        }
+    }
+}
+
+/// API server configuration
+#[derive(Debug, Clone, Deserialize, Serialize, PartialEq)]
+pub struct ApiConfig {
+    /// Enable REST API server
+    #[serde(default = "default_api_enabled")]
+    pub enabled: bool,
+    /// Unique instance identifier (derived from config file if not set)
+    #[serde(default)]
+    pub instance_id: Option<String>,
+    /// API server port
+    #[serde(default = "default_api_port")]
+    pub port: u16,
+    /// Bind host address
+    #[serde(default = "default_api_host")]
+    pub host: String,
+    /// Auto port selection if port is in use
+    #[serde(default = "default_auto_port")]
+    pub auto_port: bool,
+    /// Enable Swagger UI
+    #[serde(default = "default_swagger")]
+    pub swagger: bool,
+    /// Rate limiting configuration
+    #[serde(default)]
+    pub rate_limit: RateLimitConfig,
+}
+
+impl Default for ApiConfig {
+    fn default() -> Self {
+        ApiConfig {
+            enabled: default_api_enabled(),
+            instance_id: None,
+            port: default_api_port(),
+            host: default_api_host(),
+            auto_port: default_auto_port(),
+            swagger: default_swagger(),
+            rate_limit: RateLimitConfig::default(),
+        }
+    }
+}
+
+// Default value functions for API config
+fn default_api_enabled() -> bool {
+    false
+}
+
+fn default_api_port() -> u16 {
+    18500
+}
+
+fn default_api_host() -> String {
+    "127.0.0.1".to_string()
+}
+
+fn default_auto_port() -> bool {
+    true
+}
+
+fn default_swagger() -> bool {
+    false
+}
+
+fn default_rate_limit_enabled() -> bool {
+    true
+}
+
+fn default_requests_per_minute() -> u32 {
+    60
+}
+
 /// Default function for Agent.env field
 fn default_env() -> Option<HashMap<String, String>> {
     Some(HashMap::new())
@@ -912,6 +1001,9 @@ pub struct Config {
     #[cfg(feature = "discord")]
     #[serde(default, rename = "discord")]
     pub discord: Option<DiscordSection>,
+    /// Optional REST API configuration
+    #[serde(default, rename = "api")]
+    pub api: Option<ApiConfig>,
     /// Path to the config file (not deserialized from TOML)
     #[serde(skip)]
     config_path: PathBuf,
@@ -924,6 +1016,7 @@ impl Default for Config {
             agents: Vec::new(),
             #[cfg(feature = "discord")]
             discord: None,
+            api: None,
             config_path: PathBuf::new(),
         }
     }

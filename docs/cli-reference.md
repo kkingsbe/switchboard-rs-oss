@@ -40,6 +40,17 @@ switchboard up
 switchboard up --detach
 ```
 
+> **API Equivalent:** You can also manage the scheduler via the REST API:
+> ```bash
+> # Start scheduler via API
+> curl -X POST http://localhost:8080/api/v1/scheduler/up \
+>   -H "Content-Type: application/json" \
+>   -d '{"detach": true}'
+> 
+> # Get scheduler status
+> curl http://localhost:8080/api/v1/scheduler/status
+> ```
+
 ---
 
 ### run

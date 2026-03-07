@@ -349,6 +349,63 @@ impl Default for ConversationConfig {
     }
 }
 
+/// Gateway client configuration for auto-connect to gateway.
+///
+/// When configured, the switchboard project will automatically connect
+/// to a gateway WebSocket server and register for message forwarding.
+///
+/// # Example
+///
+/// ```toml
+/// [discord.gateway]
+/// enabled = true
+/// url = "ws://localhost:9000"
+/// project_name = "my-project"
+/// channels = ["1474550134388949272"]
+/// ```
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct GatewayClientConfig {
+    /// Enable gateway connection.
+    ///
+    /// When set to `true`, the switchboard project will automatically
+    /// connect to the gateway WebSocket server on startup.
+    #[serde(default = "default_enabled")]
+    pub enabled: bool,
+
+    /// Gateway WebSocket URL.
+    ///
+    /// The WebSocket URL of the gateway server to connect to.
+    /// Default: "ws://localhost:9000"
+    #[serde(default = "default_gateway_url")]
+    pub url: String,
+
+    /// Project name for registration.
+    ///
+    /// This name is used to identify this project when registering
+    /// with the gateway server.
+    #[serde(default)]
+    pub project_name: String,
+
+    /// Discord channel IDs to subscribe to.
+    ///
+    /// List of Discord channel IDs that this project wants to receive
+    /// messages from. Messages from these channels will be forwarded
+    /// to this project via the gateway WebSocket connection.
+    #[serde(default)]
+    pub channels: Vec<String>,
+}
+
+impl Default for GatewayClientConfig {
+    fn default() -> Self {
+        Self {
+            enabled: false,
+            url: default_gateway_url(),
+            project_name: String::new(),
+            channels: Vec::new(),
+        }
+    }
+}
+
 /// Wrapper struct for the complete Discord configuration section.
 ///
 /// Combines Discord bot settings, LLM provider configuration, and
@@ -373,6 +430,12 @@ impl Default for ConversationConfig {
 /// [discord.conversation]
 /// max_history = 30
 /// ttl_minutes = 120
+///
+/// [discord.gateway]
+/// enabled = true
+/// url = "ws://localhost:9000"
+/// project_name = "my-project"
+/// channels = ["1474550134388949272"]
 /// ```
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct DiscordSection {
@@ -429,6 +492,13 @@ pub struct DiscordSection {
     /// If not present, uses default values for conversation settings.
     #[serde(default)]
     pub conversation: Option<ConversationConfig>,
+
+    /// Optional gateway client configuration for auto-connect to gateway.
+    ///
+    /// If present, the switchboard project will automatically connect
+    /// to the gateway WebSocket server and register for message forwarding.
+    #[serde(default)]
+    pub gateway: Option<GatewayClientConfig>,
 }
 
 impl Default for DiscordSection {
@@ -440,6 +510,7 @@ impl Default for DiscordSection {
             intents: None,
             llm: None,
             conversation: None,
+            gateway: None,
         }
     }
 }
@@ -448,6 +519,10 @@ impl Default for DiscordSection {
 
 fn default_enabled() -> bool {
     false
+}
+
+fn default_gateway_url() -> String {
+    "ws://localhost:9000".to_string()
 }
 
 fn default_token_env() -> String {

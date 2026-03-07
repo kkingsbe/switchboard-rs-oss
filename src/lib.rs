@@ -46,8 +46,8 @@ pub mod discord;
 #[cfg(feature = "discord")]
 pub use discord::start_discord_listener;
 pub mod docker;
-#[cfg(feature = "gateway")]
 pub mod gateway;
+pub mod api;
 pub mod logger;
 pub mod logging;
 pub mod metrics;

@@ -168,8 +168,10 @@ pub enum Commands {
     Restart(RestartCommand),
 
     /// Start the Discord Gateway service
-    #[cfg(feature = "gateway")]
     Gateway(commands::gateway::GatewayCommand),
+
+    /// Start the REST API server
+    Api(commands::api::ApiCommand),
 }
 
 /// Build agent image and start scheduler
@@ -330,8 +332,8 @@ pub async fn run() -> Result<ColorMode, Box<dyn std::error::Error>> {
         Commands::Status => run_status(cli.config),
         Commands::Ps => commands::ps::run_ps(cli.config),
         Commands::Restart(args) => run_restart(args, cli.config).await,
-        #[cfg(feature = "gateway")]
         Commands::Gateway(args) => run_gateway(args).await,
+        Commands::Api(args) => run_api(args).await,
     };
 
     // Return the color_mode regardless of success or failure
@@ -511,11 +513,32 @@ pub async fn run_restart(
 /// - Configuration file not found
 /// - Configuration parsing or validation fails
 /// - Server fails to start
-#[cfg(feature = "gateway")]
 pub async fn run_gateway(
     args: commands::gateway::GatewayCommand,
 ) -> Result<(), Box<dyn std::error::Error>> {
     commands::gateway::run_gateway(args).await
+}
+
+/// Handler for the 'api' command - Start the REST API server
+///
+/// This command starts the REST API server which provides HTTP endpoints
+/// for health checks, configuration validation, and agent/skills/workflows management.
+///
+/// # Arguments
+///
+/// * `args` - The [`ApiCommand`] containing CLI arguments
+///
+/// # Returns
+///
+/// Returns `Ok(())` on success, or an error if:
+/// - Configuration file not found
+/// - Configuration parsing or validation fails
+/// - API is not enabled in configuration
+/// - Server fails to start
+pub async fn run_api(
+    args: commands::api::ApiCommand,
+) -> Result<(), Box<dyn std::error::Error>> {
+    commands::api::run_api(args).await
 }
 
 /// Handler for the 'run' command - Immediately execute a single agent

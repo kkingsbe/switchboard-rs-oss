@@ -4,6 +4,13 @@ image_tag = "latest"
 log_dir = ".switchboard/logs"
 timezone = "America/New_York"
 
+[api]
+enabled = true
+port = 18500                    # Default port
+auto_port = true               # Auto-increment if port is in use
+host = "127.0.0.1"
+swagger = true
+
 # [[agent]]
 # name = "sb-solution-architect"
 # schedule = ""

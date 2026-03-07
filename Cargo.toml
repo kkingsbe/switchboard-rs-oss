@@ -41,9 +41,11 @@ tracing-appender = "0.2"
 anyhow = "1.0"
 async-trait = "0.1"
 thiserror = "1.0"
-axum = { version = "0.7", default-features = false, features = ["json", "tokio", "http1"], optional = true }
-tower = { version = "0.5", optional = true }
-tower-http = { version = "0.6", features = ["trace"], optional = true }
+axum = { version = "0.7", default-features = false, features = ["json", "tokio", "http1", "ws"] }
+tower = { version = "0.5", features = ["limit"] }
+tower-http = { version = "0.6", features = ["trace"] }
+utoipa = "4"
+utoipa-swagger-ui = { version = "6", features = ["axum"] }
 futures = "0.3"
 bytes = "1.0"
 flate2 = "1.0"
@@ -88,8 +90,10 @@ serial_test = "0.10"
 http = "1.0"
 
 [features]
-default = ["discord"]
+default = ["discord", "api", "gateway", "utoipa"]
 scheduler = []
 discord = []
-gateway = ["axum", "tower", "tower-http", "axum/ws"]
+gateway = []
 integration = []
+api = []
+utoipa = []
