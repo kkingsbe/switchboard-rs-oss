@@ -814,7 +814,7 @@ fn default_auto_port() -> bool {
 }
 
 fn default_swagger() -> bool {
-    false
+    true
 }
 
 fn default_rate_limit_enabled() -> bool {
