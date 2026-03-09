@@ -215,6 +215,16 @@ pub trait DockerClientTrait: Send + Sync {
         container_id: &str,
         options: Option<bollard::container::KillContainerOptions<String>>,
     ) -> Result<(), DockerError>;
+
+    /// Get a reference to the underlying bollard Docker client
+    ///
+    /// This is used for operations that require direct access to the
+    /// Docker API, such as log streaming.
+    ///
+    /// # Returns
+    ///
+    /// Some reference to the Docker client, or None if unavailable
+    fn docker(&self) -> Option<&bollard::Docker>;
 }
 
 /// Real Docker Client implementation using bollard
@@ -628,6 +638,87 @@ or there may be network issues. Try again or check your network connection."
             handle.block_on(async { self.docker.kill_container(container_id, options).await })
         })
         .map_err(|e| DockerError::ConnectionError(e.to_string()))
+    }
+
+    fn docker(&self) -> Option<&bollard::Docker> {
+        Some(&self.docker)
+    }
+}
+
+// ============================================================================
+// Arc<dyn DockerClientTrait> implementation
+// ============================================================================
+
+use std::sync::Arc;
+
+impl<T: DockerClientTrait + ?Sized> DockerClientTrait for Arc<T> {
+    fn ping(&self) -> Result<(), DockerError> {
+        (**self).ping()
+    }
+
+    fn image_exists(&self, name: &str, tag: &str) -> Result<bool, DockerError> {
+        (**self).image_exists(name, tag)
+    }
+
+    fn build_image(&self, options: BuildOptions, context: PathBuf) -> Result<String, DockerError> {
+        (**self).build_image(options, context)
+    }
+
+    fn run_container(&self, config: ContainerConfig) -> Result<String, DockerError> {
+        (**self).run_container(config)
+    }
+
+    fn stop_container(&self, container_id: &str, timeout: u64) -> Result<(), DockerError> {
+        (**self).stop_container(container_id, timeout)
+    }
+
+    fn container_logs(
+        &self,
+        container_id: &str,
+        follow: bool,
+        tail: Option<u64>,
+    ) -> Result<String, DockerError> {
+        (**self).container_logs(container_id, follow, tail)
+    }
+
+    fn wait_container(&self, container_id: &str, timeout: u64) -> Result<ExitCode, DockerError> {
+        (**self).wait_container(container_id, timeout)
+    }
+
+    fn create_container(
+        &self,
+        options: Option<bollard::container::CreateContainerOptions<String>>,
+        config: bollard::container::Config<String>,
+    ) -> Result<String, DockerError> {
+        (**self).create_container(options, config)
+    }
+
+    fn start_container(
+        &self,
+        container_id: &str,
+        options: Option<bollard::container::StartContainerOptions<String>>,
+    ) -> Result<(), DockerError> {
+        (**self).start_container(container_id, options)
+    }
+
+    fn inspect_container(
+        &self,
+        container_id: &str,
+        options: Option<bollard::container::InspectContainerOptions>,
+    ) -> Result<bollard::service::ContainerInspectResponse, DockerError> {
+        (**self).inspect_container(container_id, options)
+    }
+
+    fn kill_container(
+        &self,
+        container_id: &str,
+        options: Option<bollard::container::KillContainerOptions<String>>,
+    ) -> Result<(), DockerError> {
+        (**self).kill_container(container_id, options)
+    }
+
+    fn docker(&self) -> Option<&bollard::Docker> {
+        (**self).docker()
     }
 }
 

@@ -6,10 +6,12 @@
 //! - Container creation and lifecycle management
 //! - Container execution with timeout support
 //! - AgentExecutionResult with container ID and exit code reporting
+//! - Silent timeout monitoring for detecting stuck agents
 //!
 //! The module integrates with the logger module for log streaming and the
 //! wait module for container exit waiting with timeout enforcement.
 
+use super::streams::LogTimestampTracker;
 use super::types::ContainerConfig;
 use super::wait::{parse_timeout, wait_with_timeout, TerminationSignal};
 use crate::docker::skills::generate_entrypoint_script;
@@ -19,11 +21,12 @@ use crate::metrics::{update_all_metrics, AgentRunResult, MetricsStore};
 use crate::skills::SkillsError;
 use crate::traits::DockerClientTrait;
 use bollard::{
-    container::{Config, CreateContainerOptions},
+    container::{Config, CreateContainerOptions, KillContainerOptions},
     models::HostConfig,
 };
 use chrono::Utc;
 use std::collections::HashMap;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
@@ -502,6 +505,157 @@ pub fn find_preexisting_skills(
     Ok(preexisting)
 }
 
+/// Parse a silent timeout string into a Duration
+///
+/// Supports:
+/// - "0" -> Disabled (returns Ok(None))
+/// - "30s" -> 30 seconds
+/// - "5m" -> 5 minutes
+/// - "1h" -> 1 hour
+///
+/// # Arguments
+///
+/// * `s` - Silent timeout string to parse
+///
+/// # Returns
+///
+/// Returns `Ok(Some(Duration))` on success for valid timeout values,
+/// `Ok(None)` if the value is "0" (disabled),
+/// or `Err(DockerError)` on parse failure.
+fn parse_silent_timeout(s: &str) -> Result<Option<Duration>, DockerError> {
+    let s = s.trim();
+
+    // "0" or "0s" means disabled
+    if s == "0" {
+        return Ok(None);
+    }
+
+    // Find the last character which should be the unit (s, m, h)
+    let (value_part, unit) = s.split_at(s.len().saturating_sub(1));
+
+    let value: u64 = value_part.parse().map_err(|_| DockerError::IoError {
+        operation: "parse silent timeout".to_string(),
+        error_details: format!(
+            "Invalid silent timeout value: '{}'. Use a positive number with unit (e.g., '30s', '5m', '1h') or '0' to disable.",
+            value_part
+        ),
+    })?;
+
+    let duration = match unit {
+        "s" => Duration::from_secs(value),
+        "m" => Duration::from_secs(value * 60),
+        "h" => Duration::from_secs(value * 60 * 60),
+        _ => {
+            return Err(DockerError::IoError {
+                operation: "parse silent timeout".to_string(),
+                error_details: format!(
+                    "Invalid silent timeout unit: '{}' (use s, m, or h). Example: '30s' (30 seconds), '5m' (5 minutes), '1h' (1 hour)",
+                    unit
+                ),
+            })
+        }
+    };
+
+    Ok(Some(duration))
+}
+
+/// Spawn a background task to monitor silent timeout
+///
+/// This function spawns an async task that monitors when logs were last received
+/// and terminates the container if no logs are received within the specified duration.
+///
+/// # Arguments
+///
+/// * `client` - Reference to the DockerClient (cloned for the task)
+/// * `container_id` - ID of the container to monitor
+/// * `agent_name` - Name of the agent for logging
+/// * `silent_timeout` - Duration after which to terminate if no logs received
+/// * `timestamp_tracker` - Tracker for last log timestamp
+/// * `logger` - Optional logger for writing timeout messages
+/// * `cancel_flag` - Atomic flag to signal task cancellation
+///
+/// # Returns
+///
+/// A handle to the spawned task
+fn spawn_silent_timeout_monitor(
+    client: Arc<dyn DockerClientTrait>,
+    container_id: String,
+    agent_name: String,
+    silent_timeout: Duration,
+    timestamp_tracker: LogTimestampTracker,
+    logger: Option<Arc<Mutex<Logger>>>,
+    cancel_flag: Arc<AtomicBool>,
+) -> tokio::task::JoinHandle<()> {
+    tokio::spawn(async move {
+        // Check interval - how often to check for silent timeout
+        let check_interval = Duration::from_secs(5);
+
+        loop {
+            // Check if we've been cancelled
+            if cancel_flag.load(Ordering::SeqCst) {
+                tracing::debug!(
+                    "Silent timeout monitor cancelled for agent '{}'",
+                    agent_name
+                );
+                break;
+            }
+
+            // Sleep for the check interval
+            tokio::time::sleep(check_interval).await;
+
+            // Check if timeout is exceeded
+            if timestamp_tracker.is_silent_timeout_exceeded(silent_timeout) {
+                // Log the silent timeout event
+                let timeout_secs = silent_timeout.as_secs();
+                let timeout_str = if timeout_secs >= 3600 {
+                    format!("{}h", timeout_secs / 3600)
+                } else if timeout_secs >= 60 {
+                    format!("{}m", timeout_secs / 60)
+                } else {
+                    format!("{}s", timeout_secs)
+                };
+
+                let log_message = format!(
+                    "[{}] Silent timeout exceeded (no logs for {}) - terminating container",
+                    agent_name, timeout_str
+                );
+
+                // Write to logger if available
+                if let Some(logger) = &logger {
+                    if let Ok(logger_guard) = logger.lock() {
+                        let _ = logger_guard.write_agent_log(&agent_name, &log_message);
+                        if logger_guard.foreground_mode {
+                            let _ = logger_guard.write_terminal_output(&log_message);
+                        }
+                    }
+                }
+
+                // Log to stderr as well
+                eprintln!(
+                    "Agent '{}' silent timeout exceeded ({}), killing container '{}'",
+                    agent_name, timeout_str, container_id
+                );
+
+                // Kill the container using SIGKILL for immediate termination
+                if let Err(e) = client.kill_container(
+                    &container_id,
+                    Some(KillContainerOptions {
+                        signal: "SIGKILL".to_string(),
+                    }),
+                ) {
+                    eprintln!(
+                        "Failed to kill container '{}' on silent timeout: {}",
+                        container_id, e
+                    );
+                }
+
+                // Exit the monitoring loop after killing
+                break;
+            }
+        }
+    })
+}
+
 /// Run an agent by creating and starting a Docker container.
 ///
 /// This function orchestrates the complete lifecycle of an agent container execution:
@@ -830,23 +984,93 @@ pub async fn run_agent(
                     // before the agent code executes.
                     let skills_install_start_time = Instant::now();
 
+                    // Parse silent timeout from config
+                    // If None or "0", the feature is disabled
+                    let silent_timeout_duration = match &config.silent_timeout {
+                        Some(silent_timeout_str) => {
+                            match parse_silent_timeout(silent_timeout_str) {
+                                Ok(Some(duration)) => {
+                                    eprintln!(
+                                        "Agent {} has silent timeout enabled: {}s",
+                                        config.agent_name,
+                                        duration.as_secs()
+                                    );
+                                    Some(duration)
+                                }
+                                Ok(None) => {
+                                    // "0" means disabled
+                                    tracing::debug!(
+                                        "Silent timeout is disabled for agent '{}'",
+                                        config.agent_name
+                                    );
+                                    None
+                                }
+                                Err(e) => {
+                                    eprintln!(
+                                        "Failed to parse silent timeout '{}': {}. Disabling feature.",
+                                        silent_timeout_str, e
+                                    );
+                                    None
+                                }
+                            }
+                        }
+                        None => {
+                            // No silent_timeout configured - disabled
+                            tracing::debug!(
+                                "No silent timeout configured for agent '{}'",
+                                config.agent_name
+                            );
+                            None
+                        }
+                    };
+
+                    // Create the timestamp tracker and cancel flag for silent timeout monitoring
+                    let timestamp_tracker = LogTimestampTracker::new();
+                    let silent_timeout_cancel = Arc::new(AtomicBool::new(false));
+
+                    // Spawn silent timeout monitor if enabled
+                    let silent_timeout_handle = if let Some(timeout_duration) = silent_timeout_duration {
+                        Some(spawn_silent_timeout_monitor(
+                            client.clone(),
+                            container_id.clone(),
+                            config.agent_name.clone(),
+                            timeout_duration,
+                            timestamp_tracker.clone(),
+                            logger.clone(),
+                            silent_timeout_cancel.clone(),
+                        ))
+                    } else {
+                        None
+                    };
+
                     // Spawn background task to stream logs if logger is provided
+                    // This also updates the timestamp tracker for silent timeout monitoring
                     let log_task = if let Some(_logger) = logger.clone() {
                         // Clone client for the spawned task
-                        let _client_clone = client.clone();
-                        let _agent_name = config.agent_name.clone();
-                        let _container_id_clone = container_id.clone();
+                        let client_clone = client.clone();
+                        let agent_name = config.agent_name.clone();
+                        let container_id_clone = container_id.clone();
+                        let tracker = timestamp_tracker.clone();
 
                         Some(tokio::spawn(async move {
-                            // Use the trait's container_logs method
-                            // For streaming, we need to use the trait - but since container_logs
-                            // returns a String (not a stream), we need a different approach
-                            // For now, we'll use a simpler approach: just fetch logs at the end
-                            // The streaming functionality is handled separately
-
-                            // Note: Full log streaming would require adding an async method to the trait
-                            // For now, we skip the streaming in the background task
-
+                            // Use attach_and_stream_logs with timestamp tracker
+                            // This will update the tracker whenever a log is received
+                            use crate::docker::run::streams::attach_and_stream_logs;
+                            
+                            match attach_and_stream_logs(
+                                &client_clone,
+                                &container_id_clone,
+                                &agent_name,
+                                None, // logger is already captured in the closure
+                                true, // follow logs
+                                Some(tracker),
+                            ).await {
+                                Ok(_) => {}
+                                Err(e) => {
+                                    // Log stream errors are expected when container exits
+                                    tracing::debug!("Log stream ended for container '{}': {}", container_id_clone, e);
+                                }
+                            }
                             Ok::<(), DockerError>(())
                         }))
                     } else {
@@ -870,11 +1094,19 @@ pub async fn run_agent(
                     .await
                     {
                         Ok(exit_status) => {
+                            // Cancel the silent timeout monitor
+                            silent_timeout_cancel.store(true, Ordering::SeqCst);
+
                             // Wait for log streaming task to complete
                             if let Some(log_task) = log_task {
                                 if let Err(e) = log_task.await {
                                     eprintln!("Log streaming task failed: {}", e);
                                 }
+                            }
+
+                            // Wait for silent timeout monitor to finish
+                            if let Some(handle) = silent_timeout_handle {
+                                let _ = handle.await;
                             }
 
                             // Log exit code and termination signal
@@ -922,12 +1154,20 @@ pub async fn run_agent(
                             )
                         }
                         Err(e) => {
+                            // Cancel the silent timeout monitor
+                            silent_timeout_cancel.store(true, Ordering::SeqCst);
+
                             // Gracefully shut down log streaming task to allow logs to flush
                             if let Some(log_task) = log_task {
                                 use tokio::time::{timeout, Duration};
                                 // Wait up to 500ms for log task to complete naturally (flushes buffered output)
                                 let _ = timeout(Duration::from_millis(500), log_task).await;
                                 // If timeout occurred, task is already cancelled; if completed, logs are flushed
+                            }
+
+                            // Wait for silent timeout monitor to finish
+                            if let Some(handle) = silent_timeout_handle {
+                                let _ = handle.await;
                             }
 
                             eprintln!("Error waiting for agent {}: {}", config.agent_name, e);

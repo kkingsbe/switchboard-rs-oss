@@ -797,6 +797,10 @@ impl crate::traits::DockerClientTrait for DockerClient {
     ) -> Result<(), DockerError> {
         self.client.kill_container(container_id, options)
     }
+
+    fn docker(&self) -> Option<&bollard::Docker> {
+        self.client.docker()
+    }
 }
 
 #[cfg(test)]

@@ -39,6 +39,13 @@ timezone = "system"
 # "queue" - Add new runs to a queue for sequential execution after current run completes
 overlap_mode = "skip"
 
+# Default silent timeout for all agents (default: not set / disabled)
+# Format: <number><unit> where unit is "s" (seconds), "m" (minutes), or "h" (hours)
+# Set to "0" to disable
+# This feature automatically terminates agents that don't produce log output
+# for the specified duration, helping identify and clean up stuck agents.
+# Example: silent_timeout = "5m"
+
 # =============================================================================
 # AGENT CONFIGURATIONS
 # =============================================================================
@@ -112,6 +119,14 @@ skills = [
     "frontend-design",  # Simple skill name
     "security-audit",   # Another simple skill name
 ]
+
+# Optional: Silent timeout for this specific agent (default: not set / inherits from settings)
+# Format: <number><unit> where unit is "s" (seconds), "m" (minutes), or "h" (hours)
+# Set to "0" to disable even if global setting is enabled
+# This feature automatically terminates agents that don't produce log output
+# for the specified duration, helping identify and clean up stuck agents.
+# Example: silent_timeout = "5m"
+silent_timeout = "10m"
 
 # -----------------------------------------------------------------------------
 # Agent 3: Agent using prompt_file instead of inline prompt
@@ -203,6 +218,22 @@ skills = [
 #   - "5m"  - 5 minutes
 #   - "1h"  - 1 hour
 #   - "2h30m" is NOT supported (use "150m" or "9000s" instead)
+#
+# Silent Timeout Format:
+#   Silent timeout values have the same format as regular timeout:
+#   - "30s" - 30 seconds
+#   - "5m"  - 5 minutes  
+#   - "1h"  - 1 hour
+#   Set to "0" to disable the feature
+#
+# Silent Timeout Feature:
+#   The silent timeout automatically terminates agents that don't produce any log
+#   output for the specified duration. This helps identify and clean up stuck or
+#   unresponsive agents. When triggered:
+#   - The container is terminated with SIGKILL
+#   - A message is logged indicating silent timeout was exceeded
+#   - The agent is marked as failed
+#   Can be set at the global [settings] level or per-agent level.
 #
 # Overlap Modes:
 #   - "Skip": Default behavior. If an agent is already running when a new

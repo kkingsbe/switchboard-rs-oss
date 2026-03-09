@@ -772,6 +772,7 @@ pub async fn run_run(
         readonly: agent.readonly.unwrap_or(false),
         prompt: prompt.clone(),
         skills: agent.skills.clone(),
+        silent_timeout: agent.silent_timeout.clone(),
     };
 
     // Create DockerClient using DockerClient::new()

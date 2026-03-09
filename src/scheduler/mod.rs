@@ -642,6 +642,7 @@ async fn execute_agent(
             readonly: agent.readonly.unwrap_or(false),
             prompt: prompt.clone(),
             skills: agent.skills.clone(),
+            silent_timeout: agent.silent_timeout.clone(),
         };
 
         // Create DockerClient (use injected client if provided, otherwise create internally)

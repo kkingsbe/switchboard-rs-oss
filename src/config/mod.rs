@@ -721,6 +721,12 @@ pub struct Settings {
     /// Global default overlap mode
     #[serde(default)]
     pub overlap_mode: Option<OverlapMode>,
+    /// Silent timeout duration (e.g., "5m", "30s", "1h", "0" to disable)
+    #[serde(default)]
+    pub silent_timeout_str: String,
+    /// Global silent timeout
+    #[serde(default)]
+    pub silent_timeout: Option<String>,
 }
 
 impl Default for Settings {
@@ -732,6 +738,8 @@ impl Default for Settings {
             timezone: "system".to_string(),
             overlap_mode_str: "skip".to_string(),
             overlap_mode: None,
+            silent_timeout_str: "5m".to_string(),
+            silent_timeout: None,
         }
     }
 }
@@ -863,6 +871,9 @@ pub struct Agent {
     /// Format: alphanumeric characters, hyphens, and underscores only
     #[serde(default)]
     pub skills: Option<Vec<String>>,
+    /// Agent-level override for silent timeout
+    #[serde(default)]
+    pub silent_timeout: Option<String>,
 }
 
 impl Default for Agent {
@@ -878,6 +889,7 @@ impl Default for Agent {
             overlap_mode: None,
             max_queue_size: None,
             skills: None,
+            silent_timeout: None,
         }
     }
 }
@@ -985,6 +997,26 @@ impl Agent {
     /// Returns agent's max_queue_size if set, otherwise returns 3 (the default queue size)
     pub fn effective_max_queue_size(&self) -> usize {
         self.max_queue_size.unwrap_or(3)
+    }
+
+    /// Resolve the effective silent timeout for this agent
+    /// Returns agent's silent_timeout if set, otherwise returns global setting if set,
+    /// otherwise returns "5m" (the default)
+    pub fn effective_silent_timeout(&self, global_settings: &Option<Settings>) -> String {
+        // Check agent-specific setting first
+        if let Some(agent_timeout) = &self.silent_timeout {
+            return agent_timeout.clone();
+        }
+
+        // Fall back to global setting
+        if let Some(settings) = global_settings {
+            if let Some(global_timeout) = &settings.silent_timeout {
+                return global_timeout.clone();
+            }
+        }
+
+        // Default to 5 minutes
+        "5m".to_string()
     }
 }
 

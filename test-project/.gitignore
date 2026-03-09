@@ -1,0 +1,11 @@
+# Switchboard
+.switchboard/
+*.log
+
+# Editor
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
