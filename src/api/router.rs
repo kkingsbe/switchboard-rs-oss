@@ -98,6 +98,8 @@ pub struct HealthResponse {
     pub instance_id: String,
     /// API version.
     pub version: String,
+    /// Current working directory.
+    pub working_directory: String,
 }
 
 /// Validation request body.
@@ -200,10 +202,15 @@ pub struct PlaceholderResponse {
     )
 )]
 async fn health_handler(State(state): State<Arc<ApiState>>) -> Json<HealthResponse> {
+    let working_directory = std::env::current_dir()
+        .map(|p| p.to_string_lossy().to_string())
+        .unwrap_or_else(|_| "unknown".to_string());
+
     Json(HealthResponse {
         status: "ok",
         instance_id: state.instance_id.clone(),
         version: env!("CARGO_PKG_VERSION").to_string(),
+        working_directory,
     })
 }
 

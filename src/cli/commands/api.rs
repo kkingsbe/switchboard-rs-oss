@@ -6,7 +6,6 @@
 use crate::api::registry::{
     derive_instance_id_from_config, InstanceRegistration, InstanceRegistry, InstanceStatus,
 };
-use crate::api::serve;
 use crate::config::{ApiConfig, Config};
 use clap::{Parser, Subcommand};
 use std::net::TcpListener;
@@ -344,7 +343,7 @@ async fn run_api_start(args: ApiStartArgs) -> Result<(), Box<dyn std::error::Err
     }));
 
     // Start the API server
-    let result = serve(final_config).await;
+    let result = crate::api::serve_with_config(final_config, Some(&args.config)).await;
 
     // Unregister the instance on shutdown
     unregister_instance(&instance_id);
