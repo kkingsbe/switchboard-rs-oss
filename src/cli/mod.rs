@@ -765,6 +765,8 @@ pub async fn run_run(
         .map_err(|e| format!("Docker availability check failed: {}", e))?;
 
     // Create ContainerConfig with all required fields
+    // Use effective_silent_timeout to apply default "5m" if not configured
+    let settings_option: Option<crate::config::Settings> = config.settings.clone();
     let container_config = ContainerConfig {
         agent_name: agent.name.clone(),
         env_vars,
@@ -772,7 +774,7 @@ pub async fn run_run(
         readonly: agent.readonly.unwrap_or(false),
         prompt: prompt.clone(),
         skills: agent.skills.clone(),
-        silent_timeout: agent.silent_timeout.clone(),
+        silent_timeout: Some(agent.effective_silent_timeout(&settings_option)),
     };
 
     // Create DockerClient using DockerClient::new()

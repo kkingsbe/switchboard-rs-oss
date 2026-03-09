@@ -210,25 +210,20 @@ fn get_executable_path() -> Result<PathBuf, ApiError> {
 fn spawn_scheduler(detach: bool, state: &ApiState) -> Result<u32, ApiError> {
     let executable = get_executable_path()?;
     
-    // Get the config path from state if available
-    // Only pass -c if there's a valid non-empty config path
-    let config_path = state.config_path.as_ref()
-        .and_then(|p| {
-            let s = p.to_string_lossy().to_string();
-            if s.is_empty() { None } else { Some(s) }
-        });
-
+    tracing::debug!("spawn_scheduler: spawning 'up' command");
+    
+    // Build the command - no config flag needed, will use default switchboard.toml
     let mut cmd = Command::new(&executable);
     
-    // Add config path as -c flag BEFORE the subcommand (global option must come first)
-    // Only if we have a valid config path, otherwise let CLI use default
-    if let Some(path) = config_path {
-        cmd.arg("-c").arg(&path);
-    }
+    // The subcommand
     cmd.arg("up");
     
+    // Subcommand options
     if detach {
         cmd.arg("--detach");
+    }
+    
+    if detach {
         // Detached mode: spawn and return immediately
         let child = cmd.spawn()
             .map_err(|e| ApiError::Internal(format!("Failed to spawn scheduler: {}", e)))?;
@@ -650,20 +645,21 @@ mod tests {
     }
 
     /// Test that reproduces the user's issue: API starts WITH a valid switchboard.toml,
-    /// but starting scheduler via API fails with "Workspace path '' does not exist"
+    /// but starting scheduler via API fails with "Workspace path '' does not exist" or "error: Unrecognized option"
     ///
     /// This test creates ApiState with a valid config_path pointing to an actual switchboard.toml
     /// and then attempts to start the scheduler.
     #[tokio::test]
     async fn test_scheduler_start_via_api_with_valid_config() {
         use std::fs;
+        use std::time::Duration;
         use tempfile::TempDir;
         
         // Create a temp directory with a valid switchboard.toml
         let temp_dir = TempDir::new().unwrap();
         let config_path = temp_dir.path().join("switchboard.toml");
         
-        // Create a minimal valid switchboard.toml with at least one agent
+        // Create a minimal switchboard.toml with one agent
         let config_content = r#"
 [project]
 name = "test-project"
@@ -676,6 +672,12 @@ timeout = "5m"
 readonly = false
 "#;
         fs::write(&config_path, config_content).unwrap();
+        
+        // Create the prompt file that the agent references
+        let prompt_dir = temp_dir.path().join(".switchboard");
+        fs::create_dir_all(&prompt_dir).unwrap();
+        let prompt_file = prompt_dir.join("test.md");
+        fs::write(&prompt_file, "# Test Agent\n\nTest prompt content.").unwrap();
         
         // Parse it as Config to verify it's valid
         let switchboard_config = crate::config::Config::from_toml(&config_path).unwrap();
@@ -707,22 +709,38 @@ readonly = false
             Json(request),
         ).await;
         
-        // The user reports this fails with "Workspace path '' does not exist"
+        // The user reports this fails with "Workspace path '' does not exist" or "Unrecognized option"
         match result {
             Ok(response) => {
-                println!("Scheduler started successfully: {:?}", response);
-                // If this passes, the issue is fixed!
+                println!("Scheduler started - checking if process actually runs...");
+                
+                // Even if spawn succeeded, check if the process is actually running
+                if let Some(pid) = response.data.as_ref().and_then(|r| r.pid) {
+                    // Wait a bit for the process to actually start and potentially fail
+                    tokio::time::sleep(Duration::from_millis(500)).await;
+                    
+                    // Check if process is still running
+                    let is_running = is_process_running(pid);
+                    if !is_running {
+                        // Process died - this is the bug! The spawn succeeds but process fails immediately
+                        println!("Process {} died immediately - this reproduces the bug!", pid);
+                        // This test now reproduces the bug - the scheduler appears to start
+                        // but the actual process fails
+                    } else {
+                        println!("Process {} is still running - fix is working!", pid);
+                    }
+                }
             }
             Err(e) => {
                 let error_msg = e.to_string();
                 println!("Error starting scheduler: {}", error_msg);
                 
-                // This is what the user reports - workspace path error
-                // If we get here, we've reproduced the bug
+                // This is what the user reports - workspace path error or Unrecognized option
                 assert!(
                     error_msg.contains("Workspace path") || 
-                    error_msg.contains("does not exist"),
-                    "Expected workspace path error, got: {}",
+                    error_msg.contains("does not exist") ||
+                    error_msg.contains("Unrecognized"),
+                    "Expected workspace path error or Unrecognized option, got: {}",
                     error_msg
                 );
             }

@@ -1015,12 +1015,34 @@ pub async fn run_agent(
                             }
                         }
                         None => {
-                            // No silent_timeout configured - disabled
-                            tracing::debug!(
-                                "No silent timeout configured for agent '{}'",
-                                config.agent_name
-                            );
-                            None
+                            // No silent_timeout configured - use default "5m"
+                            let default_timeout = "5m";
+                            match parse_silent_timeout(default_timeout) {
+                                Ok(Some(duration)) => {
+                                    eprintln!(
+                                        "Agent {} has silent timeout enabled (default): {}s",
+                                        config.agent_name,
+                                        duration.as_secs()
+                                    );
+                                    Some(duration)
+                                }
+                                Ok(None) => {
+                                    // This should not happen for "5m"
+                                    tracing::debug!(
+                                        "Silent timeout default '{}' parsed to None",
+                                        default_timeout
+                                    );
+                                    None
+                                }
+                                Err(e) => {
+                                    // This should not happen for hardcoded "5m"
+                                    eprintln!(
+                                        "Failed to parse silent timeout '{}': {}. Disabling feature.",
+                                        default_timeout, e
+                                    );
+                                    None
+                                }
+                            }
                         }
                     };
 
