@@ -11,7 +11,7 @@ use crate::workflows::WorkflowsError;
 use chrono::Utc;
 use serde::{Deserialize, Serialize};
 use std::fs;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use super::types::WorkflowsInstall;
 use super::ExitCode;
@@ -21,7 +21,7 @@ const WORKFLOWS_DIR: &str = ".switchboard/workflows";
 /// Lockfile filename for workflows
 const WORKFLOWS_LOCKFILE: &str = "workflows.lock.json";
 /// Source repository for workflows
-const WORKFLOWS_SOURCE: &str = "kkingsbe/switchboard-workflows";
+pub const WORKFLOWS_SOURCE: &str = "kkingsbe/switchboard-workflows";
 
 /// Represents a single workflow entry in the lockfile
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -55,7 +55,7 @@ impl Default for WorkflowsLockfile {
 }
 
 /// Reads the workflows lockfile from the workflows directory
-fn read_workflows_lockfile(workflows_dir: &PathBuf) -> Result<WorkflowsLockfile, WorkflowsError> {
+fn read_workflows_lockfile(workflows_dir: &Path) -> Result<WorkflowsLockfile, WorkflowsError> {
     let lockfile_path = workflows_dir.join(WORKFLOWS_LOCKFILE);
     
     if !lockfile_path.exists() {
@@ -72,7 +72,7 @@ fn read_workflows_lockfile(workflows_dir: &PathBuf) -> Result<WorkflowsLockfile,
 /// Writes the workflows lockfile to the workflows directory
 fn write_workflows_lockfile(
     lockfile: &WorkflowsLockfile,
-    workflows_dir: &PathBuf,
+    workflows_dir: &Path,
 ) -> Result<(), WorkflowsError> {
     // Ensure the directory exists
     if !workflows_dir.exists() {

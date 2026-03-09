@@ -806,6 +806,7 @@ mod tests {
             overlap_mode: None,
             max_queue_size: None,
             skills: Some(vec![]), // Empty skills list
+            silent_timeout: None,
         };
 
         let result = validate_agent_skills_empty(&agent, "test-agent");
@@ -845,6 +846,7 @@ mod tests {
             overlap_mode: None,
             max_queue_size: None,
             skills: None, // No skills field
+            silent_timeout: None,
         };
 
         let result = validate_agent_skills_empty(&agent, "test-agent");
@@ -873,6 +875,7 @@ mod tests {
             overlap_mode: None,
             max_queue_size: None,
             skills: Some(vec!["owner/repo".to_string()]), // Non-empty skills list
+            silent_timeout: None,
         };
 
         let result = validate_agent_skills_empty(&agent, "test-agent");
@@ -907,6 +910,7 @@ mod tests {
                 "".to_string(),               // Invalid: empty string
                 "owner/@skill".to_string(),   // Invalid: contains @ and /
             ]),
+            silent_timeout: None,
         };
 
         let result = validate_agent_skills_format(&agent, "test-agent");
@@ -959,6 +963,7 @@ mod tests {
                 "backend_api".to_string(),     // Valid: skill-name format with underscore
                 "skill123".to_string(),        // Valid: skill-name with numbers
             ]),
+            silent_timeout: None,
         };
 
         let result = validate_agent_skills_format(&agent, "test-agent");
@@ -991,6 +996,7 @@ mod tests {
                 "security-audit".to_string(),
                 "backend-api".to_string(),
             ]),
+            silent_timeout: None,
         };
 
         let result = validate_agent_skills_duplicates(&agent, "test-agent");
@@ -1026,6 +1032,7 @@ mod tests {
                 "backend-api".to_string(),
                 "security-audit".to_string(), // Duplicate: appears twice
             ]),
+            silent_timeout: None,
         };
 
         let result = validate_agent_skills_duplicates(&agent, "test-agent");
@@ -1085,6 +1092,7 @@ mod tests {
             overlap_mode: None,
             max_queue_size: None,
             skills: None, // No skills field
+            silent_timeout: None,
         };
 
         let result = validate_agent_skills_duplicates(&agent, "test-agent");
@@ -1116,6 +1124,7 @@ mod tests {
                 "frontend-design".to_string(),
                 "security-audit".to_string(),
             ]),
+            silent_timeout: None,
         };
 
         let result = validate_agent_skills(&agent, "test-agent");
@@ -1146,6 +1155,7 @@ mod tests {
             overlap_mode: None,
             max_queue_size: None,
             skills: Some(vec![]), // Empty skills list
+            silent_timeout: None,
         };
 
         let result = validate_agent_skills(&agent, "test-agent");
@@ -1181,6 +1191,7 @@ mod tests {
             overlap_mode: None,
             max_queue_size: None,
             skills: Some(vec!["owner/repo".to_string()]), // Invalid: contains slash
+            silent_timeout: None,
         };
 
         let result = validate_agent_skills(&agent, "test-agent");
@@ -1214,6 +1225,7 @@ mod tests {
                 "frontend-design".to_string(),
                 "frontend-design".to_string(), // Duplicate
             ]),
+            silent_timeout: None,
         };
 
         let result = validate_agent_skills(&agent, "test-agent");
@@ -1311,6 +1323,7 @@ mod tests {
             overlap_mode: None,
             max_queue_size: None,
             skills: Some(vec!["frontend-design".to_string()]),
+            silent_timeout: None,
         };
 
         let skills_dir = PathBuf::from("/nonexistent/path/skills");
@@ -1355,6 +1368,7 @@ mod tests {
             overlap_mode: None,
             max_queue_size: None,
             skills: Some(vec!["frontend-design".to_string()]), // Valid skill-name format
+            silent_timeout: None,
         };
 
         let result = validate_skills_exist_in_directory(&agent, "test-agent", &skills_dir);
@@ -1381,6 +1395,7 @@ mod tests {
             overlap_mode: None,
             max_queue_size: None,
             skills: None, // No skills field
+            silent_timeout: None,
         };
 
         let skills_dir = PathBuf::from("./skills");
@@ -1420,6 +1435,7 @@ mod tests {
             overlap_mode: None,
             max_queue_size: None,
             skills: Some(vec![]), // No skills
+            silent_timeout: None,
         }];
 
         let result = validate_lockfile_consistency(&config, &skills_dir);
@@ -1454,6 +1470,7 @@ mod tests {
             overlap_mode: None,
             max_queue_size: None,
             skills: None, // No skills field
+            silent_timeout: None,
         }];
 
         let result = validate_lockfile_consistency(&config, &skills_dir);

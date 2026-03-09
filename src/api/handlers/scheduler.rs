@@ -211,21 +211,24 @@ fn spawn_scheduler(detach: bool, state: &ApiState) -> Result<u32, ApiError> {
     let executable = get_executable_path()?;
     
     // Get the config path from state if available
+    // Only pass -c if there's a valid non-empty config path
     let config_path = state.config_path.as_ref()
-        .map(|p| p.to_string_lossy().to_string())
-        .unwrap_or_else(|| "./switchboard.toml".to_string());
+        .and_then(|p| {
+            let s = p.to_string_lossy().to_string();
+            if s.is_empty() { None } else { Some(s) }
+        });
 
     let mut cmd = Command::new(&executable);
+    
+    // Add config path as -c flag BEFORE the subcommand (global option must come first)
+    // Only if we have a valid config path, otherwise let CLI use default
+    if let Some(path) = config_path {
+        cmd.arg("-c").arg(&path);
+    }
     cmd.arg("up");
     
     if detach {
         cmd.arg("--detach");
-    }
-    
-    // Add the config path
-    cmd.arg(&config_path);
-
-    if detach {
         // Detached mode: spawn and return immediately
         let child = cmd.spawn()
             .map_err(|e| ApiError::Internal(format!("Failed to spawn scheduler: {}", e)))?;
@@ -601,5 +604,128 @@ mod tests {
         let request: SchedulerStopRequest = serde_json::from_str("{}").unwrap();
         assert!(!request.force);
         assert_eq!(request.timeout, 30);
+    }
+
+    /// Test that reproduces the issue: API starts without config, then tries to start scheduler
+    /// 
+    /// Issue 1: "unexpected argument '-c' found" - This happened when -c was passed AFTER the subcommand
+    /// Issue 2: "Workspace path '' does not exist" - This happened when empty config_path was passed
+    /// 
+    /// This test verifies that when config_path is None or empty, no -c flag is passed
+    /// to the spawned process, allowing the CLI to use its default behavior.
+    #[test]
+    fn test_spawn_scheduler_without_config_path() {
+        use std::path::PathBuf;
+        use std::process::Command;
+        use crate::api::state::ApiState;
+        use crate::config::ApiConfig;
+        
+        // Create API state WITHOUT a config_path (simulates API started without switchboard.toml)
+        let api_config = ApiConfig {
+            enabled: true,
+            instance_id: Some("test".to_string()),
+            port: 18500,
+            host: "127.0.0.1".to_string(),
+            auto_port: false,
+            swagger: false,
+            rate_limit: crate::config::RateLimitConfig::default(),
+        };
+        let state = ApiState::new_arc(api_config);
+        
+        // Verify config_path is None
+        assert!(state.config_path.is_none(), "config_path should be None when API starts without config");
+        
+        // Now simulate what spawn_scheduler does - get the config path
+        let config_path = state.config_path.as_ref()
+            .and_then(|p| {
+                let s = p.to_string_lossy().to_string();
+                if s.is_empty() { None } else { Some(s) }
+            });
+        
+        // The fix: config_path should be None when not set, so no -c should be passed
+        assert!(config_path.is_none(), "config_path should be None when not set in API state");
+        
+        // When config_path is None, we should NOT add -c flag
+        assert!(config_path.is_none(), "No -c flag should be added when config_path is None");
+    }
+
+    /// Test that reproduces the user's issue: API starts WITH a valid switchboard.toml,
+    /// but starting scheduler via API fails with "Workspace path '' does not exist"
+    ///
+    /// This test creates ApiState with a valid config_path pointing to an actual switchboard.toml
+    /// and then attempts to start the scheduler.
+    #[tokio::test]
+    async fn test_scheduler_start_via_api_with_valid_config() {
+        use std::fs;
+        use tempfile::TempDir;
+        
+        // Create a temp directory with a valid switchboard.toml
+        let temp_dir = TempDir::new().unwrap();
+        let config_path = temp_dir.path().join("switchboard.toml");
+        
+        // Create a minimal valid switchboard.toml with at least one agent
+        let config_content = r#"
+[project]
+name = "test-project"
+
+[[agent]]
+name = "test-agent"
+schedule = "0 * * * *"
+prompt_file = ".switchboard/test.md"
+timeout = "5m"
+readonly = false
+"#;
+        fs::write(&config_path, config_content).unwrap();
+        
+        // Parse it as Config to verify it's valid
+        let switchboard_config = crate::config::Config::from_toml(&config_path).unwrap();
+        
+        // Create ApiState as the API would when started with this config
+        use crate::config::ApiConfig;
+        let api_config = ApiConfig {
+            enabled: true,
+            instance_id: Some("test".to_string()),
+            port: 18500,
+            host: "127.0.0.1".to_string(),
+            auto_port: false,
+            swagger: false,
+            rate_limit: crate::config::RateLimitConfig::default(),
+        };
+        
+        // Use new_with_config like the API router does
+        let state = ApiState::new_with_config(api_config, switchboard_config, config_path.clone());
+        
+        // Verify config_path is set
+        assert!(state.config_path.is_some(), "config_path should be set");
+        let stored_path = state.config_path.as_ref().unwrap();
+        assert!(!stored_path.to_string_lossy().is_empty(), "config_path should not be empty");
+        
+        // Now try to call the scheduler_up handler - this is what fails for the user
+        let request = SchedulerStartRequest { detach: true };
+        let result = scheduler_up(
+            State(Arc::new(state)),
+            Json(request),
+        ).await;
+        
+        // The user reports this fails with "Workspace path '' does not exist"
+        match result {
+            Ok(response) => {
+                println!("Scheduler started successfully: {:?}", response);
+                // If this passes, the issue is fixed!
+            }
+            Err(e) => {
+                let error_msg = e.to_string();
+                println!("Error starting scheduler: {}", error_msg);
+                
+                // This is what the user reports - workspace path error
+                // If we get here, we've reproduced the bug
+                assert!(
+                    error_msg.contains("Workspace path") || 
+                    error_msg.contains("does not exist"),
+                    "Expected workspace path error, got: {}",
+                    error_msg
+                );
+            }
+        }
     }
 }

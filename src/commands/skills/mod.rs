@@ -299,9 +299,10 @@ mod tests {
             source: None,
         };
 
-        let entry = format_skill_entry(&skill, &config, None);
-        assert!(entry.contains("...")); // Should have truncation marker
-        assert!(entry.len() < 150); // Should be reasonably short
+        let entry = format_skill_entry_table(&skill, None, "global");
+        // entry is a tuple (source, installed_at, name_with_scope)
+        assert!(entry.2.contains("...")); // Should have truncation marker
+        assert!(entry.2.len() < 150); // Should be reasonably short
     }
 
     #[test]
@@ -318,8 +319,9 @@ mod tests {
             source: None,
         };
 
-        let entry = format_skill_entry(&skill, &config, None);
-        assert!(entry.contains("<no description>"));
+        let entry = format_skill_entry_table(&skill, None, "global");
+        // entry is a tuple (source, installed_at, name_with_scope)
+        assert!(entry.2.contains("<no description>"));
     }
 
     #[test]

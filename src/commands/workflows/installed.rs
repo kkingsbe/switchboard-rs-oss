@@ -88,7 +88,7 @@ pub struct WorkflowLockEntry {
 }
 
 /// Represents the workflows lockfile structure
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize, Default)]
 pub struct WorkflowsLockfile {
     /// Lockfile version
     pub version: u32,

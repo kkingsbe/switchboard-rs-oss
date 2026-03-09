@@ -839,7 +839,7 @@ fn default_env() -> Option<HashMap<String, String>> {
 }
 
 /// Agent configuration
-#[derive(Debug, Clone, Deserialize, Serialize)]
+#[derive(Debug, Clone, Deserialize, Serialize, Default)]
 pub struct Agent {
     /// Unique agent identifier
     pub name: String,
@@ -874,24 +874,6 @@ pub struct Agent {
     /// Agent-level override for silent timeout
     #[serde(default)]
     pub silent_timeout: Option<String>,
-}
-
-impl Default for Agent {
-    fn default() -> Self {
-        Agent {
-            name: String::new(),
-            prompt: None,
-            prompt_file: None,
-            schedule: String::new(),
-            env: Some(HashMap::new()),
-            readonly: None,
-            timeout: Some("30m".to_string()),
-            overlap_mode: None,
-            max_queue_size: None,
-            skills: None,
-            silent_timeout: None,
-        }
-    }
 }
 
 impl Agent {
@@ -2494,6 +2476,7 @@ mod tests {
             overlap_mode: None,
             max_queue_size: None,
             skills: None,
+            silent_timeout: None,
         };
 
         // Read the prompt file
@@ -2519,6 +2502,7 @@ mod tests {
             overlap_mode: None,
             max_queue_size: None,
             skills: None,
+            silent_timeout: None,
         };
 
         let temp_dir = tempfile::tempdir().expect("Failed to create temp dir");
@@ -2541,6 +2525,7 @@ mod tests {
             overlap_mode: None,
             max_queue_size: None,
             skills: None,
+            silent_timeout: None,
         };
 
         let temp_dir = tempfile::tempdir().expect("Failed to create temp dir");

@@ -8,7 +8,7 @@ use crate::workflows::WorkflowsError;
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::io::{self, Write};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use super::types::WorkflowsRemove;
 use super::ExitCode;
@@ -50,7 +50,7 @@ impl Default for WorkflowsLockfile {
 }
 
 /// Reads the workflows lockfile from the workflows directory
-fn read_workflows_lockfile(workflows_dir: &PathBuf) -> Result<WorkflowsLockfile, WorkflowsError> {
+fn read_workflows_lockfile(workflows_dir: &Path) -> Result<WorkflowsLockfile, WorkflowsError> {
     let lockfile_path = workflows_dir.join(WORKFLOWS_LOCKFILE);
 
     if !lockfile_path.exists() {
@@ -67,7 +67,7 @@ fn read_workflows_lockfile(workflows_dir: &PathBuf) -> Result<WorkflowsLockfile,
 /// Writes the workflows lockfile to the workflows directory
 fn write_workflows_lockfile(
     lockfile: &WorkflowsLockfile,
-    workflows_dir: &PathBuf,
+    workflows_dir: &Path,
 ) -> Result<(), WorkflowsError> {
     // Ensure the directory exists
     if !workflows_dir.exists() {
@@ -84,7 +84,7 @@ fn write_workflows_lockfile(
 
 /// Removes a workflow from the lockfile
 fn remove_workflow_from_lockfile(
-    workflows_dir: &PathBuf,
+    workflows_dir: &Path,
     workflow_name: &str,
 ) -> Result<(), WorkflowsError> {
     let mut lockfile = read_workflows_lockfile(workflows_dir)?;

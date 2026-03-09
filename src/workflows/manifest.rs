@@ -11,7 +11,7 @@ use std::path::Path;
 use crate::config::{Agent, OverlapMode};
 
 /// ManifestDefaults defines default configuration values for agents
-#[derive(Debug, Clone, Deserialize, Serialize)]
+#[derive(Debug, Clone, Deserialize, Serialize, PartialEq)]
 pub struct ManifestDefaults {
     /// Default cron schedule for agents (e.g., "0 9 * * *")
     #[serde(default)]
@@ -718,6 +718,6 @@ skills = ["agent-skill"]
         assert_eq!(defaults.skills.unwrap(), vec!["skill1", "skill2"]);
         
         let agent = &manifest.agents[0];
-        assert_eq!(agent.skills.unwrap(), vec!["agent-skill"]);
+        assert_eq!(agent.skills.as_ref().unwrap(), &vec!["agent-skill"]);
     }
 }

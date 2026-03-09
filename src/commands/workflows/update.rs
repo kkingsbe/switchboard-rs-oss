@@ -13,7 +13,7 @@ use chrono::Utc;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use super::types::WorkflowsUpdate;
 use super::ExitCode;
@@ -55,7 +55,7 @@ impl Default for WorkflowsLockfile {
 }
 
 /// Reads the workflows lockfile from the workflows directory
-fn read_workflows_lockfile(workflows_dir: &PathBuf) -> Result<WorkflowsLockfile, WorkflowsError> {
+fn read_workflows_lockfile(workflows_dir: &Path) -> Result<WorkflowsLockfile, WorkflowsError> {
     let lockfile_path = workflows_dir.join(WORKFLOWS_LOCKFILE);
 
     if !lockfile_path.exists() {
@@ -72,7 +72,7 @@ fn read_workflows_lockfile(workflows_dir: &PathBuf) -> Result<WorkflowsLockfile,
 /// Writes the workflows lockfile to the workflows directory
 fn write_workflows_lockfile(
     lockfile: &WorkflowsLockfile,
-    workflows_dir: &PathBuf,
+    workflows_dir: &Path,
 ) -> Result<(), WorkflowsError> {
     // Ensure the directory exists
     if !workflows_dir.exists() {
@@ -362,7 +362,7 @@ mod tests {
             "test-workflow".to_string(),
             WorkflowLockEntry {
                 workflow_name: "test-workflow".to_string(),
-                source: WORKFLOWS_SOURCE.to_string(),
+                source: crate::commands::workflows::install::WORKFLOWS_SOURCE.to_string(),
                 installed_at: "2024-01-01T00:00:00Z".to_string(),
             },
         );
