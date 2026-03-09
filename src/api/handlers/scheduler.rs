@@ -225,6 +225,11 @@ fn spawn_scheduler(detach: bool, state: &ApiState) -> Result<u32, ApiError> {
     
     if detach {
         // Detached mode: spawn and return immediately
+        
+        // Set up to capture stderr for debugging
+        cmd.stderr(std::process::Stdio::piped());
+        cmd.stdout(std::process::Stdio::piped());
+        
         let child = cmd.spawn()
             .map_err(|e| ApiError::Internal(format!("Failed to spawn scheduler: {}", e)))?;
         
@@ -232,6 +237,7 @@ fn spawn_scheduler(detach: bool, state: &ApiState) -> Result<u32, ApiError> {
         
         // Write PID file
         let pid_file_path = get_pid_file_path(state);
+        tracing::debug!("Writing PID {} to {:?}", pid, pid_file_path);
         write_pid_file(&pid_file_path, pid)?;
         
         tracing::info!("Scheduler started in detached mode with PID: {}", pid);

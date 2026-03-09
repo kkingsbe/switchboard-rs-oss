@@ -2,6 +2,7 @@
 //!
 //! This module contains the run_up command handler and its helper functions.
 
+use crate::api::registry::derive_instance_id_from_config;
 use crate::config::{Config, ConfigError};
 use crate::docker::{check_docker_available, DockerClient};
 use crate::logging::init_logging;
@@ -371,6 +372,10 @@ pub async fn run_up(
     let config_path = config_path.unwrap_or_else(|| "./switchboard.toml".to_string());
     let path = Path::new(&config_path);
 
+    // Derive instance_id from config path to match API expectations
+    let instance_id = derive_instance_id_from_config(&config_path);
+    tracing::debug!("Derived instance ID from config path: {}", instance_id);
+
     let config = match Config::from_toml(path) {
         Ok(config) => config,
         Err(e @ ConfigError::ParseError { .. }) => {
@@ -391,9 +396,9 @@ pub async fn run_up(
         }
     };
 
-    // Check for and clean up stale PID file before starting
-    let pid_file_path = Path::new(".switchboard/scheduler.pid");
-    if let Err(e) = check_and_clean_stale_pid_file(pid_file_path) {
+    // Check for and clean up stale PID file before starting (instance-specific path)
+    let pid_file_path = Path::new(".switchboard").join("instances").join(&instance_id).join("scheduler.pid");
+    if let Err(e) = check_and_clean_stale_pid_file(&pid_file_path) {
         eprintln!("  ⚠ Warning: Failed to check/clean stale PID file: {}", e);
         // Continue anyway, the error is not fatal
     }
@@ -551,17 +556,17 @@ pub async fn run_up(
     if args.daemon {
         if let Some(ref mut sched) = scheduler {
             if registered_count > 0 {
-                // Create .switchboard directory if it doesn't exist
-                let switchboard_dir = Path::new(".switchboard");
-                if !switchboard_dir.exists() {
-                    if let Err(e) = std::fs::create_dir_all(switchboard_dir) {
-                        eprintln!("  ⚠ Warning: Failed to create .switchboard directory: {}", e);
+                // Create instance-specific directory if it doesn't exist
+                let instance_dir = Path::new(".switchboard").join("instances").join(&instance_id);
+                if !instance_dir.exists() {
+                    if let Err(e) = std::fs::create_dir_all(&instance_dir) {
+                        eprintln!("  ⚠ Warning: Failed to create instance directory: {}", e);
                         return Err(e.into());
                     }
                 }
 
-                // Write PID file
-                let pid_file_path = Path::new(".switchboard/scheduler.pid");
+                // Write PID file to instance-specific location
+                let pid_file_path = instance_dir.join("scheduler.pid");
                 let current_pid = std::process::id();
                 if let Err(e) = std::fs::write(&pid_file_path, current_pid.to_string()) {
                     eprintln!("  ⚠ Warning: Failed to write PID file: {}", e);
