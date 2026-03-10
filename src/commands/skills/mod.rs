@@ -7,7 +7,7 @@ pub mod update;
 
 pub use update::{handle_skills_update, reinstall_skill_from_source, update_skill_timestamp};
 
-pub use installed::{format_skill_entry, format_skills_list, get_agent_assignment_display};
+pub use installed::{format_skill_entry_table, format_skills_list, get_agent_assignment_display};
 
 pub use types::*;
 
@@ -299,9 +299,10 @@ mod tests {
             source: None,
         };
 
-        let entry = format_skill_entry(&skill, &config, None);
-        assert!(entry.contains("...")); // Should have truncation marker
-        assert!(entry.len() < 150); // Should be reasonably short
+        let entry = format_skill_entry_table(&skill, None, "global");
+        // entry is a tuple (source, installed_at, name_with_scope)
+        assert!(entry.2.contains("...")); // Should have truncation marker
+        assert!(entry.2.len() < 150); // Should be reasonably short
     }
 
     #[test]
@@ -318,8 +319,9 @@ mod tests {
             source: None,
         };
 
-        let entry = format_skill_entry(&skill, &config, None);
-        assert!(entry.contains("<no description>"));
+        let entry = format_skill_entry_table(&skill, None, "global");
+        // entry is a tuple (source, installed_at, name_with_scope)
+        assert!(entry.2.contains("<no description>"));
     }
 
     #[test]

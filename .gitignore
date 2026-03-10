@@ -4,12 +4,16 @@
 *.pdb
 Cargo.lock
 
+# Skills lock files
+skills-lock.json
+skills/skills.lock.json
+
 # Test coverage
 /llvm-cov
 *.profraw
 
 # Switchboard runtime
-.switchboard/logs/
+.switchboard/logs
 .sprint_complete
 .architect_in_progress
 .state/
@@ -32,10 +36,9 @@ switchboard.env
 .env
 
 # Agent runtime artifacts
-coverage/html/
-comms/outbox/
+coverage/
+summarizer-narratives/
+reports/
+
+# Runtime logs
 logs/
-plans/
-skills-lock.json
-BLOCKERS.md
-FRONTEND_PRD.md

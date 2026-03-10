@@ -9,6 +9,7 @@ use crate::skills::{
     get_agents_using_skill, read_lockfile, scan_global_skills, scan_project_skills, LockfileStruct,
     SkillLockEntry, SkillMetadata, SkillsError,
 };
+use comfy_table::{Attribute, Cell, Table};
 use std::path::PathBuf;
 
 use super::{ExitCode, SkillsInstalled};
@@ -162,58 +163,88 @@ pub fn format_skills_list(
     lockfile: Option<&LockfileStruct>,
 ) -> String {
     let mut output = String::new();
-    // Column widths: name(20) + description(30) + source(25) + installed_at(20) + agents ~= 95 chars
-    let separator = "─".repeat(95);
-
-    // Header
-    output.push_str("Installed Skills\n\n");
-    output.push_str("  Name                 Description                Source                     Installed At            Agents\n");
-    output.push_str(&format!("  {}\n", separator));
 
     // Check if we have any skills
     let total_skills = project_skills.len() + global_skills.len();
 
     if total_skills == 0 {
         // Empty state
-        output.push_str("  No skills installed\n\n");
+        output.push_str("No skills installed\n\n");
         output.push_str("  Browse available skills with: switchboard skills list\n");
         output.push_str("  Install a skill with: switchboard skills install <source>\n");
         output.push('\n');
     } else {
+        // Build table with results
+        let mut table = Table::new();
+        table
+            .load_preset(comfy_table::presets::UTF8_FULL)
+            .set_header(vec![
+                Cell::new("Name").add_attribute(Attribute::Bold),
+                Cell::new("Description").add_attribute(Attribute::Bold),
+                Cell::new("Source").add_attribute(Attribute::Bold),
+                Cell::new("Installed At").add_attribute(Attribute::Bold),
+                Cell::new("Agents").add_attribute(Attribute::Bold),
+            ]);
+
         // Project skills section (displayed first as they take precedence over global skills)
         if !project_skills.is_empty() {
-            output.push_str("  Project (./skills/)\n");
-            output.push_str(&format!("  {}\n", separator));
+            output.push_str("Project (./skills/)\n");
             for skill in &project_skills {
                 let lockfile_entry = lockfile.and_then(|lf| lf.skills.get(&skill.name));
-                output.push_str(&format_skill_entry(skill, config, lockfile_entry));
+                let (source, installed_at, name_with_scope) =
+                    format_skill_entry_table(skill, lockfile_entry, "project");
+                table.add_row(vec![
+                    Cell::new(&name_with_scope),
+                    Cell::new(&skill.description.clone().unwrap_or_else(|| "<no description>".to_string())),
+                    Cell::new(&source),
+                    Cell::new(&installed_at),
+                    Cell::new(&get_agent_assignment_display(&skill.name, config)),
+                ]);
             }
+            output.push_str(&table.to_string());
             output.push('\n');
+            // Reset table for global skills
+            table = Table::new();
+            table
+                .load_preset(comfy_table::presets::UTF8_FULL)
+                .set_header(vec![
+                    Cell::new("Name").add_attribute(Attribute::Bold),
+                    Cell::new("Description").add_attribute(Attribute::Bold),
+                    Cell::new("Source").add_attribute(Attribute::Bold),
+                    Cell::new("Installed At").add_attribute(Attribute::Bold),
+                    Cell::new("Agents").add_attribute(Attribute::Bold),
+                ]);
         }
 
         // Global skills section (displayed after project skills with visual separation)
         if !global_skills.is_empty() {
-            output.push_str("  Global (./skills/)\n");
-            output.push_str(&format!("  {}\n", separator));
+            output.push_str("Global (./skills/)\n");
             for skill in &global_skills {
                 let lockfile_entry = lockfile.and_then(|lf| lf.skills.get(&skill.name));
-                output.push_str(&format_skill_entry(skill, config, lockfile_entry));
+                let (source, installed_at, name_with_scope) =
+                    format_skill_entry_table(skill, lockfile_entry, "global");
+                table.add_row(vec![
+                    Cell::new(&name_with_scope),
+                    Cell::new(&skill.description.clone().unwrap_or_else(|| "<no description>".to_string())),
+                    Cell::new(&source),
+                    Cell::new(&installed_at),
+                    Cell::new(&get_agent_assignment_display(&skill.name, config)),
+                ]);
             }
+            output.push_str(&table.to_string());
             output.push('\n');
         }
 
         // Count summary (only show if there are skills)
         if total_skills > 0 {
             output.push_str(&format!(
-                "  {} skills installed ({} project, {} global)\n",
+                "{} skills installed ({} project, {} global)\n",
                 total_skills,
                 project_skills.len(),
                 global_skills.len()
             ));
         }
     }
-
-    // Warnings section (only display if there are warnings)
 
     // Warnings section (only display if there are warnings)
     if !warnings.is_empty() {
@@ -228,31 +259,23 @@ pub fn format_skills_list(
 }
 
 /// Formats a single skill entry with name, description, source, installed_at, and agent assignments
+/// Returns (source, installed_at, name_with_scope) for use with comfy_table
 ///
 /// # Arguments
 ///
 /// * `skill` - The skill metadata to format
-/// * `config` - The switchboard configuration for agent assignment lookup
 /// * `lockfile_entry` - Optional reference to the lockfile entry for this skill
+/// * `scope` - The scope of the skill ("project" or "global")
 ///
 /// # Returns
 ///
-/// A formatted string with fixed-width columns for alignment.
-pub fn format_skill_entry(
+/// A tuple of (source, installed_at, name_with_scope) strings.
+pub fn format_skill_entry_table(
     skill: &SkillMetadata,
-    config: &Config,
     lockfile_entry: Option<&SkillLockEntry>,
-) -> String {
-    let name = &skill.name;
-    let description = skill.description.as_deref().unwrap_or("<no description>");
-    let agents = get_agent_assignment_display(name, config);
-
-    // Truncate description if too long (keep it under 40 chars, leave room for "...")
-    let truncated_desc = if description.len() > 40 {
-        format!("{}...", &description[..37])
-    } else {
-        description.to_string()
-    };
+    scope: &str,
+) -> (String, String, String) {
+    let name_with_scope = format!("[{}] {}", scope, skill.name);
 
     // Get source and installed_at from lockfile entry, or show "Not in lockfile"
     let (source, installed_at) = match lockfile_entry {
@@ -260,16 +283,7 @@ pub fn format_skill_entry(
         None => ("Not in lockfile".to_string(), "-".to_string()),
     };
 
-    // Format with fixed-width columns for table alignment:
-    // - Name column: 20 chars
-    // - Description column: 30 chars
-    // - Source column: 25 chars
-    // - Installed at column: 20 chars
-    // - Agents column: variable width
-    format!(
-        "  {:.<20} {:.<30} {:.<25} {:.<20} {}\n",
-        name, truncated_desc, source, installed_at, agents
-    )
+    (source, installed_at, name_with_scope)
 }
 
 /// Gets a display string showing which agents have a skill assigned

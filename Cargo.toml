@@ -25,6 +25,7 @@ path = "src/main.rs"
 [dependencies]
 clap = { version = "4.5", features = ["derive"] }
 tokio = { version = "1.40", features = ["full"] }
+tokio-tungstenite = "0.24"
 bollard = "0.18"
 tokio-cron-scheduler = "0.15"
 serde = { version = "1.0", features = ["derive"] }
@@ -34,12 +35,17 @@ serde_repr = "0.1"
 toml = "0.8"
 chrono = "0.4"
 chrono-tz = "0.10"
-tracing = "0.1"
+tracing = { version = "0.1", features = ["attributes"] }
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 tracing-appender = "0.2"
 anyhow = "1.0"
 async-trait = "0.1"
 thiserror = "1.0"
+axum = { version = "0.7", default-features = false, features = ["json", "tokio", "http1", "ws"] }
+tower = { version = "0.5", features = ["limit"] }
+tower-http = { version = "0.6", features = ["trace"] }
+utoipa = "4"
+utoipa-swagger-ui = { version = "6", features = ["axum"] }
 futures = "0.3"
 bytes = "1.0"
 flate2 = "1.0"
@@ -63,6 +69,14 @@ twilight-gateway = "0.17"
 twilight-model = "0.17"
 twilight-http = "0.17"
 
+# Windows process control for gateway down command
+[target.'cfg(windows)'.dependencies]
+windows = { version = "0.58", features = [
+    "Win32_Foundation",
+    "Win32_System_Threading",
+    "Win32_System_ProcessStatus"
+] }
+
 [dev-dependencies]
 assert_cmd = "2.0"
 tempfile = "3.0"
@@ -76,8 +90,10 @@ serial_test = "0.10"
 http = "1.0"
 
 [features]
-default = ["discord"]
-integration = []
+default = ["discord", "api", "gateway", "utoipa"]
 scheduler = []
-streams = []
 discord = []
+gateway = []
+integration = []
+api = []
+utoipa = []

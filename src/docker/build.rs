@@ -52,6 +52,10 @@ pub fn create_build_context_tarball(
         // Add all files from the build context directory
         // Only include .kilocode directory (the Dockerfile only copies this)
         if build_context.is_dir() {
+            eprintln!(
+                "DEBUG: build_context is a directory: {}",
+                build_context.display()
+            );
             let entries = std::fs::read_dir(build_context)
                 .map_err(|e| anyhow::anyhow!("Failed to read build context: {}", e))?;
 
@@ -62,6 +66,13 @@ pub fn create_build_context_tarball(
                 let relative_path = path
                     .strip_prefix(build_context)
                     .map_err(|e| anyhow::anyhow!("Failed to get relative path: {}", e))?;
+
+                eprintln!(
+                    "DEBUG: Found entry in build_context: {} (is_file: {}, is_dir: {})",
+                    relative_path.display(),
+                    path.is_file(),
+                    path.is_dir()
+                );
 
                 // Skip the Dockerfile if it exists in the build context (we already added it)
                 if relative_path == Path::new("Dockerfile") {
@@ -75,8 +86,14 @@ pub fn create_build_context_tarball(
                     .and_then(|n| n.to_str())
                     .unwrap_or("");
                 if name != ".kilocode" {
+                    eprintln!("DEBUG: Skipping {} (not .kilocode)", name);
                     continue; // Skip everything except .kilocode
                 }
+
+                eprintln!(
+                    "DEBUG: Including .kilocode entry: {}",
+                    relative_path.display()
+                );
 
                 if path.is_file() {
                     let mut file = File::open(&path).map_err(|e| {
@@ -95,10 +112,25 @@ pub fn create_build_context_tarball(
                     header.set_mtime(0);
                     tar_builder.append_data(&mut header, relative_path, &mut file)?;
                 } else if path.is_dir() {
+                    // CRITICAL: Add directory entry to tarball before recursing
+                    // Without this, Docker COPY fails because directories don't exist
+                    let mut header = Header::new_gnu();
+                    header.set_entry_type(tar::EntryType::Directory);
+                    header.set_size(0);
+                    header.set_mode(0o755);
+                    header.set_mtime(0);
+                    eprintln!("DEBUG: Adding .kilocode directory entry to tarball");
+                    tar_builder.append_data(&mut header, relative_path, &mut std::io::empty())?;
+
                     // Recursively add directories to the tarball
                     add_directory_to_tar(&mut tar_builder, &path, build_context)?;
                 }
             }
+        } else {
+            eprintln!(
+                "DEBUG: build_context is NOT a directory: {}",
+                build_context.display()
+            );
         }
 
         drop(tar_builder);
@@ -129,6 +161,11 @@ pub fn add_directory_to_tar<W: Write>(
     use std::fs::File;
     use tar::Header;
 
+    eprintln!(
+        "DEBUG: add_directory_to_tar called for: {}",
+        dir_path.display()
+    );
+
     let entries = std::fs::read_dir(dir_path)
         .map_err(|e| anyhow::anyhow!("Failed to read directory {}: {}", dir_path.display(), e))?;
 
@@ -138,6 +175,13 @@ pub fn add_directory_to_tar<W: Write>(
         let relative_path = path
             .strip_prefix(base_path)
             .map_err(|e| anyhow::anyhow!("Failed to get relative path: {}", e))?;
+
+        eprintln!(
+            "DEBUG: Processing path: {} (is_file: {}, is_dir: {})",
+            relative_path.display(),
+            path.is_file(),
+            path.is_dir()
+        );
 
         if path.is_file() {
             let mut file = File::open(&path)
@@ -153,8 +197,22 @@ pub fn add_directory_to_tar<W: Write>(
             header.set_size(file_size);
             header.set_mode(0o644);
             header.set_mtime(0);
+            eprintln!("DEBUG: Adding file to tarball: {}", relative_path.display());
             tar_builder.append_data(&mut header, relative_path, &mut file)?;
         } else if path.is_dir() {
+            // CRITICAL: Add directory entry to tarball before recursing
+            // Without this, Docker COPY fails because directories don't exist
+            let mut header = Header::new_gnu();
+            header.set_entry_type(tar::EntryType::Directory);
+            header.set_size(0);
+            header.set_mode(0o755);
+            header.set_mtime(0);
+            eprintln!(
+                "DEBUG: Adding directory entry to tarball: {}",
+                relative_path.display()
+            );
+            tar_builder.append_data(&mut header, relative_path, &mut std::io::empty())?;
+
             add_directory_to_tar(tar_builder, &path, base_path)?;
         }
     }

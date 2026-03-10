@@ -1,0 +1,677 @@
+{
+  "generated_at": "2026-03-06T14:25:00Z",
+  "project": {
+    "name": "switchboard",
+    "language": "Rust",
+    "version": "0.1.0",
+    "description": "Cron for AI coding agents - Schedule and run AI coding agents with Docker isolation, cron-based scheduling, and Discord integration"
+  },
+  "scan_summary": {
+    "source_files": 110,
+    "test_files": 300,
+    "existing_kb_articles": 6,
+    "recent_commits_30d": null
+  },
+  "cli_commands": [
+    {
+      "command": "switchboard up",
+      "description": "Build agent image and start scheduler",
+      "arguments": [],
+      "flags": ["--detach"],
+      "source_file": "src/cli/mod.rs:124"
+    },
+    {
+      "command": "switchboard run <agent_name>",
+      "description": "Immediately execute a single agent",
+      "arguments": [{"name": "agent_name", "type": "string", "required": true}],
+      "flags": [],
+      "source_file": "src/cli/mod.rs:127"
+    },
+    {
+      "command": "switchboard build",
+      "description": "Build or rebuild agent Docker image",
+      "arguments": [],
+      "flags": [],
+      "source_file": "src/cli/mod.rs:130"
+    },
+    {
+      "command": "switchboard list",
+      "description": "Print all configured agents, their schedules, and prompts",
+      "arguments": [],
+      "flags": [],
+      "source_file": "src/cli/mod.rs:133"
+    },
+    {
+      "command": "switchboard logs [agent_name]",
+      "description": "View logs from agent runs",
+      "arguments": [{"name": "agent_name", "type": "string", "required": false}],
+      "flags": ["--follow", "--tail <N>"],
+      "source_file": "src/cli/mod.rs:136"
+    },
+    {
+      "command": "switchboard metrics",
+      "description": "Display agent execution metrics",
+      "arguments": [],
+      "flags": ["--detailed", "--agent <NAME>", "--config <PATH>"],
+      "source_file": "src/cli/mod.rs:139"
+    },
+    {
+      "command": "switchboard down",
+      "description": "Stop scheduler and any running agent containers",
+      "arguments": [],
+      "flags": ["--cleanup", "-c"],
+      "source_file": "src/cli/mod.rs:142"
+    },
+    {
+      "command": "switchboard validate",
+      "description": "Parse and validate config file",
+      "arguments": [],
+      "flags": [],
+      "source_file": "src/cli/mod.rs:145"
+    },
+    {
+      "command": "switchboard skills list",
+      "description": "List available skills from registry",
+      "arguments": [{"name": "query", "type": "string", "required": false}],
+      "flags": ["--search", "--limit"],
+      "source_file": "src/commands/skills/types.rs:49"
+    },
+    {
+      "command": "switchboard skills install <source>",
+      "description": "Install a skill from GitHub, npm, or local path",
+      "arguments": [{"name": "source", "type": "string", "required": true}],
+      "flags": ["--global", "--yes"],
+      "source_file": "src/commands/skills/types.rs:72"
+    },
+    {
+      "command": "switchboard skills installed",
+      "description": "List currently installed skills",
+      "arguments": [],
+      "flags": ["--global"],
+      "source_file": "src/commands/skills/types.rs:90"
+    },
+    {
+      "command": "switchboard skills update [skill-name]",
+      "description": "Update installed skills to latest versions",
+      "arguments": [{"name": "skill_name", "type": "string", "required": false}],
+      "flags": [],
+      "source_file": "src/commands/skills/types.rs:108"
+    },
+    {
+      "command": "switchboard skills remove <skill_name>",
+      "description": "Remove an installed skill",
+      "arguments": [{"name": "skill_name", "type": "string", "required": true}],
+      "flags": ["--global", "--yes"],
+      "source_file": "src/commands/skills/types.rs:132"
+    },
+    {
+      "command": "switchboard workflows list",
+      "description": "List available workflows from registry",
+      "arguments": [],
+      "flags": ["--search", "--limit"],
+      "source_file": "src/commands/workflows/mod.rs"
+    },
+    {
+      "command": "switchboard workflows install <workflow_name>",
+      "description": "Install a workflow from registry",
+      "arguments": [{"name": "workflow_name", "type": "string", "required": true}],
+      "flags": ["--yes"],
+      "source_file": "src/commands/workflows/mod.rs"
+    },
+    {
+      "command": "switchboard workflows installed",
+      "description": "List currently installed workflows",
+      "arguments": [],
+      "flags": [],
+      "source_file": "src/commands/workflows/mod.rs"
+    },
+    {
+      "command": "switchboard workflows update [workflow_name]",
+      "description": "Update installed workflows to latest versions",
+      "arguments": [{"name": "workflow_name", "type": "string", "required": false}],
+      "flags": [],
+      "source_file": "src/commands/workflows/mod.rs"
+    },
+    {
+      "command": "switchboard workflows remove <workflow_name>",
+      "description": "Remove an installed workflow",
+      "arguments": [{"name": "workflow_name", "type": "string", "required": true}],
+      "flags": ["--yes"],
+      "source_file": "src/commands/workflows/mod.rs"
+    },
+    {
+      "command": "switchboard workflows validate <path>",
+      "description": "Validate a workflow manifest file",
+      "arguments": [{"name": "path", "type": "string", "required": true}],
+      "flags": [],
+      "source_file": "src/commands/workflows/mod.rs"
+    },
+    {
+      "command": "switchboard workflows apply <workflow_name>",
+      "description": "Apply a workflow to generate agents",
+      "arguments": [{"name": "workflow_name", "type": "string", "required": true}],
+      "flags": [],
+      "source_file": "src/commands/workflows/mod.rs"
+    },
+    {
+      "command": "switchboard status",
+      "description": "Check scheduler health and status",
+      "arguments": [],
+      "flags": [],
+      "source_file": "src/cli/mod.rs:154"
+    },
+    {
+      "command": "switchboard gateway",
+      "description": "Start the Discord Gateway service (HTTP/WS server)",
+      "arguments": [],
+      "flags": [],
+      "source_file": "src/cli/mod.rs:158",
+      "feature": "gateway"
+    }
+  ],
+  "config_fields": [
+    {
+      "section": "settings",
+      "field": "image_name",
+      "type": "string",
+      "required": false,
+      "default": "switchboard-agent",
+      "description": "Docker image for agent containers",
+      "source_file": "switchboard.sample.toml:20"
+    },
+    {
+      "section": "settings",
+      "field": "image_tag",
+      "type": "string",
+      "required": false,
+      "default": "latest",
+      "description": "Docker image tag",
+      "source_file": "switchboard.sample.toml:23"
+    },
+    {
+      "section": "settings",
+      "field": "log_dir",
+      "type": "string",
+      "required": false,
+      "default": ".switchboard/logs",
+      "description": "Directory for log files",
+      "source_file": "switchboard.sample.toml:26"
+    },
+    {
+      "section": "settings",
+      "field": "timezone",
+      "type": "string",
+      "required": false,
+      "default": "system",
+      "description": "IANA timezone for scheduling",
+      "source_file": "switchboard.sample.toml:35"
+    },
+    {
+      "section": "settings",
+      "field": "overlap_mode",
+      "type": "string",
+      "required": false,
+      "default": "skip",
+      "description": "How to handle concurrent executions: skip or queue",
+      "source_file": "switchboard.sample.toml:40"
+    },
+    {
+      "section": "agent",
+      "field": "name",
+      "type": "string",
+      "required": true,
+      "default": null,
+      "description": "Unique agent identifier",
+      "source_file": "switchboard.sample.toml:56"
+    },
+    {
+      "section": "agent",
+      "field": "schedule",
+      "type": "string",
+      "required": true,
+      "default": null,
+      "description": "Cron expression for scheduling",
+      "source_file": "switchboard.sample.toml:61"
+    },
+    {
+      "section": "agent",
+      "field": "prompt",
+      "type": "string",
+      "required": false,
+      "default": null,
+      "description": "Inline prompt text (mutually exclusive with prompt_file)",
+      "source_file": "switchboard.sample.toml:64"
+    },
+    {
+      "section": "agent",
+      "field": "prompt_file",
+      "type": "string",
+      "required": false,
+      "default": null,
+      "description": "Path to prompt file (mutually exclusive with prompt)",
+      "source_file": "switchboard.sample.toml:130"
+    },
+    {
+      "section": "agent",
+      "field": "env",
+      "type": "table",
+      "required": false,
+      "default": null,
+      "description": "Environment variables for agent container",
+      "source_file": "switchboard.sample.toml:88"
+    },
+    {
+      "section": "agent",
+      "field": "readonly",
+      "type": "boolean",
+      "required": false,
+      "default": "false",
+      "description": "Run agent in read-only mode",
+      "source_file": "switchboard.sample.toml:92"
+    },
+    {
+      "section": "agent",
+      "field": "timeout",
+      "type": "string",
+      "required": false,
+      "default": "30m",
+      "description": "Max execution time (format: <number><unit>, unit: s/m/h)",
+      "source_file": "switchboard.sample.toml:97"
+    },
+    {
+      "section": "agent",
+      "field": "overlap_mode",
+      "type": "string",
+      "required": false,
+      "default": "skip",
+      "description": "Agent-specific overlap mode (overrides global)",
+      "source_file": "switchboard.sample.toml:102"
+    },
+    {
+      "section": "agent",
+      "field": "max_queue_size",
+      "type": "integer",
+      "required": false,
+      "default": 3,
+      "description": "Max queued runs when overlap_mode is queue",
+      "source_file": "switchboard.sample.toml:106"
+    },
+    {
+      "section": "agent",
+      "field": "skills",
+      "type": "array",
+      "required": false,
+      "default": null,
+      "description": "List of skills to install in agent container",
+      "source_file": "switchboard.sample.toml:111"
+    },
+    {
+      "section": "discord",
+      "field": "enabled",
+      "type": "boolean",
+      "required": false,
+      "default": "false",
+      "description": "Enable Discord concierge integration",
+      "source_file": "switchboard.sample.toml:268"
+    },
+    {
+      "section": "discord",
+      "field": "token_env",
+      "type": "string",
+      "required": false,
+      "default": "${DISCORD_TOKEN}",
+      "description": "Discord bot token (supports env var syntax)",
+      "source_file": "switchboard.sample.toml:275"
+    },
+    {
+      "section": "discord",
+      "field": "channel_id",
+      "type": "string",
+      "required": false,
+      "default": null,
+      "description": "Discord channel ID to listen on",
+      "source_file": "switchboard.sample.toml:280"
+    },
+    {
+      "section": "discord",
+      "field": "intents",
+      "type": "integer",
+      "required": false,
+      "default": 21504,
+      "description": "Gateway intents for Discord events",
+      "source_file": "switchboard.sample.toml:291"
+    },
+    {
+      "section": "discord.llm",
+      "field": "provider",
+      "type": "string",
+      "required": false,
+      "default": "openrouter",
+      "description": "LLM provider (currently only openrouter)",
+      "source_file": "switchboard.sample.toml:300"
+    },
+    {
+      "section": "discord.llm",
+      "field": "api_key_env",
+      "type": "string",
+      "required": false,
+      "default": "${OPENROUTER_API_KEY}",
+      "description": "OpenRouter API key (supports env var syntax)",
+      "source_file": "switchboard.sample.toml:306"
+    },
+    {
+      "section": "discord.llm",
+      "field": "model",
+      "type": "string",
+      "required": false,
+      "default": "anthropic/claude-sonnet-4",
+      "description": "LLM model identifier",
+      "source_file": "switchboard.sample.toml:310"
+    },
+    {
+      "section": "discord.llm",
+      "field": "max_tokens",
+      "type": "integer",
+      "required": false,
+      "default": 1024,
+      "description": "Max tokens per LLM response",
+      "source_file": "switchboard.sample.toml:314"
+    },
+    {
+      "section": "discord.llm",
+      "field": "system_prompt_file",
+      "type": "string",
+      "required": false,
+      "default": null,
+      "description": "Path to custom system prompt file",
+      "source_file": "switchboard.sample.toml:320"
+    },
+    {
+      "section": "discord.conversation",
+      "field": "max_history",
+      "type": "integer",
+      "required": false,
+      "default": 30,
+      "description": "Max conversation history per user",
+      "source_file": "switchboard.sample.toml:329"
+    },
+    {
+      "section": "discord.conversation",
+      "field": "ttl_minutes",
+      "type": "integer",
+      "required": false,
+      "default": 120,
+      "description": "Conversation TTL in minutes",
+      "source_file": "switchboard.sample.toml:334"
+    }
+  ],
+  "features": [
+    {
+      "name": "Cron Scheduling",
+      "category": "core",
+      "description": "Schedule agents via 5-field cron expressions using tokio-cron-scheduler",
+      "modules": ["src/scheduler/mod.rs", "src/scheduler/cron_helper.rs"],
+      "user_facing": true,
+      "documented_in_readme": true
+    },
+    {
+      "name": "Docker Isolation",
+      "category": "core",
+      "description": "Run each agent in an isolated Docker container with its own workspace",
+      "modules": ["src/docker/mod.rs", "src/docker/client.rs", "src/docker/run/run.rs"],
+      "user_facing": true,
+      "documented_in_readme": true
+    },
+    {
+      "name": "Skills System",
+      "category": "core",
+      "description": "Reusable, versioned agent configurations installed via npx skills CLI",
+      "modules": ["src/skills/mod.rs", "src/skills/manager.rs", "src/skills/lockfile.rs", "src/skills/metadata.rs"],
+      "user_facing": true,
+      "documented_in_readme": true
+    },
+    {
+      "name": "Workflows",
+      "category": "core",
+      "description": "Manage and apply pre-built agent configurations from switchboard-workflows registry",
+      "modules": ["src/workflows/mod.rs", "src/workflows/manifest.rs", "src/workflows/github.rs"],
+      "user_facing": true,
+      "documented_in_readme": false
+    },
+    {
+      "name": "Discord Concierge",
+      "category": "integration",
+      "description": "Conversational AI bot for Discord servers with tool execution capabilities",
+      "modules": ["src/discord/mod.rs", "src/discord/gateway.rs", "src/discord/listener.rs", "src/discord/conversation.rs", "src/discord/llm/"],
+      "user_facing": true,
+      "documented_in_readme": true,
+      "feature_flag": "discord"
+    },
+    {
+      "name": "Discord Gateway",
+      "category": "integration",
+      "description": "HTTP/WebSocket server for receiving Discord messages and forwarding to project endpoints",
+      "modules": ["src/gateway/mod.rs", "src/gateway/server.rs", "src/gateway/protocol.rs"],
+      "user_facing": true,
+      "documented_in_readme": false,
+      "feature_flag": "gateway"
+    },
+    {
+      "name": "Metrics Collection",
+      "category": "core",
+      "description": "Track and display agent execution metrics (duration, exit codes, skill install stats)",
+      "modules": ["src/metrics/mod.rs", "src/metrics/collector.rs", "src/metrics/store.rs"],
+      "user_facing": true,
+      "documented_in_readme": true
+    },
+    {
+      "name": "Overlap Mode (Queue/Skip)",
+      "category": "core",
+      "description": "Handle concurrent agent executions: skip new runs or queue for sequential execution",
+      "modules": ["src/scheduler/mod.rs"],
+      "user_facing": true,
+      "documented_in_readme": true
+    },
+    {
+      "name": "Environment Variable Resolution",
+      "category": "core",
+      "description": "Support ${VAR} and ${VAR:-default} syntax in configuration files",
+      "modules": ["src/config/env.rs", "src/config/env_ext.rs"],
+      "user_facing": true,
+      "documented_in_readme": true
+    }
+  ],
+  "api_surface": {
+    "discord_bot_tools": [
+      {
+        "name": "file_bug",
+        "description": "File a bug report into comms/inbox/",
+        "parameters": ["title", "description", "severity"],
+        "source_file": "src/discord/tools/definitions.rs"
+      },
+      {
+        "name": "file_task",
+        "description": "File a task or feature request",
+        "parameters": ["title", "description", "priority"],
+        "source_file": "src/discord/tools/definitions.rs"
+      },
+      {
+        "name": "get_status",
+        "description": "Check agent status and TODO progress",
+        "parameters": [],
+        "source_file": "src/discord/tools/definitions.rs"
+      },
+      {
+        "name": "list_inbox",
+        "description": "List pending items in comms/inbox/",
+        "parameters": [],
+        "source_file": "src/discord/tools/definitions.rs"
+      },
+      {
+        "name": "read_outbox",
+        "description": "Read agent messages from comms/outbox/",
+        "parameters": [],
+        "source_file": "src/discord/tools/definitions.rs"
+      },
+      {
+        "name": "read_todos",
+        "description": "Read TODO file progress",
+        "parameters": [],
+        "source_file": "src/discord/tools/definitions.rs"
+      },
+      {
+        "name": "read_backlog",
+        "description": "Read BACKLOG.md",
+        "parameters": [],
+        "source_file": "src/discord/tools/definitions.rs"
+      },
+      {
+        "name": "add_to_backlog",
+        "description": "Add items to BACKLOG.md",
+        "parameters": ["content"],
+        "source_file": "src/discord/tools/definitions.rs"
+      },
+      {
+        "name": "read_file",
+        "description": "Read any project file (with path traversal protection)",
+        "parameters": ["path"],
+        "source_file": "src/discord/tools/definitions.rs"
+      },
+      {
+        "name": "list_directory",
+        "description": "List directory contents",
+        "parameters": ["path"],
+        "source_file": "src/discord/tools/definitions.rs"
+      }
+    ],
+    "gateway_protocol": {
+      "description": "WebSocket and HTTP protocol for project<->gateway communication",
+      "messages": ["Register", "RegisterAck", "RegisterError", "Heartbeat", "HeartbeatAck", "ChannelSubscribe", "ChannelSubscribeAck", "ChannelUnsubscribe", "ChannelUnsubscribeAck"],
+      "source_file": "src/gateway/protocol.rs"
+    }
+  },
+  "architecture": {
+    "patterns": [
+      "containerized execution via Docker",
+      "cron-based scheduling via tokio-cron-scheduler",
+      "async/await via tokio",
+      "event-driven Discord gateway",
+      "trait-based abstractions for Docker and process execution"
+    ],
+    "modules": [
+      {
+        "path": "src/cli/mod.rs",
+        "responsibility": "CLI argument parsing and command dispatch"
+      },
+      {
+        "path": "src/config/mod.rs",
+        "responsibility": "TOML configuration parsing and validation"
+      },
+      {
+        "path": "src/scheduler/mod.rs",
+        "responsibility": "Cron evaluation, agent triggering, and queue management"
+      },
+      {
+        "path": "src/docker/mod.rs",
+        "responsibility": "Docker client abstraction and container lifecycle"
+      },
+      {
+        "path": "src/docker/run/run.rs",
+        "responsibility": "Agent container execution and skill installation"
+      },
+      {
+        "path": "src/skills/mod.rs",
+        "responsibility": "Skill discovery, installation, and management via npx"
+      },
+      {
+        "path": "src/workflows/mod.rs",
+        "responsibility": "Workflow management from GitHub registry"
+      },
+      {
+        "path": "src/discord/mod.rs",
+        "responsibility": "Discord bot integration and LLM conversation"
+      },
+      {
+        "path": "src/gateway/mod.rs",
+        "responsibility": "HTTP/WS server for Discord message relay"
+      },
+      {
+        "path": "src/metrics/mod.rs",
+        "responsibility": "Execution metrics collection and storage"
+      },
+      {
+        "path": "src/logger/mod.rs",
+        "responsibility": "Logging to files and terminal"
+      }
+    ],
+    "extension_points": [
+      "Skills system for reusable agent configurations",
+      "Discord bot with tool execution",
+      "Gateway WebSocket protocol for external integrations",
+      "Workflow registry for community agent configurations"
+    ]
+  },
+  "setup": {
+    "prerequisites": [
+      "Docker 20.10+",
+      "Rust 1.70+",
+      "Kilo Code token (for AI agent execution)"
+    ],
+    "install_methods": [
+      "cargo install --path .",
+      "Build Docker image: switchboard build"
+    ],
+    "env_vars": [
+      "DISCORD_TOKEN (for Discord bot)",
+      "OPENROUTER_API_KEY (for LLM in Discord)",
+      "KILOCODE_TOKEN (for AI agent execution)",
+      "KILOCODE_MODEL (optional, default: z-ai/glm-4.7)"
+    ],
+    "docker_usage": "Agent isolation via Docker containers - each agent runs in its own container with mounted workspace",
+    "config_file": "switchboard.toml (or custom path via --config)"
+  },
+  "integrations": [
+    {
+      "name": "Discord",
+      "type": "bot",
+      "config_section": "[discord]",
+      "requires": ["DISCORD_TOKEN", "channel_id"],
+      "description": "Conversational AI bot for Discord servers"
+    },
+    {
+      "name": "OpenRouter",
+      "type": "llm_provider",
+      "config_section": "[discord.llm]",
+      "requires": ["OPENROUTER_API_KEY"],
+      "description": "LLM provider for Discord concierge"
+    },
+    {
+      "name": "Kilo Code",
+      "type": "ai_platform",
+      "config_section": "external",
+      "requires": ["KILOCODE_TOKEN"],
+      "description": "AI coding agent execution platform"
+    },
+    {
+      "name": "GitHub",
+      "type": "registry",
+      "config_section": "workflows",
+      "requires": [],
+      "description": "Workflow and skill registry via GitHub releases"
+    },
+    {
+      "name": "Docker",
+      "type": "container_runtime",
+      "config_section": "implicit",
+      "requires": ["Docker daemon running"],
+      "description": "Agent container isolation"
+    }
+  ],
+  "recent_changes": {
+    "new_features": [],
+    "modified_features": [],
+    "removed_features": [],
+    "breaking_changes": [],
+    "note": "Git log unavailable - cannot retrieve recent commits without execute_command access"
+  }
+}

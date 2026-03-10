@@ -29,7 +29,7 @@
 //! ```
 
 use std::sync::Arc;
-use tokio::sync::Mutex;
+use tokio::sync::{mpsc, Mutex};
 
 use anyhow::Result;
 
@@ -39,7 +39,8 @@ pub mod config;
 pub use config::{
     get_discord_channel_id, get_discord_token, get_openrouter_api_key, load_discord_config,
     load_discord_section_from_toml, load_system_prompt, DiscordConfig, DiscordEnvConfig,
-    DiscordSection, LlmConfig, DEFAULT_SYSTEM_PROMPT, DISCORD_TOKEN_ENV, OPENROUTER_API_KEY_ENV,
+    DiscordSection, GatewayClientConfig, LlmConfig, DEFAULT_SYSTEM_PROMPT, DISCORD_TOKEN_ENV,
+    OPENROUTER_API_KEY_ENV,
 };
 
 // Import resolve_config_value for handling ${VAR} syntax in config
@@ -55,6 +56,14 @@ pub mod gateway;
 
 // Re-export gateway types
 pub use gateway::{DiscordEvent, DiscordGateway, GatewayCommand, GatewayError, GatewayOpcode};
+
+/// Gateway client module for auto-connect functionality.
+pub mod gateway_client;
+
+// Re-export gateway client types
+pub use gateway_client::{
+    create_gateway_connection, GatewayClientError, GatewayClientMessage, GatewayConnection,
+};
 
 /// Discord API module.
 ///
@@ -380,6 +389,64 @@ pub async fn start_discord_listener_with_shutdown(
         );
         DEFAULT_INTENTS
     };
+
+    // Extract gateway configuration if present
+    let gateway_config = if let Some(ref toml_cfg) = toml_config {
+        toml_cfg.gateway.clone()
+    } else {
+        None
+    };
+
+    // Start gateway client if configured
+    if let Some(ref gateway_cfg) = gateway_config {
+        if gateway_cfg.enabled {
+            tracing::info!(
+                "Gateway client: Auto-connect enabled to {} with project_name: {}",
+                gateway_cfg.url,
+                gateway_cfg.project_name
+            );
+
+            // Create a channel for gateway client messages
+            let (mut gateway_tx, mut gateway_rx) = mpsc::channel::<GatewayClientMessage>(100);
+
+            // Create gateway connection
+            let mut gateway_connection = GatewayConnection::new(
+                gateway_cfg.clone(),
+                shutdown_rx.as_ref().map(|rx| rx.resubscribe()),
+            );
+
+            // Start the gateway connection
+            if let Err(e) = gateway_connection.start().await {
+                tracing::error!("Gateway client: Failed to start: {}", e);
+            } else {
+                tracing::info!("Gateway client: Connection started");
+            }
+
+            // Spawn a task to handle gateway client messages
+            tokio::spawn(async move {
+                while let Some(msg) = gateway_rx.recv().await {
+                    match msg {
+                        GatewayClientMessage::Connected => {
+                            tracing::info!("Gateway client: Connected to gateway server");
+                        }
+                        GatewayClientMessage::Disconnected => {
+                            tracing::info!("Gateway client: Disconnected from gateway server");
+                        }
+                        GatewayClientMessage::Error(e) => {
+                            tracing::error!("Gateway client error: {}", e);
+                        }
+                        GatewayClientMessage::Gateway(gateway_msg) => {
+                            tracing::debug!("Gateway client received: {:?}", gateway_msg);
+                            // TODO: Route message to appropriate handler
+                        }
+                        GatewayClientMessage::Text(text) => {
+                            tracing::debug!("Gateway client received text: {}", text);
+                        }
+                    }
+                }
+            });
+        }
+    }
 
     eprintln!("[DEBUG] Discord: about to check shutdown_rx");
 

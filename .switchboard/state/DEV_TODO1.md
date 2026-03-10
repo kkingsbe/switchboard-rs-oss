@@ -1,26 +1,33 @@
-# DEV_TODO1 — Development Agent 1
+# Dev 1 TODO - Sprint 21
 
-> Sprint: 2
-> Focus Area: File cleanup + Test fixes
-> Last Updated: 2026-03-01T21:19:00Z
-> Total Points: 5 (2 + 3)
+## Assigned Stories
 
-## Stories
+### Story 4.1: Create gateway module structure (1 pt)
+**Status:** IN PROGRESS
+**File:** `stories/story-004-01-gateway-module-structure.md`
 
-- [ ] **{TEST-FIX-01}**: Fix Pre-existing Test Failures (3 pts)
-  - 📄 Story: `.switchboard/state/stories/story-test-fix-01.md`
-  - ⚡ Pre-check: Build passes
-  - ✅ Post-check: `cargo test` passes with 0 failures
-  - 🔒 Risk: Medium
-  - 📝 Commit: `test(dev1): [TEST-FIX-01] fix pre-existing test failures`
-  - ⚠️ CRITICAL: This unblocks stories 3.1, 3.2 which require passing tests
+**Tasks:**
+- [ ] Create `src/gateway/mod.rs` with module declarations
+- [ ] Add `pub mod gateway` to `src/lib.rs`
+- [ ] Add feature flag `gateway` to Cargo.toml
+- [ ] Verify `cargo build --features gateway` compiles
 
-- [ ] **{2.3}**: Clean Up Committed Artifacts (2 pts)
-  - 📄 Story: See sprint-status.yaml for details
-  - ⚡ Pre-check: Build + tests pass
-  - ✅ Post-check: Build + tests pass
-  - 🔒 Risk: Medium
-  - 📝 Commit: `chore(dev1): [2.3] clean up committed artifacts`
+### Story 5.5: Add configuration validation (1 pt)
+**Status:** IN PROGRESS
+**File:** `stories/story-005-05-config-validation.md`
 
-- [ ] AGENT QA: Run full build and test suite. If green, create
-  `.switchboard/state/.dev_done_1`.
+**Tasks:**
+- [ ] Validate discord_token is not empty
+- [ ] Validate http_port and ws_port are valid (1024-65535)
+- [ ] Validate channel mappings have required fields
+- [ ] Add unit tests for validation
+
+## Dependencies
+
+- Story 4.5 (dev-2) depends on Story 4.1 completion
+
+## Notes
+
+- Follow Rust best practices from `./skills/`
+- Use thiserror for validation errors
+- Use tracing for logging (no println!)

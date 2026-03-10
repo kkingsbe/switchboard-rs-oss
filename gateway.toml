@@ -1,0 +1,36 @@
+# Gateway Configuration
+# This file contains the configuration for the Discord Gateway Service.
+# Copy this file to gateway.toml and update the values for your setup.
+
+# Discord Bot Token
+# Supports environment variable expansion: ${DISCORD_TOKEN}
+# You can also set a default: ${DISCORD_TOKEN:-your_default_token}
+discord_token = "${DISCORD_TOKEN}"
+
+# Server Configuration
+[server]
+# Host address to bind to
+host = "0.0.0.0"
+
+# HTTP server port for REST API
+http_port = 8080
+
+# WebSocket server port for gateway connections
+ws_port = 9000
+
+# Logging Configuration
+[logging]
+# Log level: debug, info, warn, error
+level = "info"
+
+# Optional log file path. If not provided, logs only to stdout.
+# file = "/var/log/gateway.log"
+
+# Channel Mappings
+# Maps Discord channels to project WebSocket endpoints
+# Each channel will forward messages to its corresponding project endpoint
+# Example:
+# [[channels]]
+# channel_id = "123456789012345678"
+# project_name = "my-project"
+# endpoint = "ws://localhost:8080/project"

@@ -100,12 +100,21 @@ impl SkillsManager {
     /// }
     /// ```
     pub fn check_npx_available(&mut self) -> Result<(), SkillsError> {
-        // On Windows, npx is a .cmd batch file that needs cmd /c to execute properly
-        // Use create_npx_command() which handles this correctly on all platforms
-        let mut cmd = create_npx_command();
-        cmd.arg("--version");
+        // On Windows, npx is a .cmd batch file that requires cmd /c to execute properly.
+        // We use Command directly here instead of the executor to handle this platform-specific issue.
+        #[cfg(target_os = "windows")]
+        let result: Result<std::process::Output, std::io::Error> = {
+            let mut cmd = Command::new("cmd");
+            cmd.args(["/c", "npx", "--version"]);
+            cmd.output()
+        };
 
-        let result = cmd.output();
+        #[cfg(not(target_os = "windows"))]
+        let result: Result<std::process::Output, std::io::Error> = {
+            let mut cmd = Command::new("npx");
+            cmd.arg("--version");
+            cmd.output()
+        };
 
         match result {
             Ok(output) => {

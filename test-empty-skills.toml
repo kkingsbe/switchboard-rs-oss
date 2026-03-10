@@ -1,5 +1,0 @@
-[[agent]]
-name = "test-agent"
-schedule = "0 9 * * *"
-prompt = "Test prompt"
-skills = []

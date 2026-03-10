@@ -91,31 +91,22 @@ fn test_no_warnings_about_missing_skills() {
     // Test multiple commands to ensure no skills-related warnings anywhere
 
     // Test validate command
-    let validate_result = Command::new(assert_cmd::cargo::cargo_bin!("switchboard"))
+    let validate_output = Command::new(assert_cmd::cargo::cargo_bin!("switchboard"))
         .args(["--config", "test-no-skills.toml", "validate"])
-        .unwrap();
-
-    let validate_output = validate_result
         .output()
         .expect("Failed to execute validate command");
     let validate_stderr = String::from_utf8_lossy(&validate_output.stderr);
 
     // Test list command
-    let list_result = Command::new(assert_cmd::cargo::cargo_bin!("switchboard"))
+    let list_output = Command::new(assert_cmd::cargo::cargo_bin!("switchboard"))
         .args(["--config", "test-no-skills.toml", "list"])
-        .unwrap();
-
-    let list_output = list_result
         .output()
         .expect("Failed to execute list command");
     let list_stderr = String::from_utf8_lossy(&list_output.stderr);
 
     // Test status command
-    let status_result = Command::new(assert_cmd::cargo::cargo_bin!("switchboard"))
+    let status_output = Command::new(assert_cmd::cargo::cargo_bin!("switchboard"))
         .args(["--config", "test-no-skills.toml", "status"])
-        .unwrap();
-
-    let status_output = status_result
         .output()
         .expect("Failed to execute status command");
     let status_stderr = String::from_utf8_lossy(&status_output.stderr);

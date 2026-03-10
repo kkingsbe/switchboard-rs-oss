@@ -13,7 +13,9 @@
 //! - All command handlers are fully implemented
 
 use crate::commands::logs::{run as logs_run, LogsArgs};
-use crate::commands::{metrics, BuildCommand, SkillsCommand, ValidateCommand};
+use crate::commands::project::ProjectCommand;
+use crate::commands::workflow_init::WorkflowInitCommand;
+use crate::commands::{metrics, BuildCommand, SkillsCommand, ValidateCommand, WorkflowsCommand};
 use crate::config::{Config, ConfigError};
 use crate::docker::run::types::ContainerConfig;
 use crate::docker::{check_docker_available, run_agent, DockerClient};
@@ -44,6 +46,7 @@ use tokio::signal::unix::{signal, SignalKind};
 pub mod commands;
 pub mod discord;
 pub mod process;
+#[cfg(feature = "discord")]
 pub use discord::{
     is_discord_configured, load_discord_config_from_toml, DiscordFullConfig, DiscordTomlSection,
 };
@@ -146,8 +149,29 @@ pub enum Commands {
     /// Manage Kilo skills
     Skills(SkillsCommand),
 
+    /// Manage Switchboard workflows
+    Workflows(WorkflowsCommand),
+
+    /// Manage Switchboard projects
+    Project(ProjectCommand),
+
+    /// Initialize a Switchboard workflow
+    Workflow(WorkflowInitCommand),
+
     /// Check scheduler health and status
     Status,
+
+    /// List switchboard processes (similar to docker-compose ps)
+    Ps,
+
+    /// Restart the scheduler (stop and start)
+    Restart(RestartCommand),
+
+    /// Start the Discord Gateway service
+    Gateway(commands::gateway::GatewayCommand),
+
+    /// Start the REST API server
+    Api(commands::api::ApiCommand),
 }
 
 /// Build agent image and start scheduler
@@ -156,6 +180,10 @@ pub struct UpCommand {
     /// Run in background
     #[arg(short, long)]
     pub detach: bool,
+
+    /// INTERNAL: Run as daemon (used by spawned process)
+    #[arg(long, hide = true)]
+    pub daemon: bool,
 }
 
 /// Immediately execute a single agent
@@ -172,6 +200,10 @@ pub struct LogsCommand {
     /// Name of the agent to view logs for (optional)
     #[arg(value_name = "AGENT_NAME")]
     pub agent_name: Option<String>,
+
+    /// Show scheduler logs (explicit)
+    #[arg(short, long)]
+    pub scheduler: bool,
 
     /// Stream logs as they are generated
     #[arg(short, long)]
@@ -204,6 +236,14 @@ pub struct DownCommand {
     /// Clean up .switchboard directory (logs, PID files, etc.)
     #[arg(short = 'c', long)]
     pub cleanup: bool,
+}
+
+/// Restart the scheduler (stop and start)
+#[derive(Parser)]
+pub struct RestartCommand {
+    /// Run in background after restart
+    #[arg(short, long)]
+    pub detach: bool,
 }
 
 /// Run the CLI application and dispatch to the appropriate command handler
@@ -286,7 +326,14 @@ pub async fn run() -> Result<ColorMode, Box<dyn std::error::Error>> {
         Commands::Down(args) => run_down(args, cli.config).await,
         Commands::Validate(args) => run_validate(args, cli.config).await,
         Commands::Skills(args) => commands::skills::run_skills(args, cli.config).await,
+        Commands::Workflows(args) => commands::workflows::run_workflows(args, cli.config).await,
+        Commands::Project(args) => commands::project::run_project(args, cli.config).await,
+        Commands::Workflow(args) => commands::workflow_init::run_workflow_init(args, cli.config).await,
         Commands::Status => run_status(cli.config),
+        Commands::Ps => commands::ps::run_ps(cli.config),
+        Commands::Restart(args) => run_restart(args, cli.config).await,
+        Commands::Gateway(args) => run_gateway(args).await,
+        Commands::Api(args) => run_api(args).await,
     };
 
     // Return the color_mode regardless of success or failure
@@ -425,6 +472,73 @@ pub async fn run_up(
     config_path: Option<String>,
 ) -> Result<(), Box<dyn std::error::Error>> {
     crate::cli::commands::up::run_up(args, config_path).await
+}
+
+/// Handler for the 'restart' command - Stop and start the scheduler
+///
+/// This command restarts the scheduler by first stopping any running instance
+/// and then starting it again.
+///
+/// # Arguments
+///
+/// * `args` - The [`RestartCommand`] containing CLI arguments:
+///   - `args.detach`: If `true`, runs in detached (background) mode after restart
+/// * `config_path` - Optional path to the configuration file
+///
+/// # Returns
+///
+/// Returns `Ok(())` on success, or an error if:
+/// - Failed to stop the running scheduler
+/// - Failed to start the scheduler
+pub async fn run_restart(
+    args: RestartCommand,
+    config_path: Option<String>,
+) -> Result<(), Box<dyn std::error::Error>> {
+    crate::cli::commands::restart::run_restart(args, config_path).await
+}
+
+/// Handler for the 'gateway' command - Start the Discord Gateway service
+///
+/// This command starts the Discord Gateway service which provides HTTP and
+/// WebSocket endpoints for receiving Discord messages and forwarding them to
+/// registered project endpoints.
+///
+/// # Arguments
+///
+/// * `args` - The [`GatewayCommand`] containing CLI arguments
+///
+/// # Returns
+///
+/// Returns `Ok(())` on success, or an error if:
+/// - Configuration file not found
+/// - Configuration parsing or validation fails
+/// - Server fails to start
+pub async fn run_gateway(
+    args: commands::gateway::GatewayCommand,
+) -> Result<(), Box<dyn std::error::Error>> {
+    commands::gateway::run_gateway(args).await
+}
+
+/// Handler for the 'api' command - Start the REST API server
+///
+/// This command starts the REST API server which provides HTTP endpoints
+/// for health checks, configuration validation, and agent/skills/workflows management.
+///
+/// # Arguments
+///
+/// * `args` - The [`ApiCommand`] containing CLI arguments
+///
+/// # Returns
+///
+/// Returns `Ok(())` on success, or an error if:
+/// - Configuration file not found
+/// - Configuration parsing or validation fails
+/// - API is not enabled in configuration
+/// - Server fails to start
+pub async fn run_api(
+    args: commands::api::ApiCommand,
+) -> Result<(), Box<dyn std::error::Error>> {
+    commands::api::run_api(args).await
 }
 
 /// Handler for the 'run' command - Immediately execute a single agent
@@ -651,6 +765,8 @@ pub async fn run_run(
         .map_err(|e| format!("Docker availability check failed: {}", e))?;
 
     // Create ContainerConfig with all required fields
+    // Use effective_silent_timeout to apply default "5m" if not configured
+    let settings_option: Option<crate::config::Settings> = config.settings.clone();
     let container_config = ContainerConfig {
         agent_name: agent.name.clone(),
         env_vars,
@@ -658,6 +774,7 @@ pub async fn run_run(
         readonly: agent.readonly.unwrap_or(false),
         prompt: prompt.clone(),
         skills: agent.skills.clone(),
+        silent_timeout: Some(agent.effective_silent_timeout(&settings_option)),
     };
 
     // Create DockerClient using DockerClient::new()
@@ -818,6 +935,7 @@ pub async fn run_logs(
 ) -> Result<(), Box<dyn std::error::Error>> {
     let logs_args = LogsArgs {
         agent_name: args.agent_name,
+        scheduler: args.scheduler,
         follow: args.follow,
         tail: Some(args.tail),
     };
@@ -1162,6 +1280,8 @@ pub fn run_status(_config: Option<String>) -> Result<(), Box<dyn std::error::Err
     struct HeartbeatData {
         pid: u32,
         last_heartbeat: String,
+        start_time: String,
+        version: String,
         state: String,
         agents: Vec<AgentHeartbeat>,
     }
@@ -1194,6 +1314,14 @@ pub fn run_status(_config: Option<String>) -> Result<(), Box<dyn std::error::Err
             "  Last Heartbeat: {} ({} ago)",
             last_heartbeat_time.format("%Y-%m-%d %H:%M:%S UTC"),
             format_duration(heartbeat_age)
+        );
+        println!(
+            "  Start Time: {}",
+            heartbeat.start_time
+        );
+        println!(
+            "  Version: {}",
+            heartbeat.version
         );
 
         // Check if heartbeat is stale (> 2 minutes)

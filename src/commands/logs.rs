@@ -73,6 +73,7 @@ fn list_available_log_files(config: &Config) -> Vec<String> {
 ///
 /// * `agent_name` - Optional agent name to filter logs for a specific agent.
 ///   If not provided, shows the scheduler log.
+/// * `scheduler` - Explicit flag to show scheduler logs (use with or without agent_name)
 /// * `follow` - Whether to follow log output (similar to `tail -f`). Continues
 ///   displaying new log lines as they are written.
 /// * `tail` - Optional number of lines to show from the end of the log file.
@@ -83,6 +84,11 @@ fn list_available_log_files(config: &Config) -> Vec<String> {
 /// View all scheduler logs:
 /// ```bash
 /// switchboard logs
+/// ```
+///
+/// Explicitly view scheduler logs:
+/// ```bash
+/// switchboard logs --scheduler
 /// ```
 ///
 /// View logs for a specific agent:
@@ -138,6 +144,10 @@ pub struct LogsArgs {
     #[arg(value_name = "AGENT")]
     pub agent_name: Option<String>,
 
+    /// Show scheduler logs (explicit)
+    #[arg(short, long)]
+    pub scheduler: bool,
+
     /// Follow log output (like tail -f)
     #[arg(short, long)]
     pub follow: bool,
@@ -152,6 +162,7 @@ pub struct LogsArgs {
 /// # Arguments
 ///
 /// * `agent_name` - Optional agent name to filter logs
+/// * `scheduler` - Whether to show scheduler logs explicitly
 /// * `config` - The configuration containing agent definitions
 ///
 /// # Returns
@@ -160,77 +171,82 @@ pub struct LogsArgs {
 /// * `Err(Box<dyn std::error::Error>)` - Error if agent not found or no log files exist
 fn resolve_log_path(
     agent_name: Option<&String>,
+    scheduler: bool,
     config: &Config,
 ) -> Result<String, Box<dyn std::error::Error>> {
-    match agent_name {
-        None => {
-            // Get log_dir from config (default: ".switchboard/logs")
-            let log_dir = config
-                .settings
-                .as_ref()
-                .map(|s| s.log_dir.as_str())
-                .unwrap_or(".switchboard/logs");
-            Ok(format!("{}/switchboard.log", log_dir))
-        }
-        Some(name) => {
-            // Check if the agent exists in config.agents
-            let agent_exists = config.agents.iter().any(|agent| &agent.name == name);
-            if !agent_exists {
-                return Err(format!("Agent '{}' not found in config", name).into());
-            }
+    // Determine if we should show scheduler logs
+    // Show scheduler if: no agent_name provided, OR scheduler flag is set
+    let show_scheduler = agent_name.is_none() || scheduler;
 
-            // Get log_dir from config (default: ".switchboard/logs")
-            let log_dir = config
-                .settings
-                .as_ref()
-                .map(|s| s.log_dir.as_str())
-                .unwrap_or(".switchboard/logs");
+    // If showing scheduler, return scheduler log path
+    if show_scheduler {
+        let log_dir = config
+            .settings
+            .as_ref()
+            .map(|s| s.log_dir.as_str())
+            .unwrap_or(".switchboard/logs");
+        return Ok(format!("{}/switchboard.log", log_dir));
+    }
 
-            // Construct the agent's log directory path: <log_dir>/<agent-name>/
-            let agent_dir = format!("{}/{}", log_dir, name);
-            let agent_dir_path = std::path::Path::new(&agent_dir);
+    // Otherwise, show agent log
+    let name = agent_name.unwrap();
 
-            // Check if agent subdirectory exists
-            if !agent_dir_path.exists() || !agent_dir_path.is_dir() {
-                return Err(
-                    format!("No log directory found for agent '{}': {}", name, agent_dir).into(),
-                );
-            }
+    // Check if the agent exists in config.agents
+    let agent_exists = config.agents.iter().any(|agent| &agent.name == name);
+    if !agent_exists {
+        return Err(format!("Agent '{}' not found in config", name).into());
+    }
 
-            // Scan for all .log files in the agent's subdirectory
-            let mut log_files: Vec<(String, std::time::SystemTime)> = Vec::new();
+    // Get log_dir from config (default: ".switchboard/logs")
+    let log_dir = config
+        .settings
+        .as_ref()
+        .map(|s| s.log_dir.as_str())
+        .unwrap_or(".switchboard/logs");
 
-            if let Ok(entries) = std::fs::read_dir(agent_dir_path) {
-                for entry in entries.flatten() {
-                    let path = entry.path();
-                    // Only process .log files
-                    if path.extension().and_then(|s| s.to_str()) == Some("log") {
-                        // Get the file's modification time
-                        if let Ok(metadata) = std::fs::metadata(&path) {
-                            if let Ok(modified) = metadata.modified() {
-                                if let Some(path_str) = path.to_str() {
-                                    log_files.push((path_str.to_string(), modified));
-                                }
-                            }
+    // Construct the agent's log directory path: <log_dir>/<agent-name>/
+    let agent_dir = format!("{}/{}", log_dir, name);
+    let agent_dir_path = std::path::Path::new(&agent_dir);
+
+    // Check if agent subdirectory exists
+    if !agent_dir_path.exists() || !agent_dir_path.is_dir() {
+        return Err(
+            format!("No log directory found for agent '{}': {}", name, agent_dir).into(),
+        );
+    }
+
+    // Scan for all .log files in the agent's subdirectory
+    let mut log_files: Vec<(String, std::time::SystemTime)> = Vec::new();
+
+    if let Ok(entries) = std::fs::read_dir(agent_dir_path) {
+        for entry in entries.flatten() {
+            let path = entry.path();
+            // Only process .log files
+            if path.extension().and_then(|s| s.to_str()) == Some("log") {
+                // Get the file's modification time
+                if let Ok(metadata) = std::fs::metadata(&path) {
+                    if let Ok(modified) = metadata.modified() {
+                        if let Some(path_str) = path.to_str() {
+                            log_files.push((path_str.to_string(), modified));
                         }
                     }
                 }
             }
-
-            // Check if any log files were found
-            if log_files.is_empty() {
-                return Err(format!(
-                    "No log files found for agent '{}' in directory: {}",
-                    name, agent_dir
-                )
-                .into());
-            }
-
-            // Sort by modification time (most recent first) and return the most recent log file
-            log_files.sort_by_key(|(_, time)| std::cmp::Reverse(*time));
-            Ok(log_files[0].0.clone())
         }
     }
+
+    // Check if any log files were found
+    if log_files.is_empty() {
+        return Err(format!(
+            "No log files found for agent '{}' in directory: {}",
+            name, agent_dir
+        )
+        .into());
+    }
+
+    // Sort by modification time (most recent first) and return the most recent log file
+    log_files.sort_by_key(|(_, time)| std::cmp::Reverse(*time));
+    Ok(log_files[0].0.clone())
 }
 
 /// Read log file lines
@@ -487,7 +503,7 @@ pub async fn run(args: LogsArgs) -> Result<(), Box<dyn std::error::Error>> {
     let config = Config::from_toml(&config_path)?;
 
     // Determine the log file path to read
-    let log_path = resolve_log_path(args.agent_name.as_ref(), &config)?;
+    let log_path = resolve_log_path(args.agent_name.as_ref(), args.scheduler, &config)?;
 
     // Check if the log file exists before attempting to read it
     let file_path = std::path::Path::new(&log_path);

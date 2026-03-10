@@ -26,7 +26,7 @@ switchboard build
 
 # 3. Create config (switchboard.toml)
 echo '[settings]
-image_name = "kilosynth/prompter:latest"
+image_name = "switchboard-agent"
 
 [[agent]]
 name = "daily-coder"
@@ -128,6 +128,85 @@ switchboard up
 ```
 
 The scheduler will run in the foreground. Press `Ctrl+C` to stop.
+
+### Running in Detached Mode
+
+You can run the scheduler in the background using the `--detach` flag:
+
+```bash
+switchboard up --detach
+```
+
+This will:
+- Spawn a new child process that runs independently
+- Return control to your terminal immediately (like `docker-compose up -d`)
+- Write the scheduler PID to `.switchboard/scheduler.pid`
+- Continue running even after you close the terminal
+
+To stop the detached scheduler:
+
+```bash
+switchboard down
+```
+
+---
+
+## Process Management
+
+Switchboard provides several commands to manage the scheduler and monitor its status.
+
+### Scheduler Commands
+
+```bash
+# Start scheduler in foreground (default)
+switchboard up
+
+# Start scheduler in detached mode (runs in background)
+switchboard up --detach
+
+# Stop the scheduler
+switchboard down
+
+# Check if scheduler is running
+switchboard status
+
+# List running processes
+switchboard ps
+
+# Restart the scheduler
+switchboard restart
+```
+
+### State Files
+
+Switchboard stores scheduler state in the `.switchboard/` directory:
+
+| File | Description |
+|------|-------------|
+| `.switchboard/scheduler.pid` | Process ID of running scheduler |
+| `.switchboard/heartbeat.json` | Scheduler status, health, and agent information |
+| `.switchboard/logs/` | Agent execution logs |
+
+### Example Workflow
+
+```bash
+# Start scheduler in background
+switchboard up --detach
+# Output: Scheduler started in detached mode (PID: 12345)
+
+# Check status
+switchboard status
+# Output: Scheduler: Running (PID: 12345)
+
+# List processes
+switchboard ps
+# Output: NAME        STATUS      PID     CREATED
+#         scheduler   Running     12345   2 minutes ago
+
+# Stop the scheduler
+switchboard down
+# Output: ✓ Scheduler stopped
+```
 
 ---
 
@@ -289,9 +368,43 @@ skills = ["frontend-design", "security-audit"]
 
 ## CLI Reference
 
+### Scaffolding Commands
+
+Scaffolding commands help you quickly set up new Switchboard projects and workflows with standard directory structures and templates.
+
+```bash
+# Create a new Switchboard project in current directory
+switchboard project init
+
+# Create project in specified directory
+switchboard project init --path ./my-project
+
+# Create project with specific name
+switchboard project init --name my-project
+
+# Create minimal project without examples
+switchboard project init --minimal
+
+# Create a new workflow (requires being in a project directory)
+switchboard workflow init --name my-workflow
+
+# Create workflow with specific agents
+switchboard workflow init --name my-workflow --agents architect developer
+
+# Create workflow with custom schedule
+switchboard workflow init --name my-workflow --schedule "0 9 * * *"
+```
+
 | Command | Description |
 |---------|-------------|
+| `switchboard project init` | Scaffold a new Switchboard project |
+| `switchboard workflow init` | Scaffold a new workflow |
 | `switchboard up` | Start the scheduler (runs agents on schedule) |
+| `switchboard up --detach` | Start scheduler in detached mode (background) |
+| `switchboard down` | Stop the scheduler |
+| `switchboard ps` | List running processes and scheduler status |
+| `switchboard status` | Check scheduler health and status |
+| `switchboard restart` | Restart the scheduler |
 | `switchboard run <name>` | Run a specific agent immediately |
 | `switchboard build` | Build the Docker image |
 | `switchboard validate` | Validate configuration file |
@@ -299,6 +412,22 @@ skills = ["frontend-design", "security-audit"]
 | `switchboard metrics` | View execution metrics |
 | `switchboard list` | List all configured agents |
 | `switchboard skills` | Manage skills |
+| `switchboard skills list` | List available skills |
+| `switchboard skills install` | Install a skill |
+| `switchboard skills installed` | List installed skills |
+| `switchboard skills remove` | Remove a skill |
+| `switchboard skills update` | Update a skill |
+| `switchboard workflows` | Manage workflows |
+| `switchboard workflows list` | List available workflows |
+| `switchboard workflows install` | Install a workflow |
+| `switchboard workflows installed` | List installed workflows |
+| `switchboard workflows remove` | Remove a workflow |
+| `switchboard workflows update` | Update a workflow |
+| `switchboard workflows apply` | Apply a workflow |
+| `switchboard workflows validate` | Validate a workflow |
+| `switchboard api start` | Start REST API server |
+| `switchboard api status` | Check API server status |
+| `switchboard api stop` | Stop API server |
 | `switchboard --help` | Show all commands |
 
 ### Common Usage
@@ -306,6 +435,15 @@ skills = ["frontend-design", "security-audit"]
 ```bash
 # Validate config before running
 switchboard validate
+
+# Run scheduler in detached mode (background)
+switchboard up --detach
+
+# Check scheduler status
+switchboard status
+
+# List running processes
+switchboard ps
 
 # Run a specific agent now
 switchboard run my-agent
@@ -315,6 +453,9 @@ switchboard logs my-agent
 
 # Check execution metrics
 switchboard metrics
+
+# Stop the scheduler
+switchboard down
 ```
 
 ---
@@ -355,6 +496,65 @@ model = "anthropic/claude-sonnet-4"
 ```
 
 > 📝 **Discord Documentation**: See [docs/discord.md](docs/discord.md)
+
+### REST API
+
+The **REST API** provides HTTP endpoints for programmatic control of Switchboard instances. It exposes all CLI commands (except `switchboard up`) via HTTP, enabling integration with external tools and automation.
+
+**Key Features:**
+- Full HTTP API for all CLI operations
+- Support for 100+ simultaneous instances on a single machine
+- Built-in Swagger UI for interactive documentation
+- Rate limiting for API protection
+- Local-only security (localhost binding)
+
+```toml
+[api]
+enabled = true
+instance_id = "switchboard-default"
+port = 18500
+host = "127.0.0.1"
+auto_port = true
+swagger = true
+
+[api.rate_limit]
+enabled = true
+requests_per_minute = 60
+```
+
+**API Endpoints:**
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/health` | GET | Health check |
+| `/api/v1/agents` | GET | List all configured agents |
+| `/api/v1/agents/{name}/run` | POST | Run an agent immediately |
+| `/api/v1/agents/{name}/logs` | GET | View agent logs |
+| `/api/v1/build` | POST | Build Docker image |
+| `/api/v1/metrics` | GET | View execution metrics |
+| `/api/v1/shutdown` | POST | Stop scheduler |
+| `/api/v1/validate` | POST | Validate configuration |
+| `/api/v1/skills` | GET | List skills |
+| `/api/v1/workflows` | GET | List workflows |
+| `/docs` | GET | Swagger UI |
+
+**Usage:**
+
+```bash
+# Start API server
+switchboard api start
+
+# Or via configuration
+# Add [api] section to switchboard.toml and run switchboard up
+
+# Access API
+curl http://localhost:18500/health
+
+# View interactive documentation
+open http://localhost:18500/docs
+```
+
+> 📝 **API Configuration**: Set `enabled = true` in `[api]` section of `switchboard.toml`
 
 ---
 

@@ -2,6 +2,8 @@
 
 Switchboard uses TOML configuration files to define agents, schedules, and integrations. This document provides a complete reference for all configuration options.
 
+> **Last updated:** 2026-03-06
+
 ## File Location
 
 Switchboard looks for configuration in the following locations:
@@ -34,6 +36,7 @@ The `[settings]` section provides defaults that apply to all agents. All fields 
 | `log_dir` | String | `".switchboard/logs"` | Directory for agent log files |
 | `timezone` | String | `"system"` | Timezone for cron schedules (IANA format or "system") |
 | `overlap_mode` | String | `"skip"` | How to handle concurrent executions: `"skip"` or `"queue"` |
+| `silent_timeout` | String | (none) | Default silent timeout (e.g., "5m", "0" to disable) |
 
 ```toml
 [settings]
@@ -66,6 +69,7 @@ Each `[[agent]]` section defines a scheduled task. At least one agent is require
 | `readonly` | Boolean | `false` | If true, agent cannot write to filesystem |
 | `timeout` | String | `"30m"` | Maximum execution duration |
 | `overlap_mode` | String | (from settings) | Override global overlap mode |
+| `silent_timeout` | String | (from settings) | Auto-terminate if no logs for duration |
 | `max_queue_size` | Number | `3` | Max queued runs when overlap_mode is "queue" |
 | `skills` | Array | `[]` | List of skills available to this agent |
 

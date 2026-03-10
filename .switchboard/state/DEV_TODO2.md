@@ -1,23 +1,25 @@
-# DEV_TODO2 — Development Agent 2
+# Dev 2 TODO - Sprint 21
 
-> Sprint: 3
-> Focus Area: Rust refactoring / Error handling
-> Last Updated: 2026-03-01T21:24:00Z
-> Total Points: 5
+## Assigned Stories
 
-## Stories
+### Story 4.5: Define message protocol types (2 pts)
+**Status:** IN PROGRESS (WAITING FOR 4.1)
+**File:** `stories/story-004-05-message-protocol-types.md`
 
-- [ ] **{3.3}**: Replace .unwrap() Calls with Proper Error Handling (5 pts)
-  - 📄 Story: `.switchboard/state/stories/story-3-3-unwrap-refactor.md`
-  - 📚 Skills: 
-    - `./skills/rust-best-practices/SKILL.md`
-    - `./skills/rust-best-practices/references/chapter_04.md`
-    - `./skills/rust-engineer/references/error-handling.md`
-  - ⚡ Pre-check: Build + tests pass
-  - ✅ Post-check: Build + tests pass, no .unwrap() in production code
-  - 🔒 Risk: Medium
-  - 📝 Commit: `refactor(dev2): [3.3] replace unwrap with proper error handling`
+**Tasks:**
+- [ ] Define `GatewayMessage` enum with variants: Register, RegisterAck, Message, Heartbeat, HeartbeatAck
+- [ ] Implement serde serialization/deserialization
+- [ ] Document protocol in code comments
+- [ ] Verify JSON round-trip tests pass
 
-- [ ] AGENT QA: Run full build and test suite. If green, create
-  `.switchboard/state/.dev_done_2`. If ALL `.dev_done_*` files exist,
-  also create `.switchboard/state/.sprint_complete`.
+## Dependencies
+
+- **Depends on:** Story 4.1 (gateway module structure) - must complete first
+- Dev-1 is working on Story 4.1
+
+## Notes
+
+- Wait for Story 4.1 to complete before starting (module structure needed)
+- Follow Rust best practices from `./skills/`
+- Use serde for JSON serialization
+- Reference `src/discord/tools/definitions.rs` for enum patterns

@@ -187,12 +187,47 @@ pub fn generate_entrypoint_script(
     }
 
     // Per Section 3.6: Skills are bind-mounted from host, NOT installed at runtime
-    // Generate simple entrypoint script that just runs kilocode
-    // No npx skills add needed - skills are already available via bind-mount
-    let mut script = String::from("#!/bin/sh\nset -e\n\n");
+    // Generate entrypoint script with skill installation commands for non-preexisting skills
+    let mut script = String::from("#!/bin/sh\n");
 
-    // Add the kilocode execution command
-    // Skills are already mounted at /workspace/skills/<skill-name>/ via Docker bind-mounts
+    // POSIX shell for maximum compatibility across container environments
+    script.push_str("# POSIX shell for maximum compatibility across container environments\n");
+    script.push_str("set -e\n");
+
+    // Error propagation - immediately exit on any command failure to prevent cascading errors
+    script.push_str("# Error propagation - immediately exit on any command failure to prevent cascading errors\n");
+    script.push('\n');
+
+    // Install skills - only for skills NOT in preexisting_skills (those need runtime installation)
+    // Skills in preexisting_skills are already mounted via bind-mounts
+    let mut has_skill_install = false;
+    for skill in skills {
+        let skill_name = extract_skill_name(skill).unwrap_or_else(|_| skill.clone());
+        if !preexisting_skills.contains(&skill_name) {
+            if !has_skill_install {
+                script.push_str("# Install skills\n");
+                script.push_str("# Skills are installed sequentially in declaration order to satisfy dependencies\n");
+                has_skill_install = true;
+            }
+            // Log skill installation start with distinguishable prefix
+            script.push_str(&format!(
+                "echo '[SKILL INSTALL] Installing skill: {}'\n",
+                skill
+            ));
+            // Capture and prefix stderr line by line
+            script.push_str(&format!("npx skills add {} -a kilo -y 2>&1 | while IFS= read -r line; do echo \"[SKILL INSTALL STDERR] $line\"; done\n", skill));
+        }
+    }
+
+    if has_skill_install {
+        script.push('\n');
+    }
+
+    // Hand off to Kilo Code CLI
+    script.push_str("# Hand off to Kilo Code CLI\n");
+
+    // Process replacement - replaces shell with kilocode, ensuring proper signal handling and exit code propagation
+    script.push_str("# Process replacement - replaces shell with kilocode, ensuring proper signal handling and exit code propagation\n");
     script.push_str("exec kilocode --yes \"$@\"\n");
 
     Ok(script)
@@ -1224,21 +1259,21 @@ mod tests {
 
     #[test]
     fn test_generate_entrypoint_script_skill_not_in_preexisting_list() {
-        // Test when skill is valid format but not in preexisting_skills list
-        let skills = vec!["owner/repo1".to_string(), "owner/repo2".to_string()];
-        // Only repo1 is in preexisting_skills, repo2 is missing
+        // Test when skill is valid format but not in preexisting_skills list AND not in filesystem
+        // Use a skill name that definitely doesn't exist in ./skills/ directory
+        let skills = vec!["owner/nonexistent-skill".to_string()];
         let preexisting_skills = vec!["repo1".to_string()];
         let result = generate_entrypoint_script("test-agent", &skills, &preexisting_skills);
 
         assert!(
             result.is_err(),
-            "Skill not in preexisting_skills should return error"
+            "Skill not in preexisting_skills and not in filesystem should return error"
         );
 
         if let Err(SkillsError::ScriptGenerationFailed { reason, .. }) = result {
             assert!(
-                reason.contains("repo2"),
-                "Error message should identify the missing skill (repo2). Got: {}",
+                reason.contains("nonexistent-skill"),
+                "Error message should identify the missing skill. Got: {}",
                 reason
             );
         } else {

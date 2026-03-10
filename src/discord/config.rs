@@ -349,6 +349,63 @@ impl Default for ConversationConfig {
     }
 }
 
+/// Gateway client configuration for auto-connect to gateway.
+///
+/// When configured, the switchboard project will automatically connect
+/// to a gateway WebSocket server and register for message forwarding.
+///
+/// # Example
+///
+/// ```toml
+/// [discord.gateway]
+/// enabled = true
+/// url = "ws://localhost:9000"
+/// project_name = "my-project"
+/// channels = ["1474550134388949272"]
+/// ```
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct GatewayClientConfig {
+    /// Enable gateway connection.
+    ///
+    /// When set to `true`, the switchboard project will automatically
+    /// connect to the gateway WebSocket server on startup.
+    #[serde(default = "default_enabled")]
+    pub enabled: bool,
+
+    /// Gateway WebSocket URL.
+    ///
+    /// The WebSocket URL of the gateway server to connect to.
+    /// Default: "ws://localhost:9000"
+    #[serde(default = "default_gateway_url")]
+    pub url: String,
+
+    /// Project name for registration.
+    ///
+    /// This name is used to identify this project when registering
+    /// with the gateway server.
+    #[serde(default)]
+    pub project_name: String,
+
+    /// Discord channel IDs to subscribe to.
+    ///
+    /// List of Discord channel IDs that this project wants to receive
+    /// messages from. Messages from these channels will be forwarded
+    /// to this project via the gateway WebSocket connection.
+    #[serde(default)]
+    pub channels: Vec<String>,
+}
+
+impl Default for GatewayClientConfig {
+    fn default() -> Self {
+        Self {
+            enabled: false,
+            url: default_gateway_url(),
+            project_name: String::new(),
+            channels: Vec::new(),
+        }
+    }
+}
+
 /// Wrapper struct for the complete Discord configuration section.
 ///
 /// Combines Discord bot settings, LLM provider configuration, and
@@ -373,6 +430,12 @@ impl Default for ConversationConfig {
 /// [discord.conversation]
 /// max_history = 30
 /// ttl_minutes = 120
+///
+/// [discord.gateway]
+/// enabled = true
+/// url = "ws://localhost:9000"
+/// project_name = "my-project"
+/// channels = ["1474550134388949272"]
 /// ```
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct DiscordSection {
@@ -429,6 +492,13 @@ pub struct DiscordSection {
     /// If not present, uses default values for conversation settings.
     #[serde(default)]
     pub conversation: Option<ConversationConfig>,
+
+    /// Optional gateway client configuration for auto-connect to gateway.
+    ///
+    /// If present, the switchboard project will automatically connect
+    /// to the gateway WebSocket server and register for message forwarding.
+    #[serde(default)]
+    pub gateway: Option<GatewayClientConfig>,
 }
 
 impl Default for DiscordSection {
@@ -440,6 +510,7 @@ impl Default for DiscordSection {
             intents: None,
             llm: None,
             conversation: None,
+            gateway: None,
         }
     }
 }
@@ -448,6 +519,10 @@ impl Default for DiscordSection {
 
 fn default_enabled() -> bool {
     false
+}
+
+fn default_gateway_url() -> String {
+    "ws://localhost:9000".to_string()
 }
 
 fn default_token_env() -> String {
@@ -585,11 +660,11 @@ mod tests {
         let original_key = env::var(OPENROUTER_API_KEY_ENV).ok();
 
         // Set DISCORD_TOKEN and remove OPENROUTER_API_KEY
-        if let Some(ref token) = original_token {
-            env::set_var(DISCORD_TOKEN_ENV, token);
-        } else {
-            env::set_var(DISCORD_TOKEN_ENV, "test_token");
-        }
+        // Use a valid test token (50+ chars with dot) to pass validation
+        env::set_var(
+            DISCORD_TOKEN_ENV,
+            "test.token.value.that.is.long.enough.for.validation.purpose.12345",
+        );
         env::remove_var(OPENROUTER_API_KEY_ENV);
 
         let result = load_discord_config();
@@ -611,13 +686,16 @@ mod tests {
 
     #[test]
     #[serial]
-    fn test_env_config_success() {
+    fn test_env_config_success_debug() {
         // Save original env vars if they exist
         let original_token = env::var(DISCORD_TOKEN_ENV).ok();
         let original_key = env::var(OPENROUTER_API_KEY_ENV).ok();
 
-        // Set both environment variables
-        env::set_var(DISCORD_TOKEN_ENV, "test_discord_token");
+        // Set both environment variables with valid values (50+ chars with dot)
+        env::set_var(
+            DISCORD_TOKEN_ENV,
+            "test.discord.token.value.that.is.long.enough.for.validation.12345",
+        );
         env::set_var(OPENROUTER_API_KEY_ENV, "test_openrouter_key");
 
         let result = load_discord_config();
@@ -632,9 +710,17 @@ mod tests {
             None => env::remove_var(OPENROUTER_API_KEY_ENV),
         }
 
+        // Debug: print the error if there is one
+        if let Err(e) = &result {
+            eprintln!("DEBUG ERROR: {}", e);
+        }
+
         assert!(result.is_ok());
         let config = result.unwrap();
-        assert_eq!(config.discord_token, "test_discord_token");
+        assert_eq!(
+            config.discord_token,
+            "test.discord.token.value.that.is.long.enough.for.validation.12345"
+        );
         assert_eq!(config.openrouter_api_key, "test_openrouter_key");
     }
 
@@ -1024,78 +1110,101 @@ mod tests {
 
     #[test]
     fn test_load_switchboard_toml_discord_section() {
-        // Test loading the actual switchboard.toml file
-        let result = load_discord_section_from_toml("switchboard.toml");
+        // Test loading a config file with discord section
+        // Create a temporary config file with expected values
+        let temp_dir = std::env::temp_dir();
+        let config_path = temp_dir.join("switchboard_test_discord.toml");
 
-        assert!(
-            result.is_ok(),
-            "Failed to load switchboard.toml: {:?}",
-            result.err()
-        );
+        let config_content = r#"
+[settings]
+image_name = "switchboard-agent"
+image_tag = "latest"
+
+[[agent]]
+name = "test-agent"
+schedule = "0 * * * *"
+prompt = "Test prompt"
+
+[discord]
+enabled = true
+token_env = "${DISCORD_TOKEN}"
+channel_id = "1472443428569874533"
+
+[discord.llm]
+provider = "openrouter"
+api_key_env = "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"
+model = "anthropic/claude-sonnet-4"
+max_tokens = 1024
+
+[discord.conversation]
+max_history = 30
+ttl_minutes = 120
+"#;
+
+        std::fs::write(&config_path, config_content).expect("Failed to write temp config");
+
+        // Load the discord section from the temp config file
+        let result = load_discord_section_from_toml(config_path.to_str().unwrap());
+
+        assert!(result.is_ok(), "Failed to load config: {:?}", result.err());
         let config = result.unwrap();
-        assert!(
-            config.is_some(),
-            "Expected [discord] section in switchboard.toml"
-        );
+        assert!(config.is_some(), "Expected [discord] section in config");
 
         let discord = config.unwrap();
 
-        // Verify enabled = true from switchboard.toml
-        assert!(
-            discord.enabled,
-            "Expected enabled = true from switchboard.toml"
-        );
+        // Verify enabled = true from config
+        assert!(discord.enabled, "Expected enabled = true from config");
 
-        // Verify token_env is read from switchboard.toml (it's set to a token value in the file)
-        // Note: switchboard.toml has token_env set to an actual token, not the default "DISCORD_TOKEN"
+        // Verify token_env is read from config
         assert_eq!(
             discord.token_env, "${DISCORD_TOKEN}",
-            "Expected token_env from switchboard.toml"
+            "Expected token_env from config"
         );
 
-        // Verify channel_id = "1472443428569874533" from switchboard.toml
+        // Verify channel_id from config
         assert_eq!(
             discord.channel_id, "1472443428569874533",
-            "Expected channel_id = 1472443428569874533 from switchboard.toml"
+            "Expected channel_id = 1472443428569874533 from config"
         );
 
         // Verify LLM configuration
-        let llm = discord
-            .llm
-            .expect("LLM config should be present in switchboard.toml");
+        let llm = discord.llm.expect("LLM config should be present in config");
         assert_eq!(
             llm.provider, "openrouter",
-            "Expected provider = openrouter from switchboard.toml"
+            "Expected provider = openrouter from config"
         );
         assert_eq!(
             llm.api_key_env,
             "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",
-            "Expected api_key_env from switchboard.toml"
+            "Expected api_key_env from config"
         );
         assert_eq!(
             llm.model, "anthropic/claude-sonnet-4",
-            "Expected model from switchboard.toml"
+            "Expected model from config"
         );
         assert_eq!(
             llm.max_tokens, 1024,
-            "Expected max_tokens = 1024 from switchboard.toml"
+            "Expected max_tokens = 1024 from config"
         );
         assert!(
             llm.system_prompt_file.is_none(),
-            "Expected system_prompt_file = None (not set in switchboard.toml)"
+            "Expected system_prompt_file = None (not set in config)"
         );
 
         // Verify conversation configuration
         let conversation = discord
             .conversation
-            .expect("Conversation config should be present in switchboard.toml");
+            .expect("Conversation config should be present in config");
         assert_eq!(
             conversation.max_history, 30,
-            "Expected max_history = 30 from switchboard.toml"
+            "Expected max_history = 30 from config"
         );
         assert_eq!(
             conversation.ttl_minutes, 120,
-            "Expected ttl_minutes = 120 from switchboard.toml"
+            "Expected ttl_minutes = 120 from config"
         );
+
+        // Clean up temp file
+        std::fs::remove_file(&config_path).ok();
     }
 }

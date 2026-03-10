@@ -1,12 +1,12 @@
 //! Config Parser - Parse and validate switchboard.toml configuration files
 //!
-//! This module handles (1206 lines, 30 tests):
+//! This module handles:
 //! - TOML file parsing and deserialization
-//! - Configuration data structures (Settings, Agent, Config, OverlapMode)
+//! - Configuration data structures (Settings, Agent, Config, ApiConfig, RateLimitConfig, OverlapMode)
 //! - Config file loading from disk
 //! - Validation logic for agent configurations
 //! - Overlap mode configuration (Skip and Queue modes)
-//! - Comprehensive test coverage (30 tests)
+//! - REST API server configuration
 
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
@@ -721,6 +721,12 @@ pub struct Settings {
     /// Global default overlap mode
     #[serde(default)]
     pub overlap_mode: Option<OverlapMode>,
+    /// Silent timeout duration (e.g., "5m", "30s", "1h", "0" to disable)
+    #[serde(default)]
+    pub silent_timeout_str: String,
+    /// Global silent timeout
+    #[serde(default)]
+    pub silent_timeout: Option<String>,
 }
 
 impl Default for Settings {
@@ -732,8 +738,99 @@ impl Default for Settings {
             timezone: "system".to_string(),
             overlap_mode_str: "skip".to_string(),
             overlap_mode: None,
+            silent_timeout_str: "5m".to_string(),
+            silent_timeout: None,
         }
     }
+}
+
+/// Rate limiting configuration for the REST API
+#[derive(Debug, Clone, Deserialize, Serialize, PartialEq)]
+pub struct RateLimitConfig {
+    /// Enable rate limiting
+    #[serde(default = "default_rate_limit_enabled")]
+    pub enabled: bool,
+    /// Number of requests allowed per minute
+    #[serde(default = "default_requests_per_minute")]
+    pub requests_per_minute: u32,
+}
+
+impl Default for RateLimitConfig {
+    fn default() -> Self {
+        RateLimitConfig {
+            enabled: default_rate_limit_enabled(),
+            requests_per_minute: default_requests_per_minute(),
+        }
+    }
+}
+
+/// API server configuration
+#[derive(Debug, Clone, Deserialize, Serialize, PartialEq)]
+pub struct ApiConfig {
+    /// Enable REST API server
+    #[serde(default = "default_api_enabled")]
+    pub enabled: bool,
+    /// Unique instance identifier (derived from config file if not set)
+    #[serde(default)]
+    pub instance_id: Option<String>,
+    /// API server port
+    #[serde(default = "default_api_port")]
+    pub port: u16,
+    /// Bind host address
+    #[serde(default = "default_api_host")]
+    pub host: String,
+    /// Auto port selection if port is in use
+    #[serde(default = "default_auto_port")]
+    pub auto_port: bool,
+    /// Enable Swagger UI
+    #[serde(default = "default_swagger")]
+    pub swagger: bool,
+    /// Rate limiting configuration
+    #[serde(default)]
+    pub rate_limit: RateLimitConfig,
+}
+
+impl Default for ApiConfig {
+    fn default() -> Self {
+        ApiConfig {
+            enabled: default_api_enabled(),
+            instance_id: None,
+            port: default_api_port(),
+            host: default_api_host(),
+            auto_port: default_auto_port(),
+            swagger: default_swagger(),
+            rate_limit: RateLimitConfig::default(),
+        }
+    }
+}
+
+// Default value functions for API config
+fn default_api_enabled() -> bool {
+    false
+}
+
+fn default_api_port() -> u16 {
+    18500
+}
+
+fn default_api_host() -> String {
+    "127.0.0.1".to_string()
+}
+
+fn default_auto_port() -> bool {
+    true
+}
+
+fn default_swagger() -> bool {
+    true
+}
+
+fn default_rate_limit_enabled() -> bool {
+    true
+}
+
+fn default_requests_per_minute() -> u32 {
+    60
 }
 
 /// Default function for Agent.env field
@@ -742,7 +839,7 @@ fn default_env() -> Option<HashMap<String, String>> {
 }
 
 /// Agent configuration
-#[derive(Debug, Clone, Deserialize, Serialize)]
+#[derive(Debug, Clone, Deserialize, Serialize, Default)]
 pub struct Agent {
     /// Unique agent identifier
     pub name: String,
@@ -774,23 +871,9 @@ pub struct Agent {
     /// Format: alphanumeric characters, hyphens, and underscores only
     #[serde(default)]
     pub skills: Option<Vec<String>>,
-}
-
-impl Default for Agent {
-    fn default() -> Self {
-        Agent {
-            name: String::new(),
-            prompt: None,
-            prompt_file: None,
-            schedule: String::new(),
-            env: Some(HashMap::new()),
-            readonly: None,
-            timeout: Some("30m".to_string()),
-            overlap_mode: None,
-            max_queue_size: None,
-            skills: None,
-        }
-    }
+    /// Agent-level override for silent timeout
+    #[serde(default)]
+    pub silent_timeout: Option<String>,
 }
 
 impl Agent {
@@ -897,6 +980,26 @@ impl Agent {
     pub fn effective_max_queue_size(&self) -> usize {
         self.max_queue_size.unwrap_or(3)
     }
+
+    /// Resolve the effective silent timeout for this agent
+    /// Returns agent's silent_timeout if set, otherwise returns global setting if set,
+    /// otherwise returns "5m" (the default)
+    pub fn effective_silent_timeout(&self, global_settings: &Option<Settings>) -> String {
+        // Check agent-specific setting first
+        if let Some(agent_timeout) = &self.silent_timeout {
+            return agent_timeout.clone();
+        }
+
+        // Fall back to global setting
+        if let Some(settings) = global_settings {
+            if let Some(global_timeout) = &settings.silent_timeout {
+                return global_timeout.clone();
+            }
+        }
+
+        // Default to 5 minutes
+        "5m".to_string()
+    }
 }
 
 /// Top-level configuration structure
@@ -912,6 +1015,9 @@ pub struct Config {
     #[cfg(feature = "discord")]
     #[serde(default, rename = "discord")]
     pub discord: Option<DiscordSection>,
+    /// Optional REST API configuration
+    #[serde(default, rename = "api")]
+    pub api: Option<ApiConfig>,
     /// Path to the config file (not deserialized from TOML)
     #[serde(skip)]
     config_path: PathBuf,
@@ -924,6 +1030,7 @@ impl Default for Config {
             agents: Vec::new(),
             #[cfg(feature = "discord")]
             discord: None,
+            api: None,
             config_path: PathBuf::new(),
         }
     }
@@ -1397,11 +1504,9 @@ pub fn validate_timezone(timezone: &str) -> Result<(), ConfigError> {
 /// ```
 pub fn validate_timeout_value(timeout: Option<&str>) -> Result<(), ConfigError> {
     // If timeout is None, it's valid (default will be used)
-    if timeout.is_none() {
+    let Some(timeout_str) = timeout else {
         return Ok(());
-    }
-
-    let timeout_str = timeout.unwrap();
+    };
 
     // Parse the timeout using the existing timeout parsing logic
     // This validates the format (e.g., "30s", "5m", "1h")
@@ -2371,6 +2476,7 @@ mod tests {
             overlap_mode: None,
             max_queue_size: None,
             skills: None,
+            silent_timeout: None,
         };
 
         // Read the prompt file
@@ -2396,6 +2502,7 @@ mod tests {
             overlap_mode: None,
             max_queue_size: None,
             skills: None,
+            silent_timeout: None,
         };
 
         let temp_dir = tempfile::tempdir().expect("Failed to create temp dir");
@@ -2418,6 +2525,7 @@ mod tests {
             overlap_mode: None,
             max_queue_size: None,
             skills: None,
+            silent_timeout: None,
         };
 
         let temp_dir = tempfile::tempdir().expect("Failed to create temp dir");
@@ -3454,18 +3562,57 @@ mod tests {
     // Moved to module level to be discoverable by cargo test
     #[test]
     fn test_switchboard_toml_skills_parsing() {
-        // Test that switchboard.toml loads with skills parsed correctly for agents that have them
+        // Test that a config file loads with skills parsed correctly for agents that have them
         // This verifies the agent-specific skill parsing works correctly
         // Note: Not all agents are required to have skills defined - this is backwards compatible
-        let config = Config::from_toml(std::path::Path::new("switchboard.toml"))
-            .expect("Failed to load switchboard.toml");
+
+        // Create a temporary config file with the expected content
+        let temp_dir = std::env::temp_dir();
+        let config_path = temp_dir.join("switchboard_test_skills.toml");
+
+        let config_content = r#"
+[settings]
+image_name = "switchboard-agent"
+image_tag = "latest"
+
+[[agent]]
+name = "agent-1"
+schedule = "0 * * * *"
+prompt = "Test prompt 1"
+
+[[agent]]
+name = "agent-2"
+schedule = "0 * * * *"
+prompt = "Test prompt 2"
+
+[[agent]]
+name = "agent-3"
+schedule = "0 * * * *"
+prompt = "Test prompt 3"
+
+[[agent]]
+name = "gtse-dev-1"
+schedule = "0 9 * * 1-5"
+prompt = "Development tasks"
+skills = ["frontend-design"]
+
+[[agent]]
+name = "agent-5"
+schedule = "0 * * * *"
+prompt = "Test prompt 5"
+
+[[agent]]
+name = "agent-6"
+schedule = "0 * * * *"
+prompt = "Test prompt 6"
+"#;
+
+        std::fs::write(&config_path, config_content).expect("Failed to write temp config");
+
+        let config = Config::from_toml(&config_path).expect("Failed to load test config");
 
         // Verify we have 6 agents
-        assert_eq!(
-            config.agents.len(),
-            6,
-            "Expected 6 agents in switchboard.toml"
-        );
+        assert_eq!(config.agents.len(), 6, "Expected 6 agents in test config");
 
         // Verify agent gtse-dev-1 has the frontend-design skill
         let gtse_dev_1 = config
@@ -3493,7 +3640,7 @@ mod tests {
         );
 
         // Verify other agents can have None (backwards compatible - not all agents need skills)
-        // These agents don't have skills defined in switchboard.toml, which is valid
+        // These agents don't have skills defined in the config, which is valid
         for agent in &config.agents {
             if agent.name != "gtse-dev-1" {
                 // Agents without skills defined should have skills = None
@@ -3505,6 +3652,9 @@ mod tests {
                 );
             }
         }
+
+        // Clean up temp file
+        std::fs::remove_file(&config_path).ok();
 
         println!("Skills parsing verified: gtse-dev-1 has 'frontend-design', other agents have None (backwards compatible)");
     }

@@ -3,11 +3,59 @@
 //! This module provides functionality for streaming logs from Docker containers,
 //! supporting both foreground terminal output and file-based logging.
 
-use crate::docker::{DockerClient, DockerError};
+use crate::docker::DockerError;
 use crate::logger::Logger;
 use bollard::container::{LogOutput, LogsOptions};
 use futures::StreamExt;
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
+use std::time::{Duration, Instant};
+
+/// Shared state for tracking the last time a log was received.
+///
+/// This is used by the silent timeout monitoring to detect when an agent
+/// has been silent (no log output) for a specified duration.
+#[derive(Clone)]
+pub struct LogTimestampTracker {
+    /// Unix timestamp (seconds since epoch) of when the last log was received
+    last_log_time: Arc<AtomicU64>,
+}
+
+impl LogTimestampTracker {
+    /// Create a new LogTimestampTracker, initialized to the current time
+    pub fn new() -> Self {
+        let now = Instant::now().elapsed().as_secs();
+        Self {
+            last_log_time: Arc::new(AtomicU64::new(now)),
+        }
+    }
+
+    /// Update the last log time to now
+    pub fn update(&self) {
+        let now = Instant::now().elapsed().as_secs();
+        self.last_log_time.store(now, Ordering::SeqCst);
+    }
+
+    /// Get the seconds since the last log was received
+    pub fn seconds_since_last_log(&self) -> u64 {
+        let last_log = self.last_log_time.load(Ordering::SeqCst);
+        let now = Instant::now().elapsed().as_secs();
+        now.saturating_sub(last_log)
+    }
+
+    /// Check if the silent timeout has been exceeded
+    /// Returns true if no logs received for longer than the timeout duration
+    pub fn is_silent_timeout_exceeded(&self, timeout: Duration) -> bool {
+        let timeout_secs = timeout.as_secs();
+        self.seconds_since_last_log() > timeout_secs
+    }
+}
+
+impl Default for LogTimestampTracker {
+    fn default() -> Self {
+        Self::new()
+    }
+}
 
 /// Attach to a container and stream its logs
 ///
@@ -15,13 +63,17 @@ use std::sync::{Arc, Mutex};
 /// output. If a logger is provided, logs are written to both the terminal (if in
 /// foreground mode) and the agent's log file.
 ///
+/// If a `LogTimestampTracker` is provided, it will be updated whenever a log message
+/// is received, which is used by the silent timeout monitoring feature.
+///
 /// # Arguments
 ///
-/// * `client` - Reference to the DockerClient
+/// * `client` - Reference to the DockerClientTrait
 /// * `container_id` - The ID of the container to stream logs from
 /// * `agent_name` - Name of the agent (used for log file naming)
 /// * `logger` - Optional logger for writing container logs
 /// * `follow` - Whether to follow logs as they are generated (true) or get existing logs (false)
+/// * `timestamp_tracker` - Optional tracker for updating last log timestamp (for silent timeout)
 ///
 /// # Returns
 ///
@@ -31,12 +83,13 @@ use std::sync::{Arc, Mutex};
 ///
 /// Returns `DockerError::ConnectionError` if there's an issue with the Docker connection
 /// or log stream.
-pub async fn attach_and_stream_logs(
-    client: &DockerClient,
+pub async fn attach_and_stream_logs<T: crate::traits::DockerClientTrait>(
+    client: &T,
     container_id: &str,
     agent_name: &str,
     logger: Option<Arc<Mutex<Logger>>>,
     follow: bool,
+    timestamp_tracker: Option<LogTimestampTracker>,
 ) -> Result<(), DockerError> {
     let docker = client
         .docker()
@@ -88,9 +141,21 @@ pub async fn attach_and_stream_logs(
                         }
                     }
                     // Write to log file
-                    if let Err(e) = logger.lock().unwrap().write_agent_log(agent_name, &message) {
-                        eprintln!("Failed to write agent log: {}", e);
+                    match logger.lock() {
+                        Ok(logger_guard) => {
+                            if let Err(e) = logger_guard.write_agent_log(agent_name, &message) {
+                                eprintln!("Failed to write agent log: {}", e);
+                            }
+                        }
+                        Err(e) => {
+                            eprintln!("Failed to acquire logger lock: {}", e);
+                        }
                     }
+                }
+
+                // Update timestamp tracker if provided (for silent timeout monitoring)
+                if let Some(ref tracker) = timestamp_tracker {
+                    tracker.update();
                 }
             }
             Err(e) => {

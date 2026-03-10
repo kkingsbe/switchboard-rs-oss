@@ -10,6 +10,7 @@ Switchboard is a tool for scheduling and running AI coding agents with Docker is
 ## Features
 
 - [Skills](skills.md) - Extensible AI agent capabilities
+- [Workflows](workflows.md) - Pre-built agent configurations from a registry
 - [Discord Concierge](discord.md) - Discord bot integration for AI conversations
 
 ## Reference

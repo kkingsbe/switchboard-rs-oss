@@ -85,6 +85,12 @@ pub struct ContainerConfig {
     /// - `Some([])`: Empty skills list, use default container entrypoint
     /// - `Some([...])`: One or more skills, generate and inject entrypoint script
     pub skills: Option<Vec<String>>,
+    /// Optional silent timeout duration (e.g., "30s", "5m", "1h", "0" to disable)
+    ///
+    /// When set, the agent will be automatically terminated if it doesn't produce
+    /// any log output for the specified duration. This helps identify and clean up
+    /// stuck or unresponsive agents.
+    pub silent_timeout: Option<String>,
 }
 
 impl ContainerConfig {
@@ -144,6 +150,7 @@ impl ContainerConfig {
             readonly: false,
             prompt: String::new(),
             skills: None,
+            silent_timeout: None,
         }
     }
 }

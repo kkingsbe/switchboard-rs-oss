@@ -142,7 +142,10 @@ Run through these checks in order. Execute the FIRST match:
 
 ### 2. Sprint Complete — Clean Up and Plan Next
 **Condition:** `.sprint_complete` exists
-**Action:** Clean up completed sprint (Step 1), then plan next sprint (Step 2 → Step 5).
+**Action:** Clean up completed sprint (Step 1). Then check: does `sprint-status.yaml`
+show ALL stories as `complete` or `already-implemented`? If YES → create
+`.switchboard/state/.project_complete` and STOP. If NO → plan next sprint
+(Step 2 → Step 5).
 
 ### 3. All Stories Done — Project Complete
 **Condition:** `sprint-status.yaml` shows ALL stories as `complete` or `already-implemented`
@@ -223,6 +226,19 @@ They are never selected for sprints — they represent existing functionality.
 
 Log in BLOCKERS.md with all blocked story IDs and their unsatisfied dependencies.
 STOP and wait for human intervention or dependency resolution.
+
+### If No Selectable Stories Remain (all complete)
+
+If there are zero stories with `status: not-started` (all are `complete` or
+`already-implemented`), the project is done:
+
+1. Create `.switchboard/state/.project_complete`
+2. Commit: `chore(planner): all stories complete — project done`
+3. STOP.
+
+This catches the edge case where sprint cleanup (Step 1) increments the sprint
+counter but there's no remaining work. Without this check, the pipeline deadlocks —
+no `.project_complete` is created and all agents wait indefinitely.
 
 ✅ Update `planner_session.md`
 

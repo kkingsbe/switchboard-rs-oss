@@ -183,6 +183,7 @@ pub fn create_test_agent(name: &str, schedule: &str) -> Agent {
         max_queue_size: None,
         overlap_mode: None,
         skills: None,
+        silent_timeout: None,
     }
 }
 
@@ -1760,6 +1761,7 @@ fn test_scheduled_agent_fields() {
         max_queue_size: None,
         overlap_mode: None,
         skills: None,
+        silent_timeout: None,
     };
 
     // Create a DateTime for next_run
@@ -1928,6 +1930,7 @@ async fn test_queue_mode_fifo_ordering() {
         max_queue_size: Some(3),
         overlap_mode: Some(OverlapMode::Queue),
         skills: None,
+        silent_timeout: None,
     };
 
     // Create temporary directories for config_dir and log_dir
@@ -2156,6 +2159,7 @@ async fn test_queue_mode_full_skip_new_runs() {
         max_queue_size: Some(1),
         overlap_mode: Some(OverlapMode::Queue),
         skills: None,
+        silent_timeout: None,
     };
 
     // Create temporary directories for config_dir and log_dir
