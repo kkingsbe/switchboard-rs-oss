@@ -49,11 +49,145 @@ impl LogTimestampTracker {
         let timeout_secs = timeout.as_secs();
         self.seconds_since_last_log() > timeout_secs
     }
+
+    #[cfg(test)]
+    /// Test helper to set the last log time to a specific offset from now
+    pub fn set_seconds_ago(&self, seconds_ago: u64) {
+        // Get the current elapsed time
+        let now = Instant::now();
+        let now_secs = now.elapsed().as_secs();
+        let timestamp = now_secs.saturating_sub(seconds_ago);
+        self.last_log_time.store(timestamp, Ordering::SeqCst);
+    }
+
+    #[cfg(test)]
+    /// Test helper to set the timestamp to a specific absolute value
+    pub fn set_timestamp(&self, timestamp: u64) {
+        self.last_log_time.store(timestamp, Ordering::SeqCst);
+    }
+
+    #[cfg(test)]
+    /// Test helper to get the current tracked timestamp (for debugging tests)
+    pub fn get_last_log_time(&self) -> u64 {
+        self.last_log_time.load(Ordering::SeqCst)
+    }
+
+    #[cfg(test)]
+    /// Test helper to get the current elapsed time since program start
+    pub fn current_elapsed_secs() -> u64 {
+        Instant::now().elapsed().as_secs()
+    }
 }
 
 impl Default for LogTimestampTracker {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::thread;
+    use std::time::Duration as StdDuration;
+
+    /// Test: New tracker initialized with current time
+    #[test]
+    fn test_new_tracker_initialized() {
+        let tracker = LogTimestampTracker::new();
+        // Should be initialized to roughly now (within a few seconds)
+        let elapsed = tracker.seconds_since_last_log();
+        assert!(elapsed < 5, "New tracker should be initialized to current time, but was {} seconds ago", elapsed);
+    }
+
+    /// Test: Update resets timestamp to now
+    #[test]
+    fn test_update_resets_timestamp() {
+        let tracker = LogTimestampTracker::new();
+
+        // Wait a tiny bit
+        thread::sleep(StdDuration::from_millis(10));
+
+        // Update should reset to now
+        tracker.update();
+
+        let elapsed = tracker.seconds_since_last_log();
+        assert!(elapsed < 2, "After update, seconds_since_last_log should be ~0, but was {} seconds", elapsed);
+    }
+
+    /// Test: Seconds since last log immediately after creation
+    #[test]
+    fn test_seconds_since_last_log_immediately() {
+        let tracker = LogTimestampTracker::new();
+        let elapsed = tracker.seconds_since_last_log();
+        // Should be 0 or very close to 0
+        assert!(elapsed < 2, "Immediately after creation, should be ~0 seconds, but was {} seconds", elapsed);
+    }
+
+    /// Test: Timeout NOT exceeded with recent log
+    #[test]
+    fn test_timeout_not_exceeded() {
+        let tracker = LogTimestampTracker::new();
+
+        // Use a relatively short timeout (10 seconds)
+        let timeout = StdDuration::from_secs(10);
+
+        // Should NOT be exceeded since we just created it
+        assert!(!tracker.is_silent_timeout_exceeded(timeout),
+            "Timeout should NOT be exceeded with recent log");
+    }
+
+    /// Test: Timeout exceeded after waiting
+    /// This test waits for 65 seconds and then verifies the timeout is exceeded.
+    /// Note: This test takes 65+ seconds to run.
+    #[test]
+    #[ignore] // Ignored because it takes too long to run
+    fn test_timeout_exceeded_after_wait() {
+        let tracker = LogTimestampTracker::new();
+        
+        // Wait longer than the timeout
+        thread::sleep(StdDuration::from_secs(65));
+        
+        // Use a 60 second timeout
+        let timeout = StdDuration::from_secs(60);
+
+        // Should be exceeded since we waited 65 seconds
+        assert!(tracker.is_silent_timeout_exceeded(timeout),
+            "Timeout SHOULD be exceeded after waiting 65 seconds with 60 second timeout");
+    }
+
+    /// Test: Timeout NOT exceeded when log is recent
+    /// This test verifies the timeout logic works correctly in the non-exceeded case
+    #[test]
+    fn test_timeout_not_exceeded_recent_log() {
+        let tracker = LogTimestampTracker::new();
+        
+        // Wait a small amount
+        thread::sleep(StdDuration::from_millis(100));
+        
+        // Use a 1 second timeout
+        let timeout = StdDuration::from_secs(1);
+
+        // Should NOT be exceeded since we just created the tracker
+        // (100ms < 1000ms)
+        assert!(!tracker.is_silent_timeout_exceeded(timeout),
+            "Timeout should NOT be exceeded with recent log");
+    }
+
+    /// Test: Default implementation equivalent to new()
+    #[test]
+    fn test_default_implementation() {
+        let tracker_default = LogTimestampTracker::default();
+        let tracker_new = LogTimestampTracker::new();
+
+        // Both should be initialized to roughly the same time
+        let elapsed_default = tracker_default.seconds_since_last_log();
+        let elapsed_new = tracker_new.seconds_since_last_log();
+
+        // Both should be close to now (within 5 seconds of each other)
+        assert!((elapsed_default as i64 - elapsed_new as i64).abs() < 5,
+            "Default should be equivalent to new(), but differs by {} seconds",
+            elapsed_default as i64 - elapsed_new as i64);
     }
 }
 

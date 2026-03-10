@@ -3658,4 +3658,117 @@ prompt = "Test prompt 6"
 
         println!("Skills parsing verified: gtse-dev-1 has 'frontend-design', other agents have None (backwards compatible)");
     }
+
+    // ========================================
+    // Tests for effective_silent_timeout()
+    // ========================================
+
+    #[test]
+    fn test_effective_silent_timeout_agent_override() {
+        // Agent override: Some("10m") / Some("5m") -> "10m"
+        let agent = Agent {
+            name: "test-agent".to_string(),
+            schedule: "0 * * * *".to_string(),
+            silent_timeout: Some("10m".to_string()),
+            ..Default::default()
+        };
+
+        let global_settings = Settings {
+            silent_timeout: Some("5m".to_string()),
+            ..Default::default()
+        };
+
+        let result = agent.effective_silent_timeout(&Some(global_settings));
+        assert_eq!(result, "10m");
+    }
+
+    #[test]
+    fn test_effective_silent_timeout_global_fallback() {
+        // Global fallback: None / Some("5m") -> "5m"
+        let agent = Agent {
+            name: "test-agent".to_string(),
+            schedule: "0 * * * *".to_string(),
+            silent_timeout: None,
+            ..Default::default()
+        };
+
+        let global_settings = Settings {
+            silent_timeout: Some("5m".to_string()),
+            ..Default::default()
+        };
+
+        let result = agent.effective_silent_timeout(&Some(global_settings));
+        assert_eq!(result, "5m");
+    }
+
+    #[test]
+    fn test_effective_silent_timeout_default_fallback() {
+        // Default fallback: None / None -> "5m"
+        let agent = Agent {
+            name: "test-agent".to_string(),
+            schedule: "0 * * * *".to_string(),
+            silent_timeout: None,
+            ..Default::default()
+        };
+
+        let global_settings = Settings {
+            silent_timeout: None,
+            ..Default::default()
+        };
+
+        let result = agent.effective_silent_timeout(&Some(global_settings));
+        assert_eq!(result, "5m");
+    }
+
+    #[test]
+    fn test_effective_silent_timeout_agent_zero_disabled() {
+        // Agent "0" (disabled): Some("0") / Some("5m") -> "0"
+        let agent = Agent {
+            name: "test-agent".to_string(),
+            schedule: "0 * * * *".to_string(),
+            silent_timeout: Some("0".to_string()),
+            ..Default::default()
+        };
+
+        let global_settings = Settings {
+            silent_timeout: Some("5m".to_string()),
+            ..Default::default()
+        };
+
+        let result = agent.effective_silent_timeout(&Some(global_settings));
+        assert_eq!(result, "0");
+    }
+
+    #[test]
+    fn test_effective_silent_timeout_global_zero_disabled() {
+        // Global "0" (disabled): None / Some("0") -> "0"
+        let agent = Agent {
+            name: "test-agent".to_string(),
+            schedule: "0 * * * *".to_string(),
+            silent_timeout: None,
+            ..Default::default()
+        };
+
+        let global_settings = Settings {
+            silent_timeout: Some("0".to_string()),
+            ..Default::default()
+        };
+
+        let result = agent.effective_silent_timeout(&Some(global_settings));
+        assert_eq!(result, "0");
+    }
+
+    #[test]
+    fn test_effective_silent_timeout_no_global_settings() {
+        // When global_settings is None, should fall back to default "5m"
+        let agent = Agent {
+            name: "test-agent".to_string(),
+            schedule: "0 * * * *".to_string(),
+            silent_timeout: None,
+            ..Default::default()
+        };
+
+        let result = agent.effective_silent_timeout(&None);
+        assert_eq!(result, "5m");
+    }
 }
