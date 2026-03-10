@@ -107,13 +107,13 @@ pub struct SchedulerStatusResponse {
 // ============================================================================
 
 /// Get the scheduler PID file path.
-fn get_pid_file_path(state: &ApiState) -> PathBuf {
+pub(crate) fn get_pid_file_path(state: &ApiState) -> PathBuf {
     // Use the instance-specific PID file from state
     state.instance_pid_file.clone()
 }
 
 /// Read the PID from the PID file.
-fn read_pid_file(pid_file_path: &PathBuf) -> Result<Option<u32>, ApiError> {
+pub(crate) fn read_pid_file(pid_file_path: &PathBuf) -> Result<Option<u32>, ApiError> {
     if !pid_file_path.exists() {
         return Ok(None);
     }
@@ -130,7 +130,7 @@ fn read_pid_file(pid_file_path: &PathBuf) -> Result<Option<u32>, ApiError> {
 }
 
 /// Write the PID to the PID file.
-fn write_pid_file(pid_file_path: &PathBuf, pid: u32) -> Result<(), ApiError> {
+pub(crate) fn write_pid_file(pid_file_path: &PathBuf, pid: u32) -> Result<(), ApiError> {
     // Ensure parent directory exists
     if let Some(parent) = pid_file_path.parent() {
         fs::create_dir_all(parent)
@@ -144,7 +144,7 @@ fn write_pid_file(pid_file_path: &PathBuf, pid: u32) -> Result<(), ApiError> {
 }
 
 /// Delete the PID file.
-fn delete_pid_file(pid_file_path: &PathBuf) -> Result<(), ApiError> {
+pub(crate) fn delete_pid_file(pid_file_path: &PathBuf) -> Result<(), ApiError> {
     if pid_file_path.exists() {
         fs::remove_file(pid_file_path)
             .map_err(|e| ApiError::Internal(format!("Failed to delete PID file: {}", e)))?;
@@ -154,7 +154,7 @@ fn delete_pid_file(pid_file_path: &PathBuf) -> Result<(), ApiError> {
 
 /// Check if a process with the given PID is running.
 #[cfg(unix)]
-fn is_process_running(pid: u32) -> bool {
+pub(crate) fn is_process_running(pid: u32) -> bool {
     unsafe {
         match libc::kill(pid as libc::pid_t, 0) {
             0 | libc::EPERM => true, // Process exists (success or permission denied)
@@ -166,7 +166,7 @@ fn is_process_running(pid: u32) -> bool {
 
 /// Check if a process with the given PID is running (Windows).
 #[cfg(windows)]
-fn is_process_running(pid: u32) -> bool {
+pub(crate) fn is_process_running(pid: u32) -> bool {
     use std::process::Command;
 
     let output = Command::new("tasklist")
@@ -183,7 +183,7 @@ fn is_process_running(pid: u32) -> bool {
 }
 
 /// Check if the scheduler is currently running.
-fn is_scheduler_running(state: &ApiState) -> (bool, Option<u32>) {
+pub(crate) fn is_scheduler_running(state: &ApiState) -> (bool, Option<u32>) {
     let pid_file_path = get_pid_file_path(state);
     
     match read_pid_file(&pid_file_path) {

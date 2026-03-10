@@ -3,6 +3,7 @@
 //! This module implements the `ps` command similar to `docker-compose ps` to show
 //! the status of all switchboard processes.
 
+use crate::api::registry::derive_instance_id_from_config;
 use crate::cli::process::is_process_running;
 use serde::Deserialize;
 use std::fs;
@@ -32,10 +33,15 @@ pub struct ProcessStatus {
 /// - Scheduler not running (no PID file)
 /// - Stale PID file (process not running but file exists)
 /// - No heartbeat file
-pub fn run_ps(_config: Option<String>) -> Result<(), Box<dyn std::error::Error>> {
-    let switchboard_dir = Path::new(".switchboard");
-    let pid_file_path = switchboard_dir.join("scheduler.pid");
-    let heartbeat_path = switchboard_dir.join("heartbeat.json");
+pub fn run_ps(config: Option<String>) -> Result<(), Box<dyn std::error::Error>> {
+    let config_path = config.unwrap_or_else(|| "./switchboard.toml".to_string());
+    
+    // Derive instance_id from config path to match the instance-specific PID file location
+    let instance_id = derive_instance_id_from_config(&config_path);
+    tracing::debug!("Derived instance ID from config path: {}", instance_id);
+    
+    let pid_file_path = Path::new(".switchboard").join("instances").join(&instance_id).join("scheduler.pid");
+    let heartbeat_path = Path::new(".switchboard").join("instances").join(&instance_id).join("heartbeat.json");
 
     // Header for the table
     println!(

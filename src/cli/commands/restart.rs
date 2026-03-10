@@ -2,6 +2,7 @@
 //!
 //! This module contains the restart command handler that stops and restarts the scheduler.
 
+use crate::api::registry::derive_instance_id_from_config;
 use crate::cli::process::{default_executor, is_process_running};
 use std::fs;
 use std::path::Path;
@@ -37,15 +38,20 @@ pub async fn run_restart(
     args: crate::cli::RestartCommand,
     config_path: Option<String>,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    let pid_file_path = Path::new(".switchboard/scheduler.pid");
     let config_path = config_path.unwrap_or_else(|| "./switchboard.toml".to_string());
+    
+    // Derive instance_id from config path to match the instance-specific PID file location
+    let instance_id = derive_instance_id_from_config(&config_path);
+    tracing::debug!("Derived instance ID from config path: {}", instance_id);
+    
+    let pid_file_path = Path::new(".switchboard").join("instances").join(&instance_id).join("scheduler.pid");
 
     // Step 1: Check if scheduler is running
     let mut _was_running = false;
     
     if pid_file_path.exists() {
         // Read PID file
-        let pid_content = fs::read_to_string(pid_file_path)?;
+        let pid_content = fs::read_to_string(&pid_file_path)?;
         
         // Parse PID as u32
         let pid: u32 = pid_content.trim().parse().map_err(|e| {

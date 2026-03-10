@@ -9,6 +9,9 @@ pub mod projects;
 pub mod scheduler;
 pub mod gateway;
 
+#[cfg(test)]
+mod scheduler_tests;
+
 // Re-export specific items to avoid ambiguous glob re-exports
 pub use agents::{
     ApiResponse as AgentsApiResponse,

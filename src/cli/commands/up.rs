@@ -697,8 +697,8 @@ pub async fn run_up(
         // Detach mode: spawn a new child process with --daemon flag
         // This allows the parent process to return immediately
         if registered_count > 0 {
-            // Check for existing scheduler using PID file
-            let pid_file_path = Path::new(".switchboard/scheduler.pid");
+            // Check for existing scheduler using PID file (instance-specific path)
+            let pid_file_path = Path::new(".switchboard").join("instances").join(&instance_id).join("scheduler.pid");
             if pid_file_path.exists() {
                 // Try to read the PID and check if the process is running
                 if let Ok(pid_content) = fs::read_to_string(pid_file_path) {
