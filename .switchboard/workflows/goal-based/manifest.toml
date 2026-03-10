@@ -1,0 +1,32 @@
+[workflow]
+name = "goal-based"                        # Required: workflow name (matches directory)
+version = "1.0.0"                          # Optional: version string
+description = "Goal-based autonomous workflow with planner/executor/verifier loop"
+
+[[agent]]
+name = "goal-planner"
+schedule = "0,10,20,30,40,50 * * * *"     # Every 10 min at :00, :10, :20, :30, :40, :50
+readonly = false
+timeout = "8m"
+prompt_file = "./switchboard/workflows/goal-based/prompts/GOAL_PLANNER.md"
+
+[[agent]]
+name = "goal-executor"
+schedule = "3,13,23,33,43,53 * * * *"     # Every 10 min at :03, :13, :23, :33, :43, :53
+readonly = false
+timeout = "8m"
+prompt_file = "./switchboard/workflows/goal-based/prompts/GOAL_EXECUTOR.md"
+
+[[agent]]
+name = "goal-verifier"
+schedule = "6,16,26,36,46,56 * * * *"     # Every 10 min at :06, :16, :26, :36, :46, :56
+readonly = false
+timeout = "8m"
+prompt_file = "./switchboard/workflows/goal-based/prompts/GOAL_VERIFIER.md"
+
+[[agent]]
+name = "goal-skill-distiller"
+schedule = "*/30 * * * *"
+prompt_file = "./switchboard/workflows/goal-based/prompts/SKILL_DISTILLER.md"
+timeout = "30m"
+readonly = false

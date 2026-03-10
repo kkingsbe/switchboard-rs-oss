@@ -77,7 +77,14 @@ fn get_timezone(config: &Config) -> Result<Tz, String> {
         .as_ref()
         .ok_or_else(|| "Missing settings in config".to_string())
         .and_then(|s| {
-            s.timezone
+            // Handle special cases: "system" or empty string should default to UTC
+            // This matches the validation logic in config/mod.rs which accepts these as valid
+            let timezone_str = if s.timezone.is_empty() || s.timezone == "system" {
+                "UTC"
+            } else {
+                s.timezone.as_str()
+            };
+            timezone_str
                 .parse::<Tz>()
                 .map_err(|e| format!("Invalid timezone '{}': {}", s.timezone, e))
         })
