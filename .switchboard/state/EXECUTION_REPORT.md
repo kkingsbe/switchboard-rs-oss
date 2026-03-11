@@ -1,13 +1,13 @@
 # Execution Report
 
-**Milestone:** M4 — Git Diff Capture
+**Milestone:** M5 — Log Rotation
 **Task type:** code
 **Attempt:** 1
 **Date:** 2026-03-11
 
 ## Custom Skills Applied
 
-- **tdd-comprehensive-tests.md** — Applied TDD approach with comprehensive unit tests for git diff parsing. 8 tests verify the parsing functionality covering single commit, multiple commits, empty output, no numstat, binary files, special characters, trailing newlines, and Windows line endings.
+- **tdd-comprehensive-tests.md** — Applied TDD approach with comprehensive unit tests for log rotation functionality. 9 tests verify rotation behavior, timestamp formatting, retention cleanup, and configuration.
 
 ## Verdict
 
@@ -15,59 +15,57 @@ COMPLETE
 
 ## What Was Done
 
-The M4 Git Diff Capture feature was verified as fully implemented:
+The M5 Log Rotation feature was implemented in [`src/observability/emitter.rs`](src/observability/emitter.rs):
 
-1. **HEAD hash recorded before container launch** — [`get_git_head()`](src/scheduler/mod.rs:51) function executes `git rev-parse HEAD` before container starts
-2. **HEAD hash captured after container exits** — Same function called at line 1004 after container exits
-3. **git.log output parsed into structured commit data** — [`parse_git_log_output()`](src/scheduler/mod.rs:94) parses `git log {before}..{after} --format="%H|%s" --numstat --no-merges` output
-4. **Edge case handled: no commits made** — Lines 1047-1071 emit empty git.diff event when no commits
-5. **Unit tests for git diff parsing pass** — 8 comprehensive tests at lines 1919-2050
+1. **Rotation size threshold** — [`EmitterConfig.rotation_size_threshold`](src/observability/emitter.rs:37) configurable maximum file size before rotation (default: 10MB)
+2. **Retention days** — [`EmitterConfig.retention_days`](src/observability/emitter.rs:39) configurable number of days to keep rotated files (default: 30)
+3. **Automatic rotation** — [`check_and_rotate()`](src/observability/emitter.rs:212) checks file size after each write and rotates when threshold exceeded
+4. **Timestamp-suffixed files** — [`rotate()`](src/observability/emitter.rs:227) renames current file to `events.2025-03-10T09-00-00Z.jsonl` format
+5. **Retention cleanup** — [`cleanup_old_files()`](src/observability/emitter.rs:266) automatically deletes rotated files older than retention period
+6. **Manual rotation** — [`force_rotate()`](src/observability/emitter.rs:308) allows forced rotation for testing or administrative purposes
 
 ## Files Modified / Created
 
+- `src/observability/emitter.rs` — Added log rotation implementation (373 lines)
 - `src/observability/event.rs` — Added run_id and agent fields to Event struct (31 lines)
-- `src/scheduler/mod.rs` — Added git diff capture functions and event emission (411 lines)
+- `src/observability/mod.rs` — Updated module exports (3 lines)
 
 ## Evidence
 
 ### git diff --stat
 ```
- src/observability/event.rs |  31 +++
- src/scheduler/mod.rs       | 411 ++++++++++++++++++++++++++++++++++++++++++++-
- 2 files changed, 441 insertions(+), 1 deletion(-)
+ src/observability/emitter.rs | 373 +++++++++++++++++++++++++++++++++++++++++++
+ src/observability/event.rs   |  31 +++
+ src/observability/mod.rs    |   3 +-
+ 3 files changed, 406 insertions(+), 1 deletion(-)
 ```
 
 ### Build Output
 ```
-    Finished `dev` profile [unoptimized + debuginfo] target(s) in 3m 50s
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 28.77s
 ```
-Build succeeded with 16 warnings (unrelated to M4).
+Build succeeded with 16 warnings (unrelated to M5).
 
 ### Test Output
 ```
-running 8 tests
-test scheduler::scheduler_events_tests::test_parse_git_log_empty_output ... ok
-test scheduler::scheduler_events_tests::test_parse_git_log_no_numstat ... ok
-test scheduler::scheduler_events_tests::test_parse_git_log_special_chars_in_message ... ok
-test scheduler::scheduler_events_tests::test_parse_git_log_single_commit ... ok
-test scheduler::scheduler_events_tests::test_parse_git_log_windows_line_endings ... ok
-test scheduler::scheduler_events_tests::test_parse_git_log_binary_files ... ok
-test scheduler::scheduler_events_tests::test_parse_git_log_multiple_commits ... ok
-test scheduler::scheduler_events_tests::test_parse_git_log_trailing_newline ... ok
-test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 946 filtered out; finished in 0.02s
-
-running 3 tests
-test observability::event::tests::event_type_git_diff_should_format_correctly ... ok
-test observability::event::tests::event_data_git_diff_should_handle_empty_commits ... ok
-test observability::event::tests::event_data_git_diff_should_create_valid_payload ... ok
-test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 951 filtered out; finished in 0.02s
+running 9 tests
+test observability::emitter::rotation_tests::test_config_builder_for_rotation ... ok
+test observability::emitter::rotation_tests::test_config_defaults_include_rotation ... ok
+test observability::emitter::rotation_tests::test_generate_timestamp_suffix_format ... ok
+test observability::emitter::rotation_tests::test_file_size_returns_current_size ... ok
+test observability::emitter::rotation_tests::test_rotation_disabled_does_not_rotate ... ok
+test observability::emitter::rotation_tests::test_rotation_threshold_respected ... ok
+test observability::emitter::rotation_tests::test_retention_cleanup_removes_old_files ... ok
+test observability::emitter::rotation_tests::test_force_rotate_creates_rotated_file ... ok
+test observability::emitter::rotation_tests::test_rotation_creates_timestamp_suffix_file ... ok
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 954 filtered out
 ```
 
-All 11 git_diff related tests passed.
+All 9 log rotation tests passed.
 
 ## What Was NOT Done
 
-All success criteria from CURRENT_TASK.md have been verified as implemented. No subtasks were skipped.
+All success criteria from CURRENT_TASK.md have been implemented. No subtasks were skipped.
 
 ## Blockers
 
@@ -75,4 +73,4 @@ None.
 
 ## Notes for Verifier
 
-The M4 feature was already implemented in the codebase when this task was received. The implementation follows the patterns established in M1-M3 for event emission and includes comprehensive unit tests. The verification confirms all success criteria are met.
+The M5 feature follows the established patterns in the observability module. Configuration uses the builder pattern with sensible defaults. Rotation uses atomic rename operations for safety. The implementation includes comprehensive unit tests covering all major functionality.
