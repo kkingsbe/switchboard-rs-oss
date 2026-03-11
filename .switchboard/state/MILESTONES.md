@@ -59,15 +59,16 @@
 
 ## Milestone 4: Git Diff Capture
 
-**Status:** IN_PROGRESS
+**Status:** COMPLETE
 **Task type:** code
 **Goal reference:** Implement ./observability_design_spec.md using STRICT test-driven development
 **Success criteria:**
-- [ ] HEAD hash recorded before container launch
-- [ ] HEAD hash captured after container exits
-- [ ] git.log output parsed into structured commit data
-- [ ] Edge case handled: no commits made
-- [ ] Unit tests for git diff parsing pass
+- [x] HEAD hash recorded before container launch
+- [x] HEAD hash captured after container exits
+- [x] git.log output parsed into structured commit data
+- [x] Edge case handled: no commits made
+- [x] Unit tests for git diff parsing pass
+**Verified:** 2026-03-11 (Stale state - work was complete, marked complete)
 
 **Decomposition history:**
 <!-- Empty initially -->
@@ -76,14 +77,15 @@
 
 ## Milestone 5: Log Rotation
 
-**Status:** PENDING
+**Status:** COMPLETE
 **Task type:** code
 **Goal reference:** Implement ./observability_design_spec.md using STRICT test-driven development
 **Success criteria:**
-- [ ] 10MB size check implemented after each write
-- [ ] Log rotation with timestamp suffix works
-- [ ] 30-day retention cleanup implemented
-- [ ] Tests for rotation logic pass
+- [x] 10MB size check implemented after each write
+- [x] Log rotation with timestamp suffix works
+- [x] 30-day retention cleanup implemented
+- [x] Tests for rotation logic pass
+**Verified:** 2026-03-11 (Loop 8 - PASS)
 
 **Decomposition history:**
 <!-- Empty initially -->
@@ -91,17 +93,14 @@
 ---
 
 ## Milestone 6: Configuration Integration
-
-**Status:** PENDING
+**Status:** COMPLETE
+**Verified:** 2026-03-11 (Loop 9 - PASS)
 **Task type:** code
 **Goal reference:** Implement ./observability_design_spec.md using STRICT test-driven development
 **Success criteria:**
-- [ ] [settings.observability] TOML parsing works
-- [ ] Wired into main app initialization
-- [ ] Config loading tests pass
-
-**Decomposition history:**
-<!-- Empty initially -->
+- [x] [settings.observability] TOML parsing works
+- [x] Wired into main app initialization
+- [x] Config loading tests pass
 
 ---
 

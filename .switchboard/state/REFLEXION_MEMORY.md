@@ -1,6 +1,22 @@
 Max entries: 20. Oldest pruned first.
 ---
 
+### State Fix — 2026-03-11
+**Issue:** Stale state detected
+**Problem:** CURRENT_TASK.md referenced M5 (Log Rotation) but M5 was already COMPLETE. M6 (Configuration Integration) was marked IN_PROGRESS in MILESTONES.md but not reflected in CURRENT_TASK.
+**Fix Applied:** Updated CURRENT_TASK.md to reference M6 with proper context. Re-created .milestone_ready signal for M6.
+**Lesson:** After verification feedback is processed, the system must properly transition to the next milestone. The stale state indicates a gap in the feedback processing workflow.
+
+---
+
+### Loop 8 — 2026-03-11
+**Milestone:** M5 — Log Rotation
+**Verdict:** PASS
+**Key learning:** All 4 criteria verified, 9 tests pass. Pre-existing implementation confirmed.
+**Adaptation:** None needed - milestone completed successfully on first attempt.
+
+---
+
 ### Loop 7 — 2026-03-11
 **Milestone:** M5 — Log Rotation
 **Attempt:** 1
@@ -74,3 +90,13 @@ Max entries: 20. Oldest pruned first.
 - The verification confirmed the executor stayed within scope and followed best practices
 
 ---
+
+---
+
+### Loop 9 — 2026-03-11
+**Milestone:** M6 — Configuration Integration
+**Attempt:** 1
+**Verdict:** PASS
+**Key finding:** All 3 success criteria verified: [settings.observability] TOML parsing, wired into CLI initialization via up.rs, 14 config tests plus 69 total observability tests pass.
+**Pattern:** Implementation added new code (not pre-existing like M4/M5)
+**Custom skills consulted:** tdd-comprehensive-tests.md, honest-reporting.md, milestone-reference-accuracy.md
