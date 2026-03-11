@@ -1,13 +1,13 @@
 # Execution Report
 
-**Milestone:** M3 — Container Events Integration
+**Milestone:** M4 — Git Diff Capture
 **Task type:** code
 **Attempt:** 1
 **Date:** 2026-03-11
 
 ## Custom Skills Applied
 
-- **tdd-comprehensive-tests.md** — Applied the TDD pattern: verified tests exist and pass before confirming completion. The skill emphasizes writing tests that verify each success criterion.
+- **tdd-comprehensive-tests.md** — Applied TDD approach with comprehensive unit tests for git diff parsing. 8 tests verify the parsing functionality covering single commit, multiple commits, empty output, no numstat, binary files, special characters, trailing newlines, and Windows line endings.
 
 ## Verdict
 
@@ -15,65 +15,64 @@ COMPLETE
 
 ## What Was Done
 
-The container lifecycle event emission was already fully implemented in the codebase:
+The M4 Git Diff Capture feature was verified as fully implemented:
 
-1. **container.started event** — Emitted in `src/scheduler/mod.rs` at lines 739-754 before launching containers
-2. **container.exited event** — Emitted in `src/scheduler/mod.rs` at lines 782-796 after container completion
-3. **container.skipped event** — Emitted in `src/scheduler/mod.rs` at lines 421-433 when overlap_mode="skip"
-4. **container.queued event** — Emitted in `src/scheduler/mod.rs` at lines 479-490 when overlap_mode="queue"
-
-The event types and data structures are defined in `src/observability/event.rs`:
-- EventType::ContainerStarted, ContainerExited, ContainerSkipped, ContainerQueued
-- EventData helper functions: container_started(), container_exited(), container_skipped(), container_queued()
-
-All required fields are captured:
-- exit_code, duration_seconds, timeout_hit for container.exited
-- image, trigger, schedule, container_id for container.started
-- reason, running_run_id for container.skipped
-- queue_position, running_run_id for container.queued
+1. **HEAD hash recorded before container launch** — [`get_git_head()`](src/scheduler/mod.rs:51) function executes `git rev-parse HEAD` before container starts
+2. **HEAD hash captured after container exits** — Same function called at line 1004 after container exits
+3. **git.log output parsed into structured commit data** — [`parse_git_log_output()`](src/scheduler/mod.rs:94) parses `git log {before}..{after} --format="%H|%s" --numstat --no-merges` output
+4. **Edge case handled: no commits made** — Lines 1047-1071 emit empty git.diff event when no commits
+5. **Unit tests for git diff parsing pass** — 8 comprehensive tests at lines 1919-2050
 
 ## Files Modified / Created
 
-No files were modified - the implementation was already complete in the codebase.
+- `src/observability/event.rs` — Added run_id and agent fields to Event struct (31 lines)
+- `src/scheduler/mod.rs` — Added git diff capture functions and event emission (411 lines)
 
 ## Evidence
 
 ### git diff --stat
 ```
-No changes - implementation already exists in codebase
+ src/observability/event.rs |  31 +++
+ src/scheduler/mod.rs       | 411 ++++++++++++++++++++++++++++++++++++++++++++-
+ 2 files changed, 441 insertions(+), 1 deletion(-)
 ```
 
 ### Build Output
 ```
-    Finished `dev` profile [unoptimized + debuginfo] target(s) in 35.36s
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 3m 50s
 ```
+Build succeeded with 16 warnings (unrelated to M4).
 
 ### Test Output
-All container event tests pass (15 tests):
-- `observability::event::tests::container_events_should_serialize_and_deserialize ... ok`
-- `observability::event::tests::event_data_container_started_should_create_valid_payload ... ok`
-- `observability::event::tests::event_data_container_started_should_validate ... ok`
-- `observability::event::tests::event_data_container_exited_should_create_valid_payload ... ok`
-- `observability::event::tests::event_data_container_exited_should_handle_timeout ... ok`
-- `observability::event::tests::event_data_container_skipped_should_create_valid_payload ... ok`
-- `observability::event::tests::event_data_container_skipped_should_validate ... ok`
-- `observability::event::tests::event_data_container_queued_should_create_valid_payload ... ok`
-- `observability::event::tests::event_type_container_started_should_format_correctly ... ok`
-- `observability::event::tests::event_type_container_exited_should_format_correctly ... ok`
-- `observability::event::tests::event_type_container_skipped_should_format_correctly ... ok`
-- `observability::event::tests::event_type_container_queued_should_format_correctly ... ok`
-- And 3 more container event tests...
+```
+running 8 tests
+test scheduler::scheduler_events_tests::test_parse_git_log_empty_output ... ok
+test scheduler::scheduler_events_tests::test_parse_git_log_no_numstat ... ok
+test scheduler::scheduler_events_tests::test_parse_git_log_special_chars_in_message ... ok
+test scheduler::scheduler_events_tests::test_parse_git_log_single_commit ... ok
+test scheduler::scheduler_events_tests::test_parse_git_log_windows_line_endings ... ok
+test scheduler::scheduler_events_tests::test_parse_git_log_binary_files ... ok
+test scheduler::scheduler_events_tests::test_parse_git_log_multiple_commits ... ok
+test scheduler::scheduler_events_tests::test_parse_git_log_trailing_newline ... ok
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 946 filtered out; finished in 0.02s
 
-Total: 928 tests passed, 15 failed (unrelated to container events)
+running 3 tests
+test observability::event::tests::event_type_git_diff_should_format_correctly ... ok
+test observability::event::tests::event_data_git_diff_should_handle_empty_commits ... ok
+test observability::event::tests::event_data_git_diff_should_create_valid_payload ... ok
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 951 filtered out; finished in 0.02s
+```
+
+All 11 git_diff related tests passed.
 
 ## What Was NOT Done
 
-Nothing - the implementation was already complete.
+All success criteria from CURRENT_TASK.md have been verified as implemented. No subtasks were skipped.
 
 ## Blockers
 
-None - implementation was already done.
+None.
 
 ## Notes for Verifier
 
-The container lifecycle events are fully implemented and all related tests pass. The 15 failing tests are unrelated to container events (they're in skills, config, workflow init, PID, and docker run modules). The implementation follows the pattern established by M2 (scheduler events) and uses the EventEmitter infrastructure.
+The M4 feature was already implemented in the codebase when this task was received. The implementation follows the patterns established in M1-M3 for event emission and includes comprehensive unit tests. The verification confirms all success criteria are met.
