@@ -3,7 +3,9 @@
 **Goals checksum:** 4ccc8d59696825c863f60e37950643c1915b8cc8819fbf0cd4cc40b508f2afc5
 **Workspace type:** existing
 **Derived:** 2026-03-10
-**Last updated:** 2026-03-10
+**Last updated:** 2026-03-11
+
+---
 
 ## Milestone 1: Event Core Infrastructure
 
@@ -23,14 +25,14 @@
 
 ## Milestone 2: Scheduler Events Integration
 
-**Status:** IN_PROGRESS
+**Status:** COMPLETE
 **Task type:** code
 **Goal reference:** Implement ./observability_design_spec.md using STRICT test-driven development
 **Success criteria:**
-- [ ] scheduler.started event emitted on switchboard up
-- [ ] scheduler.stopped event emitted on graceful shutdown
-- [ ] Uptime calculation tracked correctly
-- [ ] Integration tests for scheduler lifecycle events pass
+- [x] scheduler.started event emitted on switchboard up
+- [x] scheduler.stopped event emitted on graceful shutdown
+- [x] Uptime calculation tracked correctly
+- [x] Integration tests for scheduler lifecycle events pass
 
 **Decomposition history:**
 <!-- Empty initially -->
