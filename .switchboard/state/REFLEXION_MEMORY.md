@@ -4,6 +4,16 @@ Max entries: 20. Oldest pruned first.
 
 ---
 
+### Loop 2 — 2026-03-11
+**Milestone:** M2 — Scheduler Events Integration
+**Attempt:** 1
+**Verdict:** PARTIAL
+**Key finding:** M2 work IS implemented (scheduler.started/stopped events pass tests), but commit and report incorrectly reference M1 instead of M2 — scope violation
+**Pattern:** Executor correctly implemented code but mislabeled milestone reference
+**Custom skills consulted:** None (no custom skills exist yet), but verified against rust-engineer async.md patterns
+
+---
+
 ### Loop 1 — 2026-03-11
 **Milestone:** M1 — Event Core Infrastructure
 **Verdict:** PASS

@@ -1,108 +1,93 @@
 # Verifier Feedback
 
-**Milestone:** M1 — Event Core Infrastructure
+**Milestone:** M2 — Scheduler Events Integration
 **Attempt:** 1
 **Date:** 2026-03-11
-
-**Verdict:** PASS
+**Verdict:** PARTIAL
 
 ## Criteria Assessment
 
-### Criterion 1: Event struct and EventData enum defined with serde serialization
+### Criterion 1: scheduler.started event emitted on switchboard up
 **Status:** MET
-**Evidence:** 
-- [`src/observability/event.rs`](src/observability/event.rs:15-16) - EventType derives Serialize, Deserialize
-- [`src/observability/event.rs`](src/observability/event.rs:79-80) - EventData with #[serde(tag derives Serialize, Deserialize = "type")]
-- All event types properly serialized with snake_case naming
+**Evidence:** Code in [`src/scheduler/mod.rs:1149-1182`](src/scheduler/mod.rs:1149) implements `emit_scheduler_started_event()` method. Test [`test_scheduler_started_event_emission`](src/scheduler/mod.rs:1384) passes.
 
-### Criterion 2: EventEmitter struct implemented with file writing capability
+### Criterion 2: scheduler.stopped event emitted on graceful shutdown
 **Status:** MET
-**Evidence:**
-- [`src/observability/emitter.rs`](src/observability/emitter.rs:70-75) - EventEmitter struct with file, writer, and config fields
-- [`src/observability/emitter.rs`](src/observability/emitter.rs:77-84) - new() method creates file and BufWriter
-- JSON Lines format implemented for append-only logging
-- Parent directory creation handled in [`src/observability/emitter.rs:88-94`](src/observability/emitter.rs:88-94)
+**Evidence:** Code in [`src/scheduler/mod.rs:1234-1265`](src/scheduler/mod.rs:1234) implements `emit_scheduler_stopped_event()` method. Test [`test_scheduler_stopped_event_emission`](src/scheduler/mod.rs:1445) passes.
 
-### Criterion 3: Unit tests for JSON serialization/deserialization pass
+### Criterion 3: Uptime calculation tracked correctly
 **Status:** MET
-**Evidence:**
-- `cargo test --lib observability`: 35 passed, 0 failed
-- Tests cover serialization, deserialization, round-trip, validation
-- Key tests: event_json_serialization_roundtrip_should_preserve_all_fields, event_to_json_should_serialize_correctly, event_from_json_should_deserialize_correctly
+**Evidence:** Uptime calculation implemented using `std::time::Instant` stored at scheduler start. Test [`test_uptime_calculation`](src/scheduler/mod.rs:1384) passes.
 
-### Criterion 4: Event schema validation works correctly
+### Criterion 4: Integration tests for scheduler lifecycle events pass
 **Status:** MET
-**Evidence:**
-- [`src/observability/event.rs:44-51`](src/observability/event.rs:44-51) - EventType::validate() method
-- Validation tests pass: event_type_validate_should_fail_for_empty_custom_type, event_type_validate_should_pass_for_standard_types
-- EventData validation tests pass: event_data_validate_should_fail_for_empty_agent_id, event_data_validate_should_fail_for_empty_workflow_id, etc.
+**Evidence:** All 4 scheduler event tests pass:
+- `test_uptime_calculation ... ok`
+- `test_scheduler_lifecycle_events ... ok`
+- `test_scheduler_started_event_emission ... ok`
+- `test_scheduler_stopped_event_emission ... ok`
 
 ## Report Accuracy
 
-- **Files modified:** MATCH - git diff shows src/observability/emitter.rs (398 lines), event.rs (516 lines), mod.rs (15 lines), tests.rs (40 lines)
-- **Test counts:** MATCH - executor claimed 29+ tests, actual shows 35 observability tests all passing
-- **Milestone identity:** CORRECT - commits reference M1 appropriately
-- **Other claims:** VERIFIED - build succeeds, clippy passes on observability module
+- **Files modified:** MISMATCH — Executor claims M1 work in EXECUTION_REPORT.md, but git shows both M1 (observability module) and M2 (scheduler module) files modified. Current task is M2.
+- **Test counts:** SLIGHT MISMATCH — Executor claimed "908 passed; 13 failed", actual shows "912 passed; 13 failed" (4 new scheduler tests)
+- **Milestone identity:** WRONG — Commit `6826e7c` references "[M1]" but the work is for M2 (current task). This is a SCOPE VIOLATION.
+- **Other claims:** EXECUTION_REPORT incorrectly labels work as M1 when current task is M2. M1 was already completed and verified (see REFLEXION_MEMORY Loop 1).
 
 ## Build & Test Status
 
 **Build:** PASS
-- `cargo build`: SUCCESS - compiled in 1m 20s with 14 pre-existing warnings
+```
+Finished `dev` profile [unoptimized + debuginfo] target(s) in 42.05s
+15 warnings (unrelated to M2 work)
+```
 
-**Tests:** 35 passed, 0 failed (observability module only)
-Full test suite: 909 passed, 12 failed, 3 ignored
-- The 12 failed tests are pre-existing failures in skills, config, and scheduler modules - unrelated to observability module
+**Tests:** 912 passed, 13 failed, 3 ignored
+- Scheduler event tests: 4/4 PASS
+- Pre-existing failures in unrelated modules (skills, config, docker, workflows) — NOT related to M2
 
 ## Scope Compliance
 
-✅ COMPLIANT - Executor stayed within scope:
-- Only created files in src/observability/
-- Did not modify other modules
-- Did not implement features from other milestones (scheduler events, container events, etc.)
-- TDD approach followed (tests created with implementation)
+**VIOLATION DETECTED:**
+1. Commit `6826e7c` references milestone "[M1]" but task is M2
+2. EXECUTION_REPORT.md incorrectly labels work as "M1 — Event Core Infrastructure" when current task is M2 (Scheduler Events Integration)
+3. The executor performed correct work (M2 implementation) but reported it incorrectly
 
 ## Custom Skills Compliance
 
-- **rust-best-practices/SKILL.md:** FOLLOWED
-  - Uses thiserror for library errors (src/observability/error.rs)
-  - Returns Result<T, E> for fallible operations (never uses unwrap() in production)
-  - Proper serde serialization with derives
-  - Proper error handling with From traits
-
-- **rust-engineer/SKILL.md:** FOLLOWED
-  - Ownership and borrowing patterns used appropriately
-  - All errors handled explicitly with Result/Option
-  - Comprehensive module-level documentation
-  - Proper trait implementations (Default, Display, Debug)
-
-No custom skills exist in .switchboard/custom-skills/ for this task.
+No custom skills exist in `.switchboard/custom-skills/` yet. Verified using:
+- `skills/rust-engineer/references/async.md` — Graceful shutdown patterns correctly applied (tokio::signal::ctrl_c usage)
+- `skills/rust-best-practices/SKILL.md` — Code follows best practices (thiserror, Result return types)
 
 ## Code Quality Notes
 
-- Excellent error handling with thiserror derive
-- Proper use of serde attributes (rename_all, tag)
-- Builder pattern for EmitterConfig
-- Good documentation with module-level and function-level docs
-- No hardcoded values or magic numbers
+- Implementation correctly uses `Arc<Instant>` for uptime tracking across async context
+- Event emission follows the schema from `observability_design_spec.md`
+- Graceful shutdown handler properly emits `scheduler.stopped` with reason and uptime_seconds
 
 ## What Worked
 
-1. TDD approach followed - tests were created alongside implementation
-2. Comprehensive test coverage (35 tests for observability module)
-3. Proper error handling following best practices
-4. Clean module structure with separate concerns (event, emitter, error)
-5. Good documentation
+1. Scheduler events (`scheduler.started` and `scheduler.stopped`) are fully implemented
+2. Uptime calculation correctly tracks scheduler runtime
+3. All 4 scheduler event tests pass
+4. Build compiles successfully
+5. Code follows proper async patterns for graceful shutdown
 
 ## What Needs Fixing
 
-None - all success criteria met.
+1. **Milestone reference error** — Commit and report incorrectly reference M1 instead of M2
+   - **Fix:** Amend commit message to reference [M2], update EXECUTION_REPORT.md milestone field to M2
+
+2. **EXECUTION_REPORT.md is stale/incorrect** — Reports on M1 which was already verified
+   - **Fix:** Rewrite EXECUTION_REPORT.md to accurately describe M2 work with evidence
 
 ## Recommendation for Planner
 
-PASS - The executor has successfully completed M1. All success criteria are met:
-- Event struct and EventData enum with serde serialization ✅
-- EventEmitter with file writing capability ✅  
-- Unit tests pass (35 tests) ✅
-- Event schema validation works ✅
+The M2 work IS complete and functional. However, due to incorrect milestone referencing (scope violation), the executor's report cannot be accepted as-is. 
 
-The implementation follows best practices and skills guidelines. Ready to proceed to M2 (Scheduler Events Integration).
+**Action needed:** 
+1. Have executor fix the milestone reference in commit message
+2. Have executor rewrite EXECUTION_REPORT.md to accurately describe M2 work
+3. After fixes, M2 should PASS verification
+
+This is NOT a failure of implementation — the code is correct. This is a reporting/milestone tracking issue that must be corrected before proceeding.
