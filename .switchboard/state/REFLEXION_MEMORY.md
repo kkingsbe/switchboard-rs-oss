@@ -1,6 +1,14 @@
 Max entries: 20. Oldest pruned first.
 ---
 
+### Loop 7 — 2026-03-11
+**Milestone:** M5 — Log Rotation
+**Attempt:** 1
+**Verdict:** PASS
+**Key finding:** All 4 success criteria verified: 10MB size check, timestamp suffix rotation, 30-day retention cleanup, 9 tests pass. Implementation already existed in codebase (same pattern as M4).
+**Pattern:** Pre-existing implementation - code verified to work, commit only contains state files
+**Custom skills consulted:** tdd-comprehensive-tests.md, honest-reporting.md, milestone-reference-accuracy.md
+
 ---
 
 ### Loop 6 — 2026-03-11
@@ -11,6 +19,8 @@ Max entries: 20. Oldest pruned first.
 **Pattern:** Pre-existing implementation - task was verification rather than new implementation
 **Custom skills consulted:** tdd-comprehensive-tests.md, milestone-reference-accuracy.md
 
+---
+
 ### Loop 5 — 2026-03-11
 **Milestone:** M3 — Container Events Integration
 **Verdict:** PASS
@@ -18,6 +28,10 @@ Max entries: 20. Oldest pruned first.
 **Adaptation:** N/A - milestone passed first attempt
 
 ---
+
+---
+
+### Loop 2 — 2026-03-11
 **Milestone:** M2 — Scheduler Events Integration
 **Attempt:** 2
 **Verdict:** PASS
@@ -26,21 +40,6 @@ Max entries: 20. Oldest pruned first.
 **Custom skills consulted:** None (no custom skills exist), verified against rust-engineer async.md patterns
 
 ---
-
-### Loop 2 — 2026-03-11
-**Milestone:** M2 — Scheduler Events Integration
-**Attempt:** 1
-**Verdict:** PARTIAL
-**Key finding:** M2 work IS implemented (scheduler.started/stopped events pass tests), but commit and report incorrectly reference M1 instead of M2 — scope violation
-**Pattern:** Executor correctly implemented code but mislabeled milestone reference
-**Custom skills consulted:** None (no custom skills exist yet), but verified against rust-engineer async.md patterns
-
----
-
-### Loop 1 — 2026-03-11
-**Milestone:** M1 — Event Core Infrastructure
-**Verdict:** PASS
-**Key learning:** M1 verified successfully - 35 observability tests passed, build successful
 
 ---
 
@@ -52,6 +51,8 @@ Max entries: 20. Oldest pruned first.
 **Pattern:** False reporting — executor claimed no work done but implemented entire feature
 **Custom skills consulted:** tdd-comprehensive-tests.md (deviated from TDD approach), milestone-reference-accuracy.md (violated - no commits)
 **Adaptation:** Ready to proceed to M2 (Scheduler Events Integration)
+
+---
 
 ---
 
