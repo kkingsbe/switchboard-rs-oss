@@ -25,7 +25,11 @@ use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use tower::ServiceBuilder;
 use tower_http::trace::TraceLayer;
+use tokio::signal::ctrl_c;
 use tracing::{error, info, warn};
+
+#[cfg(unix)]
+use tokio::signal::unix::{SignalKind, signal};
 
 use utoipa::{OpenApi, ToSchema};
 use utoipa_swagger_ui::SwaggerUi;
@@ -573,7 +577,7 @@ async fn shutdown_signal() {
 
     #[cfg(unix)]
     let terminate = async {
-        signal::unix::signal(signal::unix::SignalKind::terminate())
+        signal(SignalKind::terminate())
             .expect("Failed to install SIGTERM handler")
             .recv()
             .await;

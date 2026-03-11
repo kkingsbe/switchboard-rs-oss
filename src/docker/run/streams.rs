@@ -47,7 +47,8 @@ impl LogTimestampTracker {
     /// Returns true if no logs received for longer than the timeout duration
     pub fn is_silent_timeout_exceeded(&self, timeout: Duration) -> bool {
         let timeout_secs = timeout.as_secs();
-        self.seconds_since_last_log() > timeout_secs
+        // Use >= to handle edge case of zero timeout (timeout immediately if no logs)
+        self.seconds_since_last_log() >= timeout_secs
     }
 
     #[cfg(test)]

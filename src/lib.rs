@@ -51,6 +51,7 @@ pub mod api;
 pub mod logger;
 pub mod logging;
 pub mod metrics;
+pub mod observability;
 pub mod scheduler;
 pub mod skills;
 pub mod traits;

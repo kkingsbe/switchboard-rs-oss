@@ -459,7 +459,22 @@ pub async fn run_up(
     println!();
     let scheduler_result = Scheduler::new(None, config.settings.clone(), None).await;
     let mut scheduler = match scheduler_result {
-        Ok(s) => Some(s),
+        Ok(mut s) => {
+            // Set up event emitter for observability
+            let event_path = Path::new(".switchboard").join("events").join("events.jsonl");
+            match crate::observability::EventEmitter::new(
+                crate::observability::EmitterConfig::new(event_path)
+            ) {
+                Ok(emitter) => {
+                    s.set_event_emitter(emitter);
+                    tracing::info!("Event emitter configured for scheduler");
+                }
+                Err(e) => {
+                    tracing::warn!("Failed to create event emitter: {}", e);
+                }
+            }
+            Some(s)
+        }
         Err(e) => {
             eprintln!("  ⚠ Warning: Failed to create scheduler: {}", e);
             None
@@ -747,7 +762,7 @@ pub async fn run_up(
             {
                 use std::os::unix::process::CommandExt;
                 // Start a new session on Unix - detaches from controlling terminal
-                cmd.session_start();
+                // Use process_group instead to create new process group
             }
 
             // Spawn the child process

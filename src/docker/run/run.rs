@@ -5680,6 +5680,9 @@ mod tests {
 
         // Create a tracker
         let timestamp_tracker = LogTimestampTracker::new();
+        
+        // Set last log to 10 seconds ago so timeout check evaluates to true
+        timestamp_tracker.set_seconds_ago(10);
 
         // Create a cancel flag that is NOT set
         let cancel_flag = Arc::new(AtomicBool::new(false));
@@ -5725,6 +5728,9 @@ mod tests {
 
         // Create a tracker
         let timestamp_tracker = LogTimestampTracker::new();
+        
+        // Set last log to 10 seconds ago so timeout check evaluates to true
+        timestamp_tracker.set_seconds_ago(10);
 
         // Create a cancel flag
         let cancel_flag = Arc::new(AtomicBool::new(false));
@@ -5767,6 +5773,9 @@ mod tests {
 
         // Create a tracker
         let timestamp_tracker = LogTimestampTracker::new();
+        
+        // Set last log to 10 seconds ago so timeout check evaluates to true
+        timestamp_tracker.set_seconds_ago(10);
 
         // Create a cancel flag
         let cancel_flag = Arc::new(AtomicBool::new(false));

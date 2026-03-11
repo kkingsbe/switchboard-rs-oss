@@ -30,7 +30,8 @@ fn test_event_data_scheduler_serialization() {
 #[test]
 fn test_event_data_scheduler_deserialization() {
     let json = r#"{
-        "Scheduler": {
+        "type": "Scheduler",
+        "payload": {
             "task_id": "task-456",
             "status": "completed"
         }
@@ -65,7 +66,8 @@ fn test_event_data_container_serialization() {
 #[test]
 fn test_event_data_container_deserialization() {
     let json = r#"{
-        "Container": {
+        "type": "Container",
+        "payload": {
             "container_id": "container-def",
             "action": "stop"
         }
@@ -100,7 +102,8 @@ fn test_event_data_agent_serialization() {
 #[test]
 fn test_event_data_agent_deserialization() {
     let json = r#"{
-        "Agent": {
+        "type": "Agent",
+        "payload": {
             "agent_id": "agent-002",
             "message": "Processing request"
         }
@@ -131,7 +134,7 @@ fn test_event_data_custom_serialization() {
 /// Test EventData deserialization from JSON for Custom variant
 #[test]
 fn test_event_data_custom_deserialization() {
-    let json = r#"{"Custom": {"key": "value", "number": 42}}"#;
+    let json = r#"{"type":"Custom","payload":{"key":"value","number":42}}"#;
     
     let event_data: EventData = serde_json::from_str(json).expect("Failed to deserialize");
     match event_data {
@@ -177,7 +180,8 @@ fn test_event_deserialization() {
         "event_type": "container.started",
         "source": "docker",
         "data": {
-            "Container": {
+            "type": "Container",
+            "payload": {
                 "container_id": "container-xyz",
                 "action": "started"
             }
@@ -218,7 +222,20 @@ fn test_event_emitter_emit() {
     let path = temp_file.path().to_path_buf();
     
     let mut emitter = EventEmitter::new(path.clone()).expect("Failed to create emitter");
-    assert!(result.is_ok());
+    let timestamp = DateTime::parse_from_rfc3339("2024-01-15T10:30:00Z")
+        .unwrap()
+        .with_timezone(&Utc);
+    let event = Event {
+        id: "test-event-001".to_string(),
+        timestamp,
+        event_type: "test.event".to_string(),
+        source: "test".to_string(),
+        data: EventData::Agent {
+            agent_id: "agent-1".to_string(),
+            message: "Test".to_string(),
+        },
+    };
+    let result = emitter.emit(event);
     
     // Verify the file contains the JSON line
     let content = fs::read_to_string(&path).expect("Failed to read file");
@@ -233,6 +250,9 @@ fn test_event_emitter_multiple_events() {
     let path = temp_file.path().to_path_buf();
     
     let mut emitter = EventEmitter::new(path.clone()).expect("Failed to create emitter");
+    let timestamp = DateTime::parse_from_rfc3339("2024-01-15T10:30:00Z")
+        .unwrap()
+        .with_timezone(&Utc);
     let event1 = Event {
         id: "event-001".to_string(),
         timestamp,
@@ -310,23 +330,23 @@ fn test_event_data_enum_tag() {
         status: "s1".to_string(),
     };
     let scheduler_json = serde_json::to_string(&scheduler).unwrap();
-    assert!(scheduler_json.starts_with("{\"Scheduler\":"));
+    assert!(scheduler_json.contains("\"type\":\"Scheduler\""));
     
     let container = EventData::Container {
         container_id: "c1".to_string(),
         action: "a1".to_string(),
     };
     let container_json = serde_json::to_string(&container).unwrap();
-    assert!(container_json.starts_with("{\"Container\":"));
+    assert!(container_json.contains("\"type\":\"Container\""));
     
     let agent = EventData::Agent {
         agent_id: "ag1".to_string(),
         message: "m1".to_string(),
     };
     let agent_json = serde_json::to_string(&agent).unwrap();
-    assert!(agent_json.starts_with("{\"Agent\":"));
+    assert!(agent_json.contains("\"type\":\"Agent\""));
     
     let custom = EventData::Custom(json!({"key": "value"}));
     let custom_json = serde_json::to_string(&custom).unwrap();
-    assert!(custom_json.starts_with("{\"Custom\":"));
+    assert!(custom_json.contains("\"type\":\"Custom\""));
 }

@@ -260,7 +260,7 @@ async fn run_gateway_detached(
     _config: GatewayConfig,
     _host: String,
     _http_port: u32,
-    _config_path: String,
+    config_path: String,
 ) -> Result<(), Box<dyn std::error::Error>> {
     #[cfg(unix)]
     {

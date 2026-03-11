@@ -2,26 +2,27 @@
 image_name = "switchboard-agent"
 image_tag = "latest"
 log_dir = ".switchboard/logs"
+timezone = "America/New_York"
 
 [[agent]]
 name = "goal-planner"
 schedule = "0,10,20,30,40,50 * * * *"     # Every 10 min at :00, :10, :20, :30, :40, :50
 readonly = false
-timeout = "8m"
+timeout = "30m"
 prompt_file = ".switchboard/workflows/goal-based/prompts/GOAL_PLANNER.md"
 
 [[agent]]
 name = "goal-executor"
 schedule = "3,13,23,33,43,53 * * * *"     # Every 10 min at :03, :13, :23, :33, :43, :53
 readonly = false
-timeout = "8m"
+timeout = "30m"
 prompt_file = ".switchboard/workflows/goal-based/prompts/GOAL_EXECUTOR.md"
 
 [[agent]]
 name = "goal-verifier"
 schedule = "6,16,26,36,46,56 * * * *"     # Every 10 min at :06, :16, :26, :36, :46, :56
 readonly = false
-timeout = "8m"
+timeout = "30m"
 prompt_file = ".switchboard/workflows/goal-based/prompts/GOAL_VERIFIER.md"
 
 [[agent]]

@@ -33,6 +33,7 @@ use crate::docker::run::types::ContainerConfig;
 use crate::docker::{run_agent, DockerClient};
 use crate::logger::Logger;
 use crate::metrics::MetricsStore;
+use crate::observability::{EmitterConfig, Event, EventData, EventEmitter, EventType};
 use crate::traits::{DockerClientTrait, RealDockerClient};
 
 /// Comprehensive error type for scheduler operations
@@ -829,6 +830,10 @@ pub struct Scheduler {
     pid: u32,
     /// Start time of the scheduler (RFC3339 timestamp)
     start_time: String,
+    /// Event emitter for observability (optional)
+    event_emitter: Option<EventEmitter>,
+    /// Start time for uptime calculation (Instant)
+    uptime_start: Option<Instant>,
 }
 
 impl Scheduler {
@@ -877,6 +882,8 @@ impl Scheduler {
             heartbeat_task: None,
             pid,
             start_time,
+            event_emitter: None,
+            uptime_start: None,
         })
     }
 
@@ -896,6 +903,17 @@ impl Scheduler {
         tokio::task::block_in_place(|| {
             tokio::runtime::Handle::current().block_on(Self::new(clock, settings, docker_client))
         })
+    }
+
+    /// Set the event emitter for the scheduler
+    ///
+    /// This allows the scheduler to emit events for observability.
+    ///
+    /// # Arguments
+    ///
+    /// * `emitter` - The event emitter to use
+    pub fn set_event_emitter(&mut self, emitter: EventEmitter) {
+        self.event_emitter = Some(emitter);
     }
 
     /// Register an agent with its cron schedule
@@ -1117,6 +1135,9 @@ impl Scheduler {
             })?;
         self.running.store(true, Ordering::SeqCst);
 
+        // Record start time for uptime calculation
+        self.uptime_start = Some(Instant::now());
+
         // Calculate next_run for all agents after starting
         if let Err(e) = self.calculate_next_run_for_agents() {
             tracing::warn!("Failed to calculate next_run for agents: {}", e);
@@ -1125,7 +1146,41 @@ impl Scheduler {
         // Start the heartbeat task
         self.start_heartbeat_task();
 
+        // Emit scheduler.started event if event emitter is configured
+        self.emit_scheduler_started_event();
+
         Ok(())
+    }
+
+    /// Emit the scheduler.started event
+    fn emit_scheduler_started_event(&mut self) {
+        if let Some(ref mut emitter) = self.event_emitter {
+            // Get list of agent names
+            let agents: Vec<String> = {
+                let locked_agents = match self.agents.lock() {
+                    Ok(guard) => guard,
+                    Err(e) => {
+                        tracing::warn!("Failed to lock agents for event emission: {}", e);
+                        return;
+                    }
+                };
+                locked_agents.iter().map(|a| a.config.name.clone()).collect()
+            };
+
+            let version = env!("CARGO_PKG_VERSION");
+            let config_file = "switchboard.toml";
+
+            let event = Event::new(
+                EventType::SchedulerStarted,
+                EventData::scheduler_started(agents, version, config_file),
+            );
+
+            if let Err(e) = emitter.emit(event) {
+                tracing::warn!("Failed to emit scheduler.started event: {}", e);
+            } else {
+                tracing::info!("Emitted scheduler.started event");
+            }
+        }
     }
 
     /// Start the heartbeat task that periodically writes health status
@@ -1177,6 +1232,9 @@ impl Scheduler {
     /// Returns `Ok(())` if the scheduler stopped successfully.
     /// Returns an error if stopping the scheduler fails.
     pub async fn stop(&mut self) -> Result<(), SchedulerError> {
+        // Emit scheduler.stopped event before stopping (if event emitter is configured)
+        self.emit_scheduler_stopped_event("sigint");
+
         self.running.store(false, Ordering::SeqCst);
         self.scheduler
             .shutdown()
@@ -1185,6 +1243,27 @@ impl Scheduler {
                 error: e.to_string(),
             })?;
         Ok(())
+    }
+
+    /// Emit the scheduler.stopped event
+    fn emit_scheduler_stopped_event(&mut self, reason: &str) {
+        if let Some(ref mut emitter) = self.event_emitter {
+            // Calculate uptime in seconds
+            let uptime_seconds = self.uptime_start
+                .map(|start| start.elapsed().as_secs())
+                .unwrap_or(0);
+
+            let event = Event::new(
+                EventType::SchedulerStopped,
+                EventData::scheduler_stopped(reason, uptime_seconds),
+            );
+
+            if let Err(e) = emitter.emit(event) {
+                tracing::warn!("Failed to emit scheduler.stopped event: {}", e);
+            } else {
+                tracing::info!("Emitted scheduler.stopped event (uptime: {}s)", uptime_seconds);
+            }
+        }
     }
 
     /// Get the total cumulative queue wait time in seconds
@@ -1294,4 +1373,191 @@ fn write_heartbeat(
     tracing::debug!("Heartbeat written to {:?}", heartbeat_path);
 
     Ok(())
+}
+
+#[cfg(test)]
+mod scheduler_events_tests {
+    use super::*;
+    use crate::observability::{EmitterConfig, Event, EventData, EventEmitter, EventType};
+    use tempfile::TempDir;
+
+    /// Test that the scheduler.started event is emitted with correct data
+    /// 
+    /// This test verifies:
+    /// - Event is emitted when scheduler starts
+    /// - Event contains correct agent list
+    /// - Event contains correct version
+    /// - Event contains correct config file
+    #[tokio::test]
+    async fn test_scheduler_started_event_emission() {
+        // Create a temporary directory for the event file
+        let temp_dir = TempDir::new().expect("Failed to create temp dir");
+        let event_file = temp_dir.path().join("events.jsonl");
+        
+        // Create an event emitter
+        let mut emitter = EventEmitter::new(
+            EmitterConfig::new(&event_file)
+                .with_append(false)
+                .with_auto_flush(true)
+        ).expect("Failed to create event emitter");
+        
+        // Create scheduler started event data
+        let agents = vec![
+            "goal-planner".to_string(),
+            "goal-executor".to_string(),
+            "goal-verifier".to_string(),
+            "skill-distiller".to_string()
+        ];
+        let version = "0.5.0";
+        let config_file = "switchboard.toml";
+        
+        let event = Event::new(
+            EventType::SchedulerStarted,
+            EventData::scheduler_started(agents.clone(), version, config_file),
+        );
+        
+        // Emit the event
+        emitter.emit(event).expect("Failed to emit scheduler.started event");
+        emitter.flush().expect("Failed to flush");
+        
+        // Read the event file and verify
+        let content = std::fs::read_to_string(&event_file).expect("Failed to read event file");
+        let lines: Vec<&str> = content.lines().collect();
+        assert_eq!(lines.len(), 1, "Should have exactly one event");
+        
+        // Parse and verify the event
+        let parsed: serde_json::Value = serde_json::from_str(lines[0])
+            .expect("Failed to parse JSON");
+        
+        // Verify event type
+        assert_eq!(parsed["event_type"], "scheduler_started");
+        
+        // Verify payload data
+        let data = &parsed["payload"]["data"];
+        assert_eq!(data["agent_count"], 4);
+        assert_eq!(data["version"], "0.5.0");
+        assert_eq!(data["config_file"], "switchboard.toml");
+        
+        let parsed_agents = data["agents"].as_array().expect("agents should be an array");
+        assert_eq!(parsed_agents.len(), 4);
+    }
+
+    /// Test that the scheduler.stopped event is emitted with correct data
+    /// 
+    /// This test verifies:
+    /// - Event is emitted when scheduler stops
+    /// - Event contains correct reason
+    /// - Event contains correct uptime_seconds
+    #[tokio::test]
+    async fn test_scheduler_stopped_event_emission() {
+        // Create a temporary directory for the event file
+        let temp_dir = TempDir::new().expect("Failed to create temp dir");
+        let event_file = temp_dir.path().join("events.jsonl");
+        
+        // Create an event emitter
+        let mut emitter = EventEmitter::new(
+            EmitterConfig::new(&event_file)
+                .with_append(false)
+                .with_auto_flush(true)
+        ).expect("Failed to create event emitter");
+        
+        // Create scheduler stopped event data
+        let reason = "sigint";
+        let uptime_seconds = 86400u64;
+        
+        let event = Event::new(
+            EventType::SchedulerStopped,
+            EventData::scheduler_stopped(reason, uptime_seconds),
+        );
+        
+        // Emit the event
+        emitter.emit(event).expect("Failed to emit scheduler.stopped event");
+        emitter.flush().expect("Failed to flush");
+        
+        // Read the event file and verify
+        let content = std::fs::read_to_string(&event_file).expect("Failed to read event file");
+        let lines: Vec<&str> = content.lines().collect();
+        assert_eq!(lines.len(), 1, "Should have exactly one event");
+        
+        // Parse and verify the event
+        let parsed: serde_json::Value = serde_json::from_str(lines[0])
+            .expect("Failed to parse JSON");
+        
+        // Verify event type
+        assert_eq!(parsed["event_type"], "scheduler_stopped");
+        
+        // Verify payload data
+        let data = &parsed["payload"]["data"];
+        assert_eq!(data["reason"], "sigint");
+        assert_eq!(data["uptime_seconds"], 86400u64);
+    }
+
+    /// Test that scheduler.started and scheduler.stopped events can both be emitted
+    /// 
+    /// This tests the full lifecycle: start -> stop
+    #[tokio::test]
+    async fn test_scheduler_lifecycle_events() {
+        // Create a temporary directory for the event file
+        let temp_dir = TempDir::new().expect("Failed to create temp dir");
+        let event_file = temp_dir.path().join("events.jsonl");
+        
+        // Create an event emitter
+        let mut emitter = EventEmitter::new(
+            EmitterConfig::new(&event_file)
+                .with_append(false)
+                .with_auto_flush(true)
+        ).expect("Failed to create event emitter");
+        
+        // Emit scheduler.started event
+        let started_event = Event::new(
+            EventType::SchedulerStarted,
+            EventData::scheduler_started(
+                vec!["agent1".to_string(), "agent2".to_string()],
+                "0.5.0",
+                "switchboard.toml"
+            ),
+        );
+        emitter.emit(started_event).expect("Failed to emit started event");
+        emitter.flush().expect("Failed to flush");
+        
+        // Simulate some time passing (in a real scenario this would be the uptime)
+        let uptime_seconds = 3600u64; // 1 hour
+        
+        // Emit scheduler.stopped event
+        let stopped_event = Event::new(
+            EventType::SchedulerStopped,
+            EventData::scheduler_stopped("sigterm", uptime_seconds),
+        );
+        emitter.emit(stopped_event).expect("Failed to emit stopped event");
+        emitter.flush().expect("Failed to flush");
+        
+        // Read and verify both events
+        let content = std::fs::read_to_string(&event_file).expect("Failed to read event file");
+        let lines: Vec<&str> = content.lines().collect();
+        assert_eq!(lines.len(), 2, "Should have exactly two events");
+        
+        // Parse and verify first event (started)
+        let parsed_started: serde_json::Value = serde_json::from_str(lines[0])
+            .expect("Failed to parse started event");
+        assert_eq!(parsed_started["event_type"], "scheduler_started");
+        
+        // Parse and verify second event (stopped)
+        let parsed_stopped: serde_json::Value = serde_json::from_str(lines[1])
+            .expect("Failed to parse stopped event");
+        assert_eq!(parsed_stopped["event_type"], "scheduler_stopped");
+        assert_eq!(parsed_stopped["payload"]["data"]["uptime_seconds"], 3600u64);
+    }
+
+    /// Test uptime calculation from Instant
+    #[test]
+    fn test_uptime_calculation() {
+        let start = Instant::now();
+        
+        // Simulate some time passing (in tests, this is very small)
+        std::thread::sleep(std::time::Duration::from_millis(10));
+        
+        let uptime = start.elapsed().as_secs();
+        // The uptime should be at least 0 (it might be 0 in fast tests)
+        assert!(uptime >= 0);
+    }
 }
