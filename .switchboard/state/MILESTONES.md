@@ -42,15 +42,15 @@
 
 ## Milestone 3: Container Events Integration
 
-**Status:** IN_PROGRESS
+**Status:** COMPLETE
 **Task type:** code
 **Goal reference:** Implement ./observability_design_spec.md using STRICT test-driven development
 **Success criteria:**
-- [ ] container.started event emitted when launching containers
-- [ ] container.exited event emitted on container completion
-- [ ] Exit code, duration_seconds, timeout_hit captured
-- [ ] container.skipped and container.queued events implemented
-- [ ] Integration tests for container lifecycle pass
+- [x] container.started event emitted when launching containers
+- [x] container.exited event emitted on container completion
+- [x] Exit code, duration_seconds, timeout_hit captured
+- [x] container.skipped and container.queued events implemented
+- [x] Integration tests for container lifecycle pass
 
 **Decomposition history:**
 <!-- Empty initially -->
@@ -59,7 +59,7 @@
 
 ## Milestone 4: Git Diff Capture
 
-**Status:** PENDING
+**Status:** IN_PROGRESS
 **Task type:** code
 **Goal reference:** Implement ./observability_design_spec.md using STRICT test-driven development
 **Success criteria:**
