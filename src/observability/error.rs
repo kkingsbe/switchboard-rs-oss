@@ -39,4 +39,8 @@ pub enum EventError {
     /// Event validation failed
     #[error("Event validation failed: {0}")]
     ValidationError(String),
+
+    /// Configuration error
+    #[error("Configuration error: {0}")]
+    ConfigError(String),
 }
