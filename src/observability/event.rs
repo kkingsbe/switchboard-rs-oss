@@ -381,6 +381,8 @@ impl EventData {
 /// - `id`: Unique identifier for the event (UUID)
 /// - `timestamp`: When the event occurred (UTC)
 /// - `event_type`: Type of the event
+/// - `run_id`: Optional run identifier to tie related events together (e.g., container.started -> container.exited)
+/// - `agent`: Optional agent name from switchboard.toml configuration
 /// - `payload`: Event data/payload
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Event {
@@ -390,6 +392,12 @@ pub struct Event {
     pub timestamp: DateTime<Utc>,
     /// Type of the event
     pub event_type: EventType,
+    /// Run identifier to tie related events together (e.g., container.started -> container.exited)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub run_id: Option<String>,
+    /// Agent name from switchboard.toml configuration
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub agent: Option<String>,
     /// Event payload/data
     pub payload: EventData,
 }
@@ -401,6 +409,25 @@ impl Event {
             id: Uuid::new_v4(),
             timestamp: Utc::now(),
             event_type,
+            run_id: None,
+            agent: None,
+            payload,
+        }
+    }
+
+    /// Create a new event with run_id and agent fields
+    pub fn with_context(
+        event_type: EventType,
+        payload: EventData,
+        run_id: Option<String>,
+        agent: Option<String>,
+    ) -> Self {
+        Self {
+            id: Uuid::new_v4(),
+            timestamp: Utc::now(),
+            event_type,
+            run_id,
+            agent,
             payload,
         }
     }
@@ -411,6 +438,8 @@ impl Event {
             id,
             timestamp: Utc::now(),
             event_type,
+            run_id: None,
+            agent: None,
             payload,
         }
     }
@@ -425,6 +454,8 @@ impl Event {
             id: Uuid::new_v4(),
             timestamp,
             event_type,
+            run_id: None,
+            agent: None,
             payload,
         }
     }
