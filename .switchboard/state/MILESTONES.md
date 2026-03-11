@@ -33,6 +33,7 @@
 - [x] scheduler.stopped event emitted on graceful shutdown
 - [x] Uptime calculation tracked correctly
 - [x] Integration tests for scheduler lifecycle events pass
+**Verified:** 2026-03-11 (Loop 3 - PASS)
 
 **Decomposition history:**
 <!-- Empty initially -->
@@ -41,7 +42,7 @@
 
 ## Milestone 3: Container Events Integration
 
-**Status:** PENDING
+**Status:** IN_PROGRESS
 **Task type:** code
 **Goal reference:** Implement ./observability_design_spec.md using STRICT test-driven development
 **Success criteria:**

@@ -1,82 +1,135 @@
 # Current Task
 
-**Milestone:** 2 — Scheduler Events Integration
-**Milestone ID:** M2
+**Milestone:** 3 — Container Events Integration
+**Milestone ID:** M3
 **Task type:** code
 **Attempt:** 1
 **Date:** 2026-03-11
 
 ## Objective
 
-Implement scheduler lifecycle event emission for the switchboard observability system. Using STRICT test-driven development, implement the emission of `scheduler.started` and `scheduler.stopped` events that track the scheduler's uptime and lifecycle state.
+Implement container lifecycle event emission for the switchboard observability system. Using STRICT test-driven development, implement the emission of `container.started`, `container.exited`, `container.skipped`, and `container.queued` events that track container lifecycle and execution results.
 
 ## Success Criteria
 
-- [ ] `scheduler.started` event emitted on switchboard up
-- [ ] `scheduler.stopped` event emitted on graceful shutdown
-- [ ] Uptime calculation tracked correctly
-- [ ] Integration tests for scheduler lifecycle events pass
+- [ ] `container.started` event emitted when launching containers
+- [ ] `container.exited` event emitted on container completion
+- [ ] Exit code, duration_seconds, timeout_hit captured
+- [ ] `container.skipped` and `container.queued` events implemented
+- [ ] Integration tests for container lifecycle pass
 
 ## Context
 
 ### Workspace
 - **Project Type:** Existing Rust project (switchboard)
-- **Tech Stack:** tokio 1.40, tokio-cron-scheduler 0.15, serde/serde_json
+- **Tech Stack:** tokio 1.40, bollard 0.18 (Docker API), serde/serde_json
 - **Key Files:**
-  - `src/scheduler/` - Existing cron-based scheduling engine
-  - `src/main.rs` - Entry point where `switchboard up` is invoked
+  - `src/docker/mod.rs` - Container lifecycle management
+  - `src/docker/run.rs` - Container execution logic
+  - `src/scheduler/mod.rs` - Where scheduler events are implemented (reference for pattern)
   - `observability_design_spec.md` - Event schema definitions
 
 ### Event Schema (from observability_design_spec.md)
 
-**scheduler.started:**
+**container.started:**
 ```json
 {
-  "event": "scheduler.started",
-  "agent": null,
-  "run_id": null,
+  "event": "container.started",
+  "agent": "goal-executor",
+  "run_id": "a1b2c3d4",
   "data": {
-    "agents": ["goal-planner", "goal-executor", ...],
-    "agent_count": 4,
-    "version": "0.5.0",
-    "config_file": "switchboard.toml"
+    "image": "kilosynth/prompter:latest",
+    "trigger": "cron",
+    "schedule": "*/5 * * * *",
+    "container_id": "docker-container-hash"
   }
 }
 ```
 
-**scheduler.stopped:**
+**container.exited:**
 ```json
 {
-  "event": "scheduler.stopped",
-  "agent": null,
-  "run_id": null,
+  "event": "container.exited",
+  "agent": "goal-executor",
+  "run_id": "a1b2c3d4",
   "data": {
-    "reason": "sigint",
-    "uptime_seconds": 86400
+    "exit_code": 0,
+    "duration_seconds": 847,
+    "timeout_hit": false
   }
 }
 ```
+
+**container.skipped:**
+```json
+{
+  "event": "container.skipped",
+  "agent": "goal-executor",
+  "run_id": null,
+  "data": {
+    "reason": "overlap_skip",
+    "running_run_id": "a1b2c3d4"
+  }
+}
+```
+
+**container.queued:**
+```json
+{
+  "event": "container.queued",
+  "agent": "goal-executor",
+  "run_id": "b2c3d4e5",
+  "data": {
+    "queue_position": 1,
+    "running_run_id": "a1b2c3d4"
+  }
+}
+```
+
+### Run ID Generation
+From the design spec, run_id should be an 8-character hex string:
+```rust
+fn generate_run_id() -> String {
+    use rand::Rng;
+    let mut rng = rand::thread_rng();
+    format!("{:08x}", rng.gen::<u32>())
+}
+```
+
+### Reference: M2 Implementation Pattern
+M2 (Scheduler Events) was implemented in `src/scheduler/mod.rs`. The pattern:
+1. EventEmitter is passed to the scheduler/container manager
+2. Events are emitted at key lifecycle points
+3. Tests verify event JSON structure and content
+4. All tests use TDD approach - write tests first
 
 ### Known Patterns
 
 From `skills/rust-engineer/references/async.md`:
-- **Lines 342-377:** Graceful shutdown patterns with `tokio::signal::ctrl_c()` - ESSENTIAL for `scheduler.stopped`
-- **Lines 78-117:** `select!` patterns for handling shutdown signals alongside other async operations
-- Use `Arc<Instant>` or similar to track scheduler start time for uptime calculation
+- Async container operations with bollard
+- Graceful shutdown handling
+
+From custom skill `tdd-comprehensive-tests.md`:
+- Write tests FIRST before implementation
+- Each event type should have its own test
+- Verify complete JSON structure including all fields
 
 ## Scope Boundaries
 
 **DO:**
-- Write tests FIRST (TDD) - define expected event JSON structure
-- Implement EventEmitter integration in scheduler startup
-- Add graceful shutdown handler that emits `scheduler.stopped` with uptime_seconds
-- Track scheduler start time using `std::time::Instant` or `tokio::time::Instant`
+- Write tests FIRST (TDD) - define expected event JSON structure for each container event type
+- Implement EventEmitter integration in container launch (src/docker/run.rs)
+- Add event emission on container completion with exit code, duration, timeout
+- Implement container.skipped for overlap_mode="skip"
+- Implement container.queued for overlap_mode="queue"
+- Track run_id to tie started/exited events together
 
 **DO NOT:**
-- Do NOT modify M1 (Event Core Infrastructure) - already complete
-- Do NOT work on M3-M7 - future milestones
-- Do NOT refactor unrelated code in src/scheduler/
+- Do NOT modify M1-M2 - already complete
+- Do NOT work on M4-M7 - future milestones
+- Do NOT refactor unrelated code in src/docker/
 - Do NOT add features not in the success criteria
+- Do NOT modify the event schema (must match observability_design_spec.md exactly)
 
 ## Evidence Requirements
 
@@ -88,5 +141,6 @@ Before writing EXECUTION_REPORT.md, you MUST:
 
 ## Relevant Skills
 
-- **rust-engineer** skill - Specifically `references/async.md` for graceful shutdown patterns
+- **rust-engineer** skill - Specifically `references/async.md` for async container operations
 - **rust-best-practices** skill - For testing best practices
+- Custom skill: **tdd-comprehensive-tests.md** - TDD approach guidance

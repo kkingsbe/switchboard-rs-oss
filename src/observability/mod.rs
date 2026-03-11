@@ -11,5 +11,5 @@ pub mod event;
 pub mod emitter;
 
 pub use error::EventError;
-pub use event::{Event, EventData, EventType};
+pub use event::{CommitInfo, Event, EventData, EventType};
 pub use emitter::{EmitterConfig, EventEmitter};

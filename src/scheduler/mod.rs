@@ -394,6 +394,8 @@ async fn execute_agent(
     queue_wait_times: Arc<Mutex<Vec<u64>>>,
     queued_start_time: Option<Instant>,
     docker_client: Option<Arc<dyn DockerClientTrait>>,
+    event_emitter: Option<Arc<Mutex<EventEmitter>>>,
+    trigger_type: String,
 ) -> Result<(), SchedulerError> {
     // Check for overlap - if the agent is already running, skip this execution (unless overlap_mode is "queue")
     {
@@ -415,6 +417,21 @@ async fn execute_agent(
                         container_id,
                         next_run_str
                     );
+                    
+                    // Emit container.skipped event
+                    if let Some(ref emitter) = event_emitter {
+                        if let Ok(mut emitter_guard) = emitter.lock() {
+                            let event = Event::new(
+                                EventType::ContainerSkipped,
+                                EventData::container_skipped(
+                                    "overlap_skip",
+                                    Some(container_id.clone()),
+                                ),
+                            );
+                            let _ = emitter_guard.emit(event);
+                        }
+                    }
+                    
                     return Err(SchedulerError::SkipModeActive {
                         agent_name: agent_name.to_string(),
                         container_id: container_id.clone(),
@@ -449,6 +466,7 @@ async fn execute_agent(
                     drop(queue_guard);
 
                     let mut queue_mut = queue.lock().map_err(|_| SchedulerError::MutexPoisoned)?;
+                    let queue_position = queue_mut.len() + 1; // 1-based position
                     queue_mut.push(queued_run);
 
                     tracing::info!(
@@ -457,6 +475,19 @@ async fn execute_agent(
                         queue_mut.len(),
                         max_queue_size
                     );
+
+                    // Emit container.queued event
+                    if let Some(ref emitter) = event_emitter {
+                        if let Ok(mut emitter_guard) = emitter.lock() {
+                            // Get the running container ID
+                            let running_container_id = scheduled_agent.current_run.clone();
+                            let event = Event::new(
+                                EventType::ContainerQueued,
+                                EventData::container_queued(queue_position as u32, running_container_id),
+                            );
+                            let _ = emitter_guard.emit(event);
+                        }
+                    }
 
                     // Note: Queue wait time will be tracked when the queued run is processed
                     // (when it's removed from the queue and executed)
@@ -493,6 +524,7 @@ async fn execute_agent(
     let image_tag_for_cleanup = image_tag.clone();
     let workspace_path_for_cleanup = workspace_path.clone();
     let clock_for_cleanup = clock.clone();
+    let event_emitter_for_cleanup = event_emitter.clone();
     // Note: docker_client is not captured here because it's created after the cleanup closure.
     // For queued runs, None is passed so a new client will be created internally.
     let cleanup = || {
@@ -588,6 +620,8 @@ async fn execute_agent(
                     queue_wait_times_for_cleanup,
                     queued_start_time,
                     None, // No injected docker client for queued runs - will be created internally
+                    event_emitter_for_cleanup,
+                    "cron".to_string(), // Queued runs are still triggered by cron
                 )) {
                     tracing::error!(
                         "Error executing queued run for agent '{}': {}",
@@ -699,6 +733,26 @@ async fn execute_agent(
             DateTime::<Utc>::from(queued_system_time)
         });
 
+        // Build the full image name
+        let full_image = format!("{}:{}", image_name, image_tag);
+        
+        // Emit container.started event before running the container
+        if let Some(ref emitter) = event_emitter {
+            if let Ok(mut emitter_guard) = emitter.lock() {
+                let schedule = agent.schedule.clone();
+                let event = Event::new(
+                    EventType::ContainerStarted,
+                    EventData::container_started(
+                        full_image.clone(),
+                        trigger_type.clone(),
+                        Some(schedule),
+                        "", // container_id not known yet, will be updated in exited event
+                    ),
+                );
+                let _ = emitter_guard.emit(event);
+            }
+        }
+
         let result = match run_agent(
             &workspace_path,
             docker_client,
@@ -724,6 +778,22 @@ async fn execute_agent(
         };
 
         let duration = start_time.elapsed();
+
+        // Emit container.exited event after run_agent completes
+        if let Some(ref emitter) = event_emitter {
+            if let Ok(mut emitter_guard) = emitter.lock() {
+                let exit_code = result.exit_code;
+                let duration_seconds = duration.as_secs();
+                // Check if the container timed out (exit_code -1 indicates error during wait)
+                let timeout_hit = result.exit_code == -1 || result.exit_code == 137;
+                
+                let event = Event::new(
+                    EventType::ContainerExited,
+                    EventData::container_exited(exit_code as i32, duration_seconds, timeout_hit),
+                );
+                let _ = emitter_guard.emit(event);
+            }
+        }
 
         // Log execution summary
         tracing::info!(
@@ -831,7 +901,7 @@ pub struct Scheduler {
     /// Start time of the scheduler (RFC3339 timestamp)
     start_time: String,
     /// Event emitter for observability (optional)
-    event_emitter: Option<EventEmitter>,
+    event_emitter: Option<Arc<Mutex<EventEmitter>>>,
     /// Start time for uptime calculation (Instant)
     uptime_start: Option<Instant>,
 }
@@ -913,7 +983,7 @@ impl Scheduler {
     ///
     /// * `emitter` - The event emitter to use
     pub fn set_event_emitter(&mut self, emitter: EventEmitter) {
-        self.event_emitter = Some(emitter);
+        self.event_emitter = Some(Arc::new(Mutex::new(emitter)));
     }
 
     /// Register an agent with its cron schedule
@@ -957,11 +1027,13 @@ impl Scheduler {
 
         let queue_wait_time_seconds = self.queue_wait_time_seconds.clone();
         let queue_wait_times = self.queue_wait_times.clone();
+        let event_emitter = self.event_emitter.clone();
 
         // Resolve the configured timezone for scheduling
         let tz = self.resolve_timezone()?;
 
         let docker_client_for_job = docker_client.clone();
+        let event_emitter_for_job = event_emitter.clone();
         let job = Job::new_async_tz(schedule, tz, move |_uuid, _l| {
             let agents = agents.clone();
             let agent_name = agent_name.clone();
@@ -976,6 +1048,7 @@ impl Scheduler {
             let queue_wait_time_seconds = queue_wait_time_seconds.clone();
             let queue_wait_times = queue_wait_times.clone();
             let docker_client = docker_client_for_job.clone();
+            let event_emitter = event_emitter_for_job.clone();
             Box::pin({
                 let agents_clone = agents.clone();
                 async move {
@@ -996,6 +1069,8 @@ impl Scheduler {
                         queue_wait_times,
                         None, // No queued start time for regular (non-queued) runs
                         Some(docker_client),
+                        event_emitter,
+                        "cron".to_string(),
                     )
                     .await
                     {
@@ -1154,7 +1229,7 @@ impl Scheduler {
 
     /// Emit the scheduler.started event
     fn emit_scheduler_started_event(&mut self) {
-        if let Some(ref mut emitter) = self.event_emitter {
+        if let Some(ref emitter) = self.event_emitter {
             // Get list of agent names
             let agents: Vec<String> = {
                 let locked_agents = match self.agents.lock() {
@@ -1175,10 +1250,12 @@ impl Scheduler {
                 EventData::scheduler_started(agents, version, config_file),
             );
 
-            if let Err(e) = emitter.emit(event) {
-                tracing::warn!("Failed to emit scheduler.started event: {}", e);
-            } else {
-                tracing::info!("Emitted scheduler.started event");
+            if let Ok(mut emitter_guard) = emitter.lock() {
+                if let Err(e) = emitter_guard.emit(event) {
+                    tracing::warn!("Failed to emit scheduler.started event: {}", e);
+                } else {
+                    tracing::info!("Emitted scheduler.started event");
+                }
             }
         }
     }
@@ -1247,7 +1324,7 @@ impl Scheduler {
 
     /// Emit the scheduler.stopped event
     fn emit_scheduler_stopped_event(&mut self, reason: &str) {
-        if let Some(ref mut emitter) = self.event_emitter {
+        if let Some(ref emitter) = self.event_emitter {
             // Calculate uptime in seconds
             let uptime_seconds = self.uptime_start
                 .map(|start| start.elapsed().as_secs())
@@ -1258,10 +1335,12 @@ impl Scheduler {
                 EventData::scheduler_stopped(reason, uptime_seconds),
             );
 
-            if let Err(e) = emitter.emit(event) {
-                tracing::warn!("Failed to emit scheduler.stopped event: {}", e);
-            } else {
-                tracing::info!("Emitted scheduler.stopped event (uptime: {}s)", uptime_seconds);
+            if let Ok(mut emitter_guard) = emitter.lock() {
+                if let Err(e) = emitter_guard.emit(event) {
+                    tracing::warn!("Failed to emit scheduler.stopped event: {}", e);
+                } else {
+                    tracing::info!("Emitted scheduler.stopped event (uptime: {}s)", uptime_seconds);
+                }
             }
         }
     }

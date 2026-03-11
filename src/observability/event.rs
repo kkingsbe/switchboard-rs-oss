@@ -11,6 +11,21 @@ use uuid::Uuid;
 
 use crate::observability::error::{EventError, JsonSerializationError};
 
+/// Information about a single git commit
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CommitInfo {
+    /// Full hash of the commit
+    pub hash: String,
+    /// Commit message
+    pub message: String,
+    /// Number of files changed in this commit
+    pub files_changed: u32,
+    /// Number of lines inserted
+    pub insertions: u32,
+    /// Number of lines deleted
+    pub deletions: u32,
+}
+
 /// Represents the type of event being emitted
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
@@ -39,6 +54,16 @@ pub enum EventType {
     SchedulerStarted,
     /// Scheduler stopped event
     SchedulerStopped,
+    /// Container started event - emitted when Switchboard launches an agent container
+    ContainerStarted,
+    /// Container exited event - emitted when a container exits
+    ContainerExited,
+    /// Container skipped event - emitted when a cron trigger fires but the agent is skipped
+    ContainerSkipped,
+    /// Container queued event - emitted when a cron trigger fires and the run is queued
+    ContainerQueued,
+    /// Git diff event - emitted after each agent container exits
+    GitDiff,
     /// Custom event type for extensibility
     Custom(String),
 }
@@ -76,6 +101,11 @@ impl std::fmt::Display for EventType {
             EventType::SystemEvent => write!(f, "system_event"),
             EventType::SchedulerStarted => write!(f, "scheduler_started"),
             EventType::SchedulerStopped => write!(f, "scheduler_stopped"),
+            EventType::ContainerStarted => write!(f, "container_started"),
+            EventType::ContainerExited => write!(f, "container_exited"),
+            EventType::ContainerSkipped => write!(f, "container_skipped"),
+            EventType::ContainerQueued => write!(f, "container_queued"),
+            EventType::GitDiff => write!(f, "git_diff"),
             EventType::Custom(name) => write!(f, "custom:{}", name),
         }
     }
@@ -139,6 +169,53 @@ pub enum EventData {
         /// Uptime in seconds
         uptime_seconds: u64,
     },
+    /// Container started event data - emitted when Switchboard launches an agent container
+    ContainerStarted {
+        /// Docker image used
+        image: String,
+        /// Trigger type: "cron" (scheduled) or "manual"
+        trigger: String,
+        /// Cron schedule expression (if trigger is "cron")
+        schedule: Option<String>,
+        /// Docker container ID
+        container_id: String,
+    },
+    /// Container exited event data - emitted when a container exits
+    ContainerExited {
+        /// Exit code from the container
+        exit_code: i32,
+        /// Duration of container execution in seconds
+        duration_seconds: u64,
+        /// Whether the container was terminated due to timeout
+        timeout_hit: bool,
+    },
+    /// Container skipped event data - emitted when a cron trigger fires but the agent is skipped
+    ContainerSkipped {
+        /// Reason for skipping (e.g., "overlap_skip")
+        reason: String,
+        /// Run ID of the currently running container that caused this skip
+        running_run_id: Option<String>,
+    },
+    /// Container queued event data - emitted when a cron trigger fires and the run is queued
+    ContainerQueued {
+        /// Position in the queue (1-based)
+        queue_position: u32,
+        /// Run ID of the currently running container
+        running_run_id: Option<String>,
+    },
+    /// Git diff event data - emitted after each agent container exits
+    GitDiff {
+        /// Number of commits made
+        commit_count: u32,
+        /// List of commit information
+        commits: Vec<CommitInfo>,
+        /// Total lines inserted
+        total_insertions: u32,
+        /// Total lines deleted
+        total_deletions: u32,
+        /// Total files changed
+        total_files_changed: u32,
+    },
     /// Custom event data
     Custom {
         /// Custom event name
@@ -172,6 +249,15 @@ impl EventData {
             }
             EventData::SchedulerStopped { reason, .. } if reason.is_empty() => {
                 Err(EventError::ValidationError("scheduler stopped event must have a reason".to_string()))
+            }
+            EventData::ContainerStarted { image, trigger, .. } if image.is_empty() => {
+                Err(EventError::ValidationError("container started event must have an image".to_string()))
+            }
+            EventData::ContainerStarted { trigger, .. } if trigger.is_empty() => {
+                Err(EventError::ValidationError("container started event must have a trigger".to_string()))
+            }
+            EventData::ContainerSkipped { reason, .. } if reason.is_empty() => {
+                Err(EventError::ValidationError("container skipped event must have a reason".to_string()))
             }
             _ => Ok(()),
         }
@@ -229,6 +315,62 @@ impl EventData {
         EventData::SchedulerStopped {
             reason: reason.into(),
             uptime_seconds,
+        }
+    }
+
+    /// Create container started event data
+    pub fn container_started(
+        image: impl Into<String>,
+        trigger: impl Into<String>,
+        schedule: Option<String>,
+        container_id: impl Into<String>,
+    ) -> Self {
+        EventData::ContainerStarted {
+            image: image.into(),
+            trigger: trigger.into(),
+            schedule,
+            container_id: container_id.into(),
+        }
+    }
+
+    /// Create container exited event data
+    pub fn container_exited(exit_code: i32, duration_seconds: u64, timeout_hit: bool) -> Self {
+        EventData::ContainerExited {
+            exit_code,
+            duration_seconds,
+            timeout_hit,
+        }
+    }
+
+    /// Create container skipped event data
+    pub fn container_skipped(reason: impl Into<String>, running_run_id: Option<String>) -> Self {
+        EventData::ContainerSkipped {
+            reason: reason.into(),
+            running_run_id,
+        }
+    }
+
+    /// Create container queued event data
+    pub fn container_queued(queue_position: u32, running_run_id: Option<String>) -> Self {
+        EventData::ContainerQueued {
+            queue_position,
+            running_run_id,
+        }
+    }
+
+    /// Create git diff event data
+    pub fn git_diff(commits: Vec<CommitInfo>) -> Self {
+        let commit_count = commits.len() as u32;
+        let total_insertions: u32 = commits.iter().map(|c| c.insertions).sum();
+        let total_deletions: u32 = commits.iter().map(|c| c.deletions).sum();
+        let total_files_changed: u32 = commits.iter().map(|c| c.files_changed).sum();
+
+        EventData::GitDiff {
+            commit_count,
+            commits,
+            total_insertions,
+            total_deletions,
+            total_files_changed,
         }
     }
 }
@@ -564,5 +706,237 @@ mod tests {
         assert_ne!(event.id, Uuid::nil());
         assert_eq!(event.event_type, EventType::SystemEvent);
         assert!(event.validate().is_ok());
+    }
+
+    // ===== Container Lifecycle Event Tests =====
+
+    #[test]
+    fn event_type_container_started_should_format_correctly() {
+        assert_eq!(EventType::ContainerStarted.to_string(), "container_started");
+    }
+
+    #[test]
+    fn event_type_container_exited_should_format_correctly() {
+        assert_eq!(EventType::ContainerExited.to_string(), "container_exited");
+    }
+
+    #[test]
+    fn event_type_container_skipped_should_format_correctly() {
+        assert_eq!(EventType::ContainerSkipped.to_string(), "container_skipped");
+    }
+
+    #[test]
+    fn event_type_container_queued_should_format_correctly() {
+        assert_eq!(EventType::ContainerQueued.to_string(), "container_queued");
+    }
+
+    #[test]
+    fn event_type_git_diff_should_format_correctly() {
+        assert_eq!(EventType::GitDiff.to_string(), "git_diff");
+    }
+
+    #[test]
+    fn event_data_container_started_should_create_valid_payload() {
+        let payload = EventData::container_started(
+            "kilosynth/prompter:latest",
+            "cron",
+            Some("*/5 * * * *".to_string()),
+            "abc123",
+        );
+        
+        if let EventData::ContainerStarted { image, trigger, schedule, container_id } = payload {
+            assert_eq!(image, "kilosynth/prompter:latest");
+            assert_eq!(trigger, "cron");
+            assert_eq!(schedule, Some("*/5 * * * *".to_string()));
+            assert_eq!(container_id, "abc123");
+        } else {
+            panic!("Expected ContainerStarted variant");
+        }
+    }
+
+    #[test]
+    fn event_data_container_started_should_validate() {
+        let payload = EventData::container_started(
+            "kilosynth/prompter:latest",
+            "cron",
+            None,
+            "abc123",
+        );
+        assert!(payload.validate().is_ok());
+    }
+
+    #[test]
+    fn event_data_container_started_should_fail_for_empty_image() {
+        let payload = EventData::container_started(
+            "",
+            "cron",
+            None,
+            "abc123",
+        );
+        assert!(payload.validate().is_err());
+    }
+
+    #[test]
+    fn event_data_container_exited_should_create_valid_payload() {
+        let payload = EventData::container_exited(0, 847, false);
+        
+        if let EventData::ContainerExited { exit_code, duration_seconds, timeout_hit } = payload {
+            assert_eq!(exit_code, 0);
+            assert_eq!(duration_seconds, 847);
+            assert_eq!(timeout_hit, false);
+        } else {
+            panic!("Expected ContainerExited variant");
+        }
+    }
+
+    #[test]
+    fn event_data_container_exited_should_handle_timeout() {
+        let payload = EventData::container_exited(137, 300, true);
+        
+        if let EventData::ContainerExited { exit_code, duration_seconds, timeout_hit } = payload {
+            assert_eq!(exit_code, 137);
+            assert_eq!(duration_seconds, 300);
+            assert_eq!(timeout_hit, true);
+        } else {
+            panic!("Expected ContainerExited variant");
+        }
+    }
+
+    #[test]
+    fn event_data_container_skipped_should_create_valid_payload() {
+        let payload = EventData::container_skipped("overlap_skip", Some("a1b2c3d4".to_string()));
+        
+        if let EventData::ContainerSkipped { reason, running_run_id } = payload {
+            assert_eq!(reason, "overlap_skip");
+            assert_eq!(running_run_id, Some("a1b2c3d4".to_string()));
+        } else {
+            panic!("Expected ContainerSkipped variant");
+        }
+    }
+
+    #[test]
+    fn event_data_container_skipped_should_validate() {
+        let payload = EventData::container_skipped("overlap_skip", None);
+        assert!(payload.validate().is_ok());
+    }
+
+    #[test]
+    fn event_data_container_skipped_should_fail_for_empty_reason() {
+        let payload = EventData::container_skipped("", Some("a1b2c3d4".to_string()));
+        assert!(payload.validate().is_err());
+    }
+
+    #[test]
+    fn event_data_container_queued_should_create_valid_payload() {
+        let payload = EventData::container_queued(1, Some("a1b2c3d4".to_string()));
+        
+        if let EventData::ContainerQueued { queue_position, running_run_id } = payload {
+            assert_eq!(queue_position, 1);
+            assert_eq!(running_run_id, Some("a1b2c3d4".to_string()));
+        } else {
+            panic!("Expected ContainerQueued variant");
+        }
+    }
+
+    #[test]
+    fn event_data_container_queued_should_handle_higher_queue_position() {
+        let payload = EventData::container_queued(5, Some("a1b2c3d4".to_string()));
+        
+        if let EventData::ContainerQueued { queue_position, running_run_id } = payload {
+            assert_eq!(queue_position, 5);
+        } else {
+            panic!("Expected ContainerQueued variant");
+        }
+    }
+
+    #[test]
+    fn event_data_git_diff_should_create_valid_payload() {
+        let commits = vec![
+            CommitInfo {
+                hash: "abc1234".to_string(),
+                message: "feat: first commit".to_string(),
+                files_changed: 4,
+                insertions: 127,
+                deletions: 12,
+            },
+            CommitInfo {
+                hash: "def5678".to_string(),
+                message: "test: second commit".to_string(),
+                files_changed: 2,
+                insertions: 89,
+                deletions: 0,
+            },
+        ];
+        
+        let payload = EventData::git_diff(commits);
+        
+        if let EventData::GitDiff { commit_count, commits: result_commits, total_insertions, total_deletions, total_files_changed } = payload {
+            assert_eq!(commit_count, 2);
+            assert_eq!(result_commits.len(), 2);
+            assert_eq!(total_insertions, 216);
+            assert_eq!(total_deletions, 12);
+            assert_eq!(total_files_changed, 6);
+        } else {
+            panic!("Expected GitDiff variant");
+        }
+    }
+
+    #[test]
+    fn event_data_git_diff_should_handle_empty_commits() {
+        let commits = vec![];
+        let payload = EventData::git_diff(commits);
+        
+        if let EventData::GitDiff { commit_count, total_insertions, total_deletions, total_files_changed, .. } = payload {
+            assert_eq!(commit_count, 0);
+            assert_eq!(total_insertions, 0);
+            assert_eq!(total_deletions, 0);
+            assert_eq!(total_files_changed, 0);
+        } else {
+            panic!("Expected GitDiff variant");
+        }
+    }
+
+    #[test]
+    fn container_events_should_serialize_and_deserialize() {
+        // Test container.started
+        let event = Event::new(
+            EventType::ContainerStarted,
+            EventData::container_started(
+                "kilosynth/prompter:latest",
+                "cron",
+                Some("*/5 * * * *".to_string()),
+                "container-123",
+            ),
+        );
+        let json = event.to_json().expect("Failed to serialize");
+        let deserialized: Event = serde_json::from_str(&json).expect("Failed to deserialize");
+        assert_eq!(event.event_type, deserialized.event_type);
+
+        // Test container.exited
+        let event = Event::new(
+            EventType::ContainerExited,
+            EventData::container_exited(0, 847, false),
+        );
+        let json = event.to_json().expect("Failed to serialize");
+        let deserialized: Event = serde_json::from_str(&json).expect("Failed to deserialize");
+        assert_eq!(event.event_type, deserialized.event_type);
+
+        // Test container.skipped
+        let event = Event::new(
+            EventType::ContainerSkipped,
+            EventData::container_skipped("overlap_skip", Some("a1b2c3d4".to_string())),
+        );
+        let json = event.to_json().expect("Failed to serialize");
+        let deserialized: Event = serde_json::from_str(&json).expect("Failed to deserialize");
+        assert_eq!(event.event_type, deserialized.event_type);
+
+        // Test container.queued
+        let event = Event::new(
+            EventType::ContainerQueued,
+            EventData::container_queued(1, Some("a1b2c3d4".to_string())),
+        );
+        let json = event.to_json().expect("Failed to serialize");
+        let deserialized: Event = serde_json::from_str(&json).expect("Failed to deserialize");
+        assert_eq!(event.event_type, deserialized.event_type);
     }
 }

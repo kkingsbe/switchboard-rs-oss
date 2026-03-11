@@ -1,6 +1,6 @@
 {
   "pid": 24116,
-  "last_heartbeat": "2026-03-11T02:39:15.029091500+00:00",
+  "last_heartbeat": "2026-03-11T05:18:16.678131300+00:00",
   "start_time": "2026-03-11T00:42:13.331340600+00:00",
   "version": "0.1.0",
   "state": "running",
@@ -8,7 +8,7 @@
     {
       "name": "goal-planner",
       "schedule": "0,10,20,30,40,50 * * * *",
-      "current_run": null
+      "current_run": "starting"
     },
     {
       "name": "goal-executor",

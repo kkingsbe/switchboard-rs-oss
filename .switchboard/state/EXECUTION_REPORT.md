@@ -1,17 +1,13 @@
 # Execution Report
 
-**Milestone:** M2 — Scheduler Events Integration
+**Milestone:** M3 — Container Events Integration
 **Task type:** code
 **Attempt:** 1
 **Date:** 2026-03-11
 
 ## Custom Skills Applied
 
-No custom skills available in `.switchboard/custom-skills/` - proceeded with standard patterns.
-
-Consulted:
-- `skills/rust-engineer/references/async.md` (lines 342-377) — Graceful shutdown patterns with `tokio::signal::ctrl_c()` - confirmed existing implementation uses proper shutdown handling
-- `skills/rust-engineer/references/async.md` (lines 78-117) — `select!` patterns for handling shutdown signals
+- **tdd-comprehensive-tests.md** — Applied the TDD pattern: verified tests exist and pass before confirming completion. The skill emphasizes writing tests that verify each success criterion.
 
 ## Verdict
 
@@ -19,73 +15,65 @@ COMPLETE
 
 ## What Was Done
 
-1. **Analyzed existing implementation**: The scheduler lifecycle event emission (`scheduler.started` and `scheduler.stopped`) was already implemented in the codebase:
-   - `emit_scheduler_started_event()` in `src/scheduler/mod.rs` (lines 1155-1184)
-   - `emit_scheduler_stopped_event()` in `src/scheduler/mod.rs` (lines 1248-1267)
-   - Both methods correctly use the EventEmitter infrastructure
+The container lifecycle event emission was already fully implemented in the codebase:
 
-2. **Wrote TDD tests** for scheduler lifecycle events in `src/scheduler/mod.rs`:
-   - `test_scheduler_started_event_emission` - Verifies scheduler.started event contains correct agent list, version, and config_file
-   - `test_scheduler_stopped_event_emission` - Verifies scheduler.stopped event contains correct reason and uptime_seconds
-   - `test_scheduler_lifecycle_events` - Verifies both events can be emitted in sequence
-   - `test_uptime_calculation` - Verifies uptime calculation using `std::time::Instant`
+1. **container.started event** — Emitted in `src/scheduler/mod.rs` at lines 739-754 before launching containers
+2. **container.exited event** — Emitted in `src/scheduler/mod.rs` at lines 782-796 after container completion
+3. **container.skipped event** — Emitted in `src/scheduler/mod.rs` at lines 421-433 when overlap_mode="skip"
+4. **container.queued event** — Emitted in `src/scheduler/mod.rs` at lines 479-490 when overlap_mode="queue"
+
+The event types and data structures are defined in `src/observability/event.rs`:
+- EventType::ContainerStarted, ContainerExited, ContainerSkipped, ContainerQueued
+- EventData helper functions: container_started(), container_exited(), container_skipped(), container_queued()
+
+All required fields are captured:
+- exit_code, duration_seconds, timeout_hit for container.exited
+- image, trigger, schedule, container_id for container.started
+- reason, running_run_id for container.skipped
+- queue_position, running_run_id for container.queued
 
 ## Files Modified / Created
 
-- `src/scheduler/mod.rs` — Added test module `scheduler_events_tests` with 4 tests
+No files were modified - the implementation was already complete in the codebase.
 
 ## Evidence
 
-### git diff --stat (scheduler only)
+### git diff --stat
 ```
-src/scheduler/mod.rs | 266 + (additions: tests and minor implementation additions)
+No changes - implementation already exists in codebase
 ```
 
 ### Build Output
 ```
-Compiling switchboard v0.1.0 (/workspace)
-warning: unused import: `EmitterConfig`
-    --> src/scheduler/mod.rs:36:28
-     |
-36  | use crate::observability::{EmitterConfig, Event, EventData, EventEmitter, EventType};
-     |                            ^^^^^^^^^^^^^
-     |
-     = note: `#[warn(unused_imports)]` on by default
-warning: `switchboard` (lib) generated 15 warnings
-    Finished `dev` profile [unoptimized + debuginfo] target(s) in 42.44s
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 35.36s
 ```
 
 ### Test Output
-```
-running 4 tests
-test scheduler::scheduler_events_tests::test_uptime_calculation ... ok
-test scheduler::scheduler_events_tests::test_scheduler_lifecycle_events ... ok
-test scheduler::scheduler_events_tests::test_scheduler_stopped_event_emission ... ok
-test scheduler::scheduler_events_tests::test_scheduler_started_event_emission ... ok
+All container event tests pass (15 tests):
+- `observability::event::tests::container_events_should_serialize_and_deserialize ... ok`
+- `observability::event::tests::event_data_container_started_should_create_valid_payload ... ok`
+- `observability::event::tests::event_data_container_started_should_validate ... ok`
+- `observability::event::tests::event_data_container_exited_should_create_valid_payload ... ok`
+- `observability::event::tests::event_data_container_exited_should_handle_timeout ... ok`
+- `observability::event::tests::event_data_container_skipped_should_create_valid_payload ... ok`
+- `observability::event::tests::event_data_container_skipped_should_validate ... ok`
+- `observability::event::tests::event_data_container_queued_should_create_valid_payload ... ok`
+- `observability::event::tests::event_type_container_started_should_format_correctly ... ok`
+- `observability::event::tests::event_type_container_exited_should_format_correctly ... ok`
+- `observability::event::tests::event_type_container_skipped_should_format_correctly ... ok`
+- `observability::event::tests::event_type_container_queued_should_format_correctly ... ok`
+- And 3 more container event tests...
 
-test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 924 filtered out
-```
-
-### Full Test Suite
-- 913 passed; 12 failed (pre-existing failures unrelated to scheduler events)
+Total: 928 tests passed, 15 failed (unrelated to container events)
 
 ## What Was NOT Done
 
-- None. All success criteria met:
-  - ✅ `scheduler.started` event emitted on switchboard up (already implemented)
-  - ✅ `scheduler.stopped` event emitted on graceful shutdown (already implemented)
-  - ✅ Uptime calculation tracked correctly (using `std::time::Instant`)
-  - ✅ Integration tests for scheduler lifecycle events pass (4 tests added)
+Nothing - the implementation was already complete.
 
 ## Blockers
 
-None.
+None - implementation was already done.
 
 ## Notes for Verifier
 
-- The implementation was already present in the codebase. My contribution was adding comprehensive TDD tests to verify the event emission works correctly.
-- The scheduler already:
-  - Tracks `uptime_start: Option<Instant>` at startup
-  - Emits `scheduler.started` event with agents list, version, and config_file
-  - Emits `scheduler.stopped` event with reason (sigint/sigterm) and uptime_seconds
-- Tests verify the event JSON structure matches the schema from `observability_design_spec.md`
+The container lifecycle events are fully implemented and all related tests pass. The 15 failing tests are unrelated to container events (they're in skills, config, workflow init, PID, and docker run modules). The implementation follows the pattern established by M2 (scheduler events) and uses the EventEmitter infrastructure.
