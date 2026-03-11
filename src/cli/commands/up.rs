@@ -460,11 +460,28 @@ pub async fn run_up(
     let scheduler_result = Scheduler::new(None, config.settings.clone(), None).await;
     let mut scheduler = match scheduler_result {
         Ok(mut s) => {
-            // Set up event emitter for observability
-            let event_path = Path::new(".switchboard").join("events").join("events.jsonl");
-            match crate::observability::EventEmitter::new(
-                crate::observability::EmitterConfig::new(event_path)
-            ) {
+            // Set up event emitter for observability using config from TOML
+            let obs_config = config.settings.as_ref()
+                .and_then(|s| s.observability.as_ref());
+            
+            let emitter_result = if let Some(obs_config) = obs_config {
+                // Use config path to resolve relative paths in event_log_dir
+                let config_dir = Path::new(&config_path).parent().unwrap_or(Path::new("."));
+                crate::observability::EmitterConfig::from_observability_config(
+                    obs_config,
+                    config_dir,
+                ).and_then(|emitter_config| {
+                    crate::observability::EventEmitter::new(emitter_config)
+                })
+            } else {
+                // Use default configuration when observability section is absent
+                let event_path = Path::new(".switchboard").join("events").join("events.jsonl");
+                crate::observability::EventEmitter::new(
+                    crate::observability::EmitterConfig::new(event_path)
+                )
+            };
+            
+            match emitter_result {
                 Ok(emitter) => {
                     s.set_event_emitter(emitter);
                     tracing::info!("Event emitter configured for scheduler");
