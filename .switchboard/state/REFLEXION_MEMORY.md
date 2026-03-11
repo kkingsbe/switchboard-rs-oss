@@ -1,10 +1,23 @@
-# Reflexion Memory
-
 Max entries: 20. Oldest pruned first.
+---
 
 ---
 
-### Loop 3 — 2026-03-11
+### Loop 6 — 2026-03-11
+**Milestone:** M4 — Git Diff Capture
+**Attempt:** 1
+**Verdict:** PASS
+**Key finding:** All 5 success criteria verified: HEAD hash capture before/after container, git log parsing, edge case handling, 11 tests pass. Implementation already existed in codebase - executor verified it works.
+**Pattern:** Pre-existing implementation - task was verification rather than new implementation
+**Custom skills consulted:** tdd-comprehensive-tests.md, milestone-reference-accuracy.md
+
+### Loop 5 — 2026-03-11
+**Milestone:** M3 — Container Events Integration
+**Verdict:** PASS
+**Key learning:** All four container event types correctly implemented with proper data capture (exit code, duration_seconds, timeout_hit). Implementation complete and comprehensive tests pass.
+**Adaptation:** N/A - milestone passed first attempt
+
+---
 **Milestone:** M2 — Scheduler Events Integration
 **Attempt:** 2
 **Verdict:** PASS

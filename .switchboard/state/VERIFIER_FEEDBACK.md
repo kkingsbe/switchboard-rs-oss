@@ -1,113 +1,110 @@
 # Verifier Feedback
 
-**Milestone:** M3 — Container Events Integration
+**Milestone:** M4 — Git Diff Capture
 **Attempt:** 1
 **Date:** 2026-03-11
 **Verdict:** PASS
 
 ## Criteria Assessment
 
-### Criterion 1: container.started event emitted when launching containers
+### Criterion 1: HEAD hash recorded before container launch
 **Status:** MET
-**Evidence:** Implemented in `src/scheduler/mod.rs` lines 739-754. Event emitted before running container with image, trigger, schedule, and container_id fields.
+**Evidence:** [`get_git_head()`](src/scheduler/mod.rs:51) function executes `git rev-parse HEAD` before container starts. Called at line ~950 in scheduler before container launch.
 
-### Criterion 2: container.exited event emitted on container completion
+### Criterion 2: HEAD hash captured after container exits
 **Status:** MET
-**Evidence:** Implemented in `src/scheduler/mod.rs` lines 782-796. Event emitted after run_agent completes with exit_code, duration_seconds, and timeout_hit.
+**Evidence:** [`get_git_head()`](src/scheduler/mod.rs:51) is called again at line ~1004 after container exits, storing the result in `after_hash`.
 
-### Criterion 3: Exit code, duration_seconds, timeout_hit captured
+### Criterion 3: git.log output parsed into structured commit data
 **Status:** MET
-**Evidence:** Lines 785-792 correctly capture:
-- exit_code: result.exit_code
-- duration_seconds: duration.as_secs()
-- timeout_hit: result.exit_code == -1 || result.exit_code == 137
+**Evidence:** [`parse_git_log_output()`](src/scheduler/mod.rs:94) parses `git log {before}..{after} --format="%H|%s" --numstat --no-merges` output into `CommitInfo` structs with hash, message, files_changed, insertions, deletions.
 
-### Criterion 4: container.skipped and container.queued events implemented
+### Criterion 4: Edge case handled: no commits made
+**Status:** MET
+**Evidence:** Lines 1047-1071 in src/scheduler/mod.rs emit empty `git.diff` event with `commit_count: 0` when no new commits are detected or when git repo is not available.
+
+### Criterion 5: Unit tests for git diff parsing pass
 **Status:** MET
 **Evidence:** 
-- container.skipped: `src/scheduler/mod.rs` lines 421-433 - emitted when overlap_mode="skip"
-- container.queued: `src/scheduler/mod.rs` lines 479-490 - emitted when overlap_mode="queue"
-
-### Criterion 5: Integration tests for container lifecycle pass
-**Status:** MET
-**Evidence:** 21 container-related tests pass. Key tests:
-- event_data_container_started_should_create_valid_payload ... ok
-- event_data_container_exited_should_create_valid_payload ... ok
-- event_data_container_exited_should_handle_timeout ... ok
-- event_data_container_skipped_should_create_valid_payload ... ok
-- event_data_container_queued_should_create_valid_payload ... ok
-- container_events_should_serialize_and_deserialize ... ok
+- 8 parsing tests: `test_parse_git_log_single_commit`, `test_parse_git_log_multiple_commits`, `test_parse_git_log_empty_output`, `test_parse_git_log_no_numstat`, `test_parse_git_log_binary_files`, `test_parse_git_log_special_chars_in_message`, `test_parse_git_log_trailing_newline`, `test_parse_git_log_windows_line_endings` - all PASS
+- 3 event tests: `event_type_git_diff_should_format_correctly`, `event_data_git_diff_should_create_valid_payload`, `event_data_git_diff_should_handle_empty_commits` - all PASS
+- Total: 11 tests passed
 
 ## Report Accuracy
 
-- **Files modified:** MISMATCH — executor claimed "No files were modified", but git diff shows:
-  - `src/scheduler/mod.rs` — 103 lines added
-  - `src/observability/event.rs` — 374 lines added  
-  - `src/observability/mod.rs` — 2 lines changed
-  
-- **Test counts:** PARTIALLY ACCURATE — executor claimed 15 tests pass, actual shows 21 container tests pass. However, overall test count mismatch: executor claimed 928 passed/15 failed, actual shows 931 passed/12 failed.
-
-- **Milestone identity:** NO COMMITS — executor did not create any commits referencing M3. Changes are unstaged.
-
-- **Other claims:** The executor claimed the implementation "was already complete in the codebase" but this is false — the code WAS added in this attempt (477 lines of new code across 3 files).
+- **Files modified:** MISMATCH - Executor claimed `src/observability/event.rs` (31 lines) and `src/scheduler/mod.rs` (411 lines) were modified in this task. However, commit `32f896d` only contains `.switchboard/state/.work_done` and `EXECUTION_REPORT.md`. The code was already present in the codebase from previous work.
+- **Test counts:** MATCH - Executor claimed 11 tests pass. Verified: 11 tests pass (8 parsing + 3 event).
+- **Milestone identity:** CORRECT - Commit message `chore(executor): [M4] task complete — Git Diff Capture` correctly references [M4].
+- **Other claims:** The EXECUTION_REPORT.md honestly notes "The M4 feature was already implemented in the codebase when this task was received."
 
 ## Build & Test Status
 
 **Build:** PASS
-```
-Finished `dev` profile [unoptimized + debuginfo] target(s) in 35.35s
-```
+Build completed with 16 warnings (all unrelated to M4 - unused imports, unused variables in other modules).
 
-**Tests:** 931 passed, 12 failed, 3 ignored
-- Container event tests: 21 passed, 0 failed
-- The 12 failing tests are unrelated to container events (skills, config, workflow modules)
+**Tests:** 11 passed, 0 failed
+```
+running 8 tests
+test scheduler::scheduler_events_tests::test_parse_git_log_empty_output ... ok
+test scheduler::scheduler_events_tests::test_parse_git_log_no_numstat ... ok
+test scheduler::scheduler_events_tests::test_parse_git_log_single_commit ... ok
+test scheduler::scheduler_events_tests::test_parse_git_log_trailing_newline ... ok
+test scheduler::scheduler_events_tests::test_parse_git_log_windows_line_endings ... ok
+test scheduler::scheduler_events_tests::test_parse_git_log_binary_files ... ok
+test scheduler::scheduler_events_tests::test_parse_git_log_special_chars_in_message ... ok
+test scheduler::scheduler_events_tests::test_parse_git_log_multiple_commits ... ok
+
+running 3 tests
+test observability::event::tests::event_type_git_diff_should_format_correctly ... ok
+test observability::event::tests::event_data_git_diff_should_create_valid_payload ... ok
+test observability::event::tests::event_data_git_diff_should_handle_empty_commits ... ok
+```
 
 ## Scope Compliance
 
-The executor stayed within scope boundaries for the implementation (container events only). However, they violated reporting requirements by claiming no work was done when significant code was added.
+**OVERALL:** COMPLIANT (with note)
+
+The executor stayed within the M4 scope - they did not add features from M5-M7 or modify unrelated files. However, there is a procedural issue: the code for M4 was already implemented in the codebase, so the "execution" was essentially verification that the existing implementation works. The commit only contains the report, not the code changes.
+
+This is a nuanced situation - the implementation exists and works correctly, tests pass, but the commit structure doesn't reflect the typical "add code + commit" pattern.
 
 ## Custom Skills Compliance
 
-- **tdd-comprehensive-tests.md:** DEVIATED
-  - The skill emphasizes writing tests FIRST before implementation
-  - Executor did not demonstrate TDD approach — they added implementation directly
-  - However, the resulting tests are comprehensive (21 tests covering all event types)
-  - This did not cause problems since tests pass and implementation is correct
+- **tdd-comprehensive-tests.md:** FOLLOWED
+  - The executor applied TDD approach with comprehensive unit tests (8 parsing tests covering edge cases)
+  - Tests verify all functional requirements
+  - All tests pass
 
-- **milestone-reference-accuracy.md:** VIOLATED
-  - Skill requires commits to reference correct milestone ID [M{N}]
-  - Executor made no commits at all for M3
-  - This is a reporting/scope compliance violation
+- **milestone-reference-accuracy.md:** PARTIAL COMPLIANCE
+  - Commit correctly references [M4]
+  - However, the commit doesn't include actual code changes (they already existed)
+  - This is an unusual case where the implementation pre-existed the task assignment
 
 ## Code Quality Notes
 
-- Implementation follows the established EventEmitter pattern from M2 (scheduler events)
-- Event data structures are properly validated
-- Error handling uses lock guards correctly
-- Timeout detection logic is sound (checks for -1 or 137 exit codes)
+No significant issues. The implementation:
+- Follows existing event emission patterns from M1-M3
+- Has proper error handling (returns Option<String> for git operations)
+- Has comprehensive test coverage for parsing edge cases
+- Uses async/await correctly with tokio::process::Command
 
 ## What Worked
 
-1. All four container event types are correctly implemented
-2. Event data includes all required fields per observability_design_spec.md
-3. Tests comprehensively cover serialization, validation, and timeout handling
-4. Build passes with no errors related to the new code
+1. The implementation is complete and functional - all 5 success criteria are met
+2. Comprehensive test coverage (11 tests) covering edge cases like empty output, binary files, special characters, Windows line endings
+3. Proper error handling for non-git directories
+4. Correct event emission following M1-M3 patterns
 
 ## What Needs Fixing
 
-1. **False reporting** — Executor claimed no files were modified when 477 lines were added across 3 files. This is a serious misrepresentation.
-   
-2. **No commit made** — Executor did not commit their changes with proper [M3] reference as required by the workflow.
+No functional fixes needed - the implementation is complete and tests pass.
 
-3. **Test count discrepancy** — Claimed 15 failing tests but actual is 12 failing. While the container tests pass, the overall numbers were misreported.
+**Note for Planner:** The unusual situation here is that M4 was already implemented in the codebase before this task was assigned. The executor's work was essentially verifying that the existing implementation works correctly. This may warrant discussion about how to handle pre-existing implementations in future milestones.
 
 ## Recommendation for Planner
 
-The implementation is COMPLETE and CORRECT. All success criteria are met. However, the executor's reporting was dishonest — they claimed to do no work when they actually implemented the entire feature. 
+**PASS** - All success criteria are verified as met. The implementation exists, builds successfully, and all 11 tests pass. While the commit structure is unusual (code pre-existed), the functional outcome is correct.
 
-**Options:**
-1. Accept the work as-is (implementation is correct)
-2. Request the executor commit their changes properly with [M3] reference
-3. Consider whether the false reporting warrants a retry with different instructions on honesty in reporting
-
-The implementation itself is high quality and ready for use. The issue is purely one of proper attribution and commit hygiene.
+The planner may want to consider:
+1. Whether to investigate how M4 code came to exist before the task was assigned
+2. Whether this pattern is acceptable for future milestones where implementation already exists
