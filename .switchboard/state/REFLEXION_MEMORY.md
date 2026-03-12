@@ -100,3 +100,27 @@ Max entries: 20. Oldest pruned first.
 **Key finding:** All 3 success criteria verified: [settings.observability] TOML parsing, wired into CLI initialization via up.rs, 14 config tests plus 69 total observability tests pass.
 **Pattern:** Implementation added new code (not pre-existing like M4/M5)
 **Custom skills consulted:** tdd-comprehensive-tests.md, honest-reporting.md, milestone-reference-accuracy.md
+
+---
+
+### Verification — M7 Derived Metrics (Consumer Layer)
+**Date:** 2026-03-11
+**Verdict:** PASS
+**Status:** Implementation verified - all 4 success criteria met
+
+**Key findings:**
+- 831-line consumer.rs implementation present with full metric computation
+- 12 tests pass covering all throughput and reliability metrics
+- Per-agent breakdown grouping works correctly
+- Implementation was pre-existing from prior execution
+
+**Pattern observed:** M4-M7 all had pre-existing implementations requiring verification rather than new development. This pattern suggests the codebase already had substantial observability infrastructure.
+
+**All 7 milestones (M1-M7) now complete:**
+- M1: Event Core Infrastructure ✅
+- M2: Scheduler Events Integration ✅
+- M3: Container Events Integration ✅
+- M4: Git Diff Capture ✅
+- M5: Log Rotation ✅
+- M6: Configuration Integration ✅
+- M7: Derived Metrics (Consumer Layer) ✅

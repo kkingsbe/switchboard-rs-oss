@@ -1,14 +1,14 @@
 {
-  "pid": 24116,
-  "last_heartbeat": "2026-03-11T05:18:16.678131300+00:00",
-  "start_time": "2026-03-11T00:42:13.331340600+00:00",
+  "pid": 21808,
+  "last_heartbeat": "2026-03-11T19:45:06.764182400+00:00",
+  "start_time": "2026-03-11T12:37:02.446516+00:00",
   "version": "0.1.0",
   "state": "running",
   "agents": [
     {
       "name": "goal-planner",
       "schedule": "0,10,20,30,40,50 * * * *",
-      "current_run": "starting"
+      "current_run": null
     },
     {
       "name": "goal-executor",
@@ -18,7 +18,7 @@
     {
       "name": "goal-verifier",
       "schedule": "6,16,26,36,46,56 * * * *",
-      "current_run": "starting"
+      "current_run": null
     },
     {
       "name": "goal-skill-distiller",

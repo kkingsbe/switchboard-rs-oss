@@ -1,8 +1,8 @@
 # TDD Comprehensive Tests
 
-> **Source:** Distilled from loops 1, 3
+> **Source:** Distilled from loops 1, 3, 4
 > **Created:** 2026-03-11T03:33:10Z
-> **Last updated:** 2026-03-11T03:33:10Z
+> **Last updated:** 2026-03-11T13:03:00Z
 > **Confidence:** high
 
 ## Context
@@ -24,11 +24,13 @@ When implementing feature code in a Rust project, writing comprehensive tests be
 - **Implementation-first:** Writing code without tests, then adding tests as an afterthought
 - **Ignoring test failures:** Proceeding despite failing tests
 - **Scope-limited tests:** Tests that only cover the "happy path"
+- **Deferring tests:** Leaving tests for later rather than writing alongside implementation
 
 ## Evidence
 
 - **M1 (Loop 1):** 35 observability tests passed - verifier confirmed TDD approach provides strong confidence in implementation correctness
 - **M2 (Loop 3):** 4 scheduler event tests passed (uptime calculation, lifecycle events, event emission) - all 4 criteria verified
+- **M3 (Loop 4):** Executor deviated from strict TDD (wrote implementation first), but wrote comprehensive tests afterward (21 container event tests). All tests pass. The deviation was acceptable because the resulting test coverage was thorough.
 
 ## Applicability
 

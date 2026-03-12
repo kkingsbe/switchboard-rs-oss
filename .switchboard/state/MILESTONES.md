@@ -106,14 +106,15 @@
 
 ## Milestone 7: Derived Metrics (Consumer Layer)
 
-**Status:** PENDING
+**Status:** COMPLETE
+**Verified:** 2026-03-11 (Stale state - work complete, marked complete)
 **Task type:** code
 **Goal reference:** Implement ./observability_design_spec.md using STRICT test-driven development
 **Success criteria:**
-- [ ] Throughput metrics computed: agent runs, productive runs, commits, lines inserted/deleted
-- [ ] Reliability metrics computed: failure rate, timeouts, skipped runs, empty runs
-- [ ] Per-agent breakdown grouping works
-- [ ] Metrics computation tests pass
+- [x] Throughput metrics computed: agent runs, productive runs, commits, lines inserted/deleted
+- [x] Reliability metrics computed: failure rate, timeouts, skipped runs, empty runs
+- [x] Per-agent breakdown grouping works
+- [x] Metrics computation tests pass
 
 **Decomposition history:**
 <!-- Empty initially -->

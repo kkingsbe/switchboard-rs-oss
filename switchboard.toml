@@ -4,6 +4,12 @@ image_tag = "latest"
 log_dir = ".switchboard/logs"
 timezone = "America/New_York"
 
+[settings.observability]
+enabled = true                          # Default: true
+event_log_dir = ".switchboard/events"   # Default
+max_log_size = "10MB"                   # Rotate after this size
+retention_days = 30                     # Delete rotated files after N days
+
 [[agent]]
 name = "goal-planner"
 schedule = "0,10,20,30,40,50 * * * *"     # Every 10 min at :00, :10, :20, :30, :40, :50

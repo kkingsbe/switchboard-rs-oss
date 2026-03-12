@@ -1,8 +1,8 @@
 # Re-verification After Feedback
 
-> **Source:** Distilled from loops 2, 3
+> **Source:** Distilled from loops 2, 3, 5
 > **Created:** 2026-03-11T03:33:10Z
-> **Last updated:** 2026-03-11T03:33:10Z
+> **Last updated:** 2026-03-11T13:03:00Z
 > **Confidence:** medium
 
 ## Context
@@ -29,6 +29,7 @@ When receiving a PARTIAL verdict from the verifier, the executor should address 
 
 - **Loop 2 (PARTIAL):** Executor implemented scheduler events correctly, but commit/report incorrectly referenced M1 instead of M2 — scope violation
 - **Loop 3 (PASS):** Executor corrected milestone references. All 4 criteria verified: scheduler.started/stopped events, uptime calculation, 4 tests pass
+- **Loop 5 (M2 PASS):** Previous PARTIAL issues (milestone reference) resolved. All 4 criteria now verified: scheduler.started/stopped events implemented, uptime calculation works, 4 tests pass. Executor corrected milestone references in re-verification.
 
 ## Applicability
 

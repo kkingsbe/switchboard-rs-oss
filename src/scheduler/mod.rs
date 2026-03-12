@@ -33,8 +33,182 @@ use crate::docker::run::types::ContainerConfig;
 use crate::docker::{run_agent, DockerClient};
 use crate::logger::Logger;
 use crate::metrics::MetricsStore;
-use crate::observability::{EmitterConfig, Event, EventData, EventEmitter, EventType};
+use crate::observability::{CommitInfo, EmitterConfig, Event, EventData, EventEmitter, EventType};
 use crate::traits::{DockerClientTrait, RealDockerClient};
+
+/// Get the current HEAD commit hash in the repository
+///
+/// This function executes `git rev-parse HEAD` to get the current commit hash.
+/// Returns Ok(None) if the workspace is not a git repository or if there are no commits.
+///
+/// # Arguments
+///
+/// * `workspace_path` - The path to the git repository workspace
+///
+/// # Returns
+///
+/// Returns Ok(Some(hash)) on success, Ok(None) if not a git repo or no commits, Err on error.
+async fn get_git_head(workspace_path: &str) -> Result<Option<String>, SchedulerError> {
+    let output = tokio::process::Command::new("git")
+        .args(["rev-parse", "HEAD"])
+        .current_dir(workspace_path)
+        .output()
+        .await
+        .map_err(|e| SchedulerError::GitError {
+            message: format!("Failed to execute git rev-parse: {}", e),
+        })?;
+
+    if !output.status.success() {
+        // Not a git repository or no commits
+        return Ok(None);
+    }
+
+    let hash = String::from_utf8_lossy(&output.stdout)
+        .trim()
+        .to_string();
+
+    if hash.is_empty() {
+        return Ok(None);
+    }
+
+    Ok(Some(hash))
+}
+
+/// Parse git log output into structured commit data
+///
+/// This function parses the output of:
+/// `git log {before}..{after} --format="%H|%s" --numstat --no-merges`
+///
+/// The expected format is:
+/// - Commit line: `<hash>|<subject>`
+/// - Following lines: `<additions>\t<deletions>\t<filename>`
+/// - Empty line separates commits
+///
+/// # Arguments
+///
+/// * `output` - The raw output from git log command
+///
+/// # Returns
+///
+/// Returns a vector of CommitInfo structs
+fn parse_git_log_output(output: &str) -> Vec<CommitInfo> {
+    let mut commits = Vec::new();
+    let mut current_commit: Option<(String, String, u32, u32, u32)> = None;
+
+    for line in output.lines() {
+        let line = line.trim();
+
+        if line.is_empty() {
+            // Empty line signals end of a commit - save it if we have one
+            if let Some((hash, message, files, insertions, deletions)) = current_commit.take() {
+                commits.push(CommitInfo {
+                    hash,
+                    message,
+                    files_changed: files,
+                    insertions,
+                    deletions,
+                });
+            }
+            continue;
+        }
+
+        // Check if this is a commit header line (contains |)
+        if line.contains('|') {
+            // Save previous commit if exists
+            if let Some((hash, message, files, insertions, deletions)) = current_commit.take() {
+                commits.push(CommitInfo {
+                    hash,
+                    message,
+                    files_changed: files,
+                    insertions,
+                    deletions,
+                });
+            }
+
+            // Parse commit header: <hash>|<subject>
+            let parts: Vec<&str> = line.splitn(2, '|').collect();
+            if parts.len() == 2 {
+                let hash = parts[0].trim().to_string();
+                let message = parts[1].trim().to_string();
+                current_commit = Some((hash, message, 0, 0, 0));
+            }
+        } else if current_commit.is_some() {
+            // This is a numstat line: <additions>\t<deletions>\t<filename>
+            let parts: Vec<&str> = line.split('\t').collect();
+            if parts.len() >= 3 {
+                let additions = parts[0].parse::<u32>().unwrap_or(0);
+                let deletions = parts[1].parse::<u32>().unwrap_or(0);
+
+                if let Some((hash, message, mut files, mut total_insertions, mut total_deletions)) = current_commit.take() {
+                    files += 1;
+                    total_insertions += additions;
+                    total_deletions += deletions;
+                    current_commit = Some((hash, message, files, total_insertions, total_deletions));
+                }
+            }
+        }
+    }
+
+    // Don't forget the last commit if there's no trailing newline
+    if let Some((hash, message, files, insertions, deletions)) = current_commit {
+        commits.push(CommitInfo {
+            hash,
+            message,
+            files_changed: files,
+            insertions,
+            deletions,
+        });
+    }
+
+    commits
+}
+
+/// Get git diff between two commits
+///
+/// This function runs `git log {before}..{after} --format="%H|%s" --numstat --no-merges`
+/// and parses the output into structured commit data.
+///
+/// # Arguments
+///
+/// * `workspace_path` - The path to the git repository
+/// * `before_hash` - The commit hash before container execution
+/// * `after_hash` - The commit hash after container execution
+///
+/// # Returns
+///
+/// Returns a vector of CommitInfo structs representing the commits made during container execution
+async fn get_git_diff(
+    workspace_path: &str,
+    before_hash: &str,
+    after_hash: &str,
+) -> Result<Vec<CommitInfo>, SchedulerError> {
+    let range = format!("{}..{}", before_hash, after_hash);
+
+    let output = tokio::process::Command::new("git")
+        .args([
+            "log",
+            &range,
+            "--format=%H|%s",
+            "--numstat",
+            "--no-merges",
+        ])
+        .current_dir(workspace_path)
+        .output()
+        .await
+        .map_err(|e| SchedulerError::GitError {
+            message: format!("Failed to execute git log: {}", e),
+        })?;
+
+    if !output.status.success() {
+        // No commits in range or other git error
+        return Ok(Vec::new());
+    }
+
+    let output_str = String::from_utf8_lossy(&output.stdout);
+    let commits = parse_git_log_output(&output_str);
+
+    Ok(commits)
+}
 
 /// Comprehensive error type for scheduler operations
 ///
@@ -235,6 +409,18 @@ pub enum SchedulerError {
         duration_secs: u64,
         /// The action taken (e.g., "Sent SIGTERM and SIGKILL after 10s grace period")
         action_taken: String,
+    },
+
+    // ========================================
+    // Git Errors
+    // ========================================
+    /// Git operation failed
+    ///
+    /// Occurs when a git operation (e.g., rev-parse, log) fails.
+    #[error("Git error: {message}")]
+    GitError {
+        /// Detailed error information
+        message: String,
     },
 
     // ========================================
@@ -735,6 +921,22 @@ async fn execute_agent(
 
         // Build the full image name
         let full_image = format!("{}:{}", image_name, image_tag);
+
+        // Record HEAD hash before container launch for git diff capture
+        let before_hash = match get_git_head(&workspace_path).await {
+            Ok(Some(hash)) => {
+                tracing::debug!("Git HEAD before container launch: {}", hash);
+                Some(hash)
+            }
+            Ok(None) => {
+                tracing::debug!("Not a git repository or no commits - skipping git diff capture");
+                None
+            }
+            Err(e) => {
+                tracing::warn!("Failed to get git HEAD before container launch: {}", e);
+                None
+            }
+        };
         
         // Emit container.started event before running the container
         if let Some(ref emitter) = event_emitter {
@@ -764,6 +966,9 @@ async fn execute_agent(
             Some(&metrics_store),
             &agent.name,
             queued_datetime,
+            event_emitter.clone(),
+            Some(trigger_type.clone()),
+            Some(agent.schedule.clone()),
         )
         .await
         {
@@ -792,6 +997,77 @@ async fn execute_agent(
                     EventData::container_exited(exit_code as i32, duration_seconds, timeout_hit),
                 );
                 let _ = emitter_guard.emit(event);
+            }
+        }
+
+        // Capture HEAD hash after container exits and emit git.diff event
+        let after_hash = match get_git_head(&workspace_path).await {
+            Ok(Some(hash)) => {
+                tracing::debug!("Git HEAD after container exit: {}", hash);
+                Some(hash)
+            }
+            Ok(None) => {
+                tracing::debug!("Not a git repository or no commits after container exit");
+                None
+            }
+            Err(e) => {
+                tracing::warn!("Failed to get git HEAD after container exit: {}", e);
+                None
+            }
+        };
+
+        // If we have both before and after hashes, compute and emit git diff
+        if let (Some(before), Some(after)) = (&before_hash, &after_hash) {
+            if before != after {
+                // There are new commits - get the git diff
+                match get_git_diff(&workspace_path, before, after).await {
+                    Ok(commits) => {
+                        tracing::info!(
+                            "Git diff: {} commits, +{} lines, -{} lines",
+                            commits.len(),
+                            commits.iter().map(|c| c.insertions).sum::<u32>(),
+                            commits.iter().map(|c| c.deletions).sum::<u32>()
+                        );
+
+                        // Emit git.diff event
+                        if let Some(ref emitter) = event_emitter {
+                            if let Ok(mut emitter_guard) = emitter.lock() {
+                                let event = Event::new(
+                                    EventType::GitDiff,
+                                    EventData::git_diff(commits),
+                                );
+                                let _ = emitter_guard.emit(event);
+                            }
+                        }
+                    }
+                    Err(e) => {
+                        tracing::warn!("Failed to get git diff: {}", e);
+                    }
+                }
+            } else {
+                tracing::debug!("No new commits after container exit");
+
+                // Emit git.diff event with empty commits (edge case: no commits)
+                if let Some(ref emitter) = event_emitter {
+                    if let Ok(mut emitter_guard) = emitter.lock() {
+                        let event = Event::new(
+                            EventType::GitDiff,
+                            EventData::git_diff(vec![]),
+                        );
+                        let _ = emitter_guard.emit(event);
+                    }
+                }
+            }
+        } else if before_hash.is_none() || after_hash.is_none() {
+            // Edge case: not a git repository or no commits - emit git.diff with empty commits
+            if let Some(ref emitter) = event_emitter {
+                if let Ok(mut emitter_guard) = emitter.lock() {
+                    let event = Event::new(
+                        EventType::GitDiff,
+                        EventData::git_diff(vec![]),
+                    );
+                    let _ = emitter_guard.emit(event);
+                }
             }
         }
 
@@ -1638,5 +1914,138 @@ mod scheduler_events_tests {
         let uptime = start.elapsed().as_secs();
         // The uptime should be at least 0 (it might be 0 in fast tests)
         assert!(uptime >= 0);
+    }
+
+    // ===== Git Diff Parsing Tests =====
+
+    /// Test parsing git log output with a single commit
+    #[test]
+    fn test_parse_git_log_single_commit() {
+        let output = r#"abc1234567890abcdef|feat: Add new feature
+10	5	src/main.rs
+3	2	src/lib.rs
+"#;
+        
+        let commits = parse_git_log_output(output);
+        
+        assert_eq!(commits.len(), 1);
+        assert_eq!(commits[0].hash, "abc1234567890abcdef");
+        assert_eq!(commits[0].message, "feat: Add new feature");
+        assert_eq!(commits[0].files_changed, 2);
+        assert_eq!(commits[0].insertions, 13);
+        assert_eq!(commits[0].deletions, 7);
+    }
+
+    /// Test parsing git log output with multiple commits
+    #[test]
+    fn test_parse_git_log_multiple_commits() {
+        let output = r#"def7890123456789|feat: First commit
+20	10	src/file1.rs
+5	3	src/file2.rs
+
+ghi456789012345abc|test: Second commit
+15	0	src/tests.rs
+"#;
+        
+        let commits = parse_git_log_output(output);
+        
+        assert_eq!(commits.len(), 2);
+        
+        // First commit
+        assert_eq!(commits[0].hash, "def7890123456789");
+        assert_eq!(commits[0].message, "feat: First commit");
+        assert_eq!(commits[0].files_changed, 2);
+        assert_eq!(commits[0].insertions, 25);
+        assert_eq!(commits[0].deletions, 13);
+        
+        // Second commit
+        assert_eq!(commits[1].hash, "ghi456789012345abc");
+        assert_eq!(commits[1].message, "test: Second commit");
+        assert_eq!(commits[1].files_changed, 1);
+        assert_eq!(commits[1].insertions, 15);
+        assert_eq!(commits[1].deletions, 0);
+    }
+
+    /// Test parsing git log output with no commits (empty output)
+    #[test]
+    fn test_parse_git_log_empty_output() {
+        let output = "";
+        
+        let commits = parse_git_log_output(output);
+        
+        assert!(commits.is_empty());
+    }
+
+    /// Test parsing git log output with no numstat lines
+    #[test]
+    fn test_parse_git_log_no_numstat() {
+        let output = r#"abc1234567890abcdef|Initial commit
+"#;
+        
+        let commits = parse_git_log_output(output);
+        
+        assert_eq!(commits.len(), 1);
+        assert_eq!(commits[0].hash, "abc1234567890abcdef");
+        assert_eq!(commits[0].message, "Initial commit");
+        assert_eq!(commits[0].files_changed, 0);
+        assert_eq!(commits[0].insertions, 0);
+        assert_eq!(commits[0].deletions, 0);
+    }
+
+    /// Test parsing git log output with binary files (shown as -)
+    #[test]
+    fn test_parse_git_log_binary_files() {
+        let output = r#"abc1234567890abcdef|feat: Add binary
+-	-	src/binary.dat
+10	5	src/text.rs
+"#;
+        
+        let commits = parse_git_log_output(output);
+        
+        assert_eq!(commits.len(), 1);
+        assert_eq!(commits[0].files_changed, 2);
+        // Binary files show as - for additions/deletions
+        assert_eq!(commits[0].insertions, 10);
+        assert_eq!(commits[0].deletions, 5);
+    }
+
+    /// Test parsing git log output with special characters in commit message
+    #[test]
+    fn test_parse_git_log_special_chars_in_message() {
+        let output = r#"abc1234567890abcdef|feat: Add | pipe test & special chars!
+10	5	src/main.rs
+"#;
+        
+        let commits = parse_git_log_output(output);
+        
+        assert_eq!(commits.len(), 1);
+        assert_eq!(commits[0].message, "feat: Add | pipe test & special chars!");
+    }
+
+    /// Test parsing git log output with trailing newline
+    #[test]
+    fn test_parse_git_log_trailing_newline() {
+        let output = r#"abc1234567890abcdef|feat: Test commit
+10	5	src/main.rs
+
+def7890123456789|feat: Another commit
+3	1	src/lib.rs
+"#;
+        
+        let commits = parse_git_log_output(output);
+        
+        assert_eq!(commits.len(), 2);
+    }
+
+
+    /// Test parsing git log output with Windows-style line endings
+    #[test]
+    fn test_parse_git_log_windows_line_endings() {
+        let output = "abc1234567890abcdef|feat: Windows test\n10\t5\tsrc/main.rs\n";
+        
+        let commits = parse_git_log_output(output);
+        
+        assert_eq!(commits.len(), 1);
+        assert_eq!(commits[0].hash, "abc1234567890abcdef");
     }
 }

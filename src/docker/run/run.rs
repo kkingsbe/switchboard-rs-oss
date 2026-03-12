@@ -7,6 +7,7 @@
 //! - Container execution with timeout support
 //! - AgentExecutionResult with container ID and exit code reporting
 //! - Silent timeout monitoring for detecting stuck agents
+//! - Container lifecycle event emission for observability
 //!
 //! The module integrates with the logger module for log streaming and the
 //! wait module for container exit waiting with timeout enforcement.
@@ -18,6 +19,7 @@ use crate::docker::skills::generate_entrypoint_script;
 use crate::docker::DockerError;
 use crate::logger::Logger;
 use crate::metrics::{update_all_metrics, AgentRunResult, MetricsStore};
+use crate::observability::{EmitterConfig, Event, EventData, EventEmitter, EventType};
 use crate::skills::SkillsError;
 use crate::traits::DockerClientTrait;
 use bollard::{
@@ -25,10 +27,20 @@ use bollard::{
     models::HostConfig,
 };
 use chrono::Utc;
+use rand::Rng;
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
+
+/// Generate a unique run ID for tying container events together
+///
+/// Returns an 8-character hex string (e.g., "a1b2c3d4") that can be used
+/// to correlate container.started and container.exited events.
+fn generate_run_id() -> String {
+    let mut rng = rand::thread_rng();
+    format!("{:08x}", rng.gen::<u32>())
+}
 
 /// Result of running an agent in a Docker container
 ///
@@ -811,7 +823,13 @@ pub async fn run_agent(
     metrics_store: Option<&MetricsStore>,
     agent_name: &str,
     queued_start_time: Option<chrono::DateTime<chrono::Utc>>,
+    event_emitter: Option<Arc<Mutex<EventEmitter>>>,
+    trigger_type: Option<String>,
+    schedule: Option<String>,
 ) -> Result<AgentExecutionResult, DockerError> {
+    // Generate run_id for tying container events together
+    let run_id = generate_run_id();
+
     // Build environment variables for the container
     let container_env_vars = build_container_env_vars(&config.env_vars);
 
@@ -977,6 +995,25 @@ pub async fn run_agent(
             match start_result {
                 Ok(_) => {
                     let start_time = Utc::now();
+
+                    // Emit container.started event after container successfully starts
+                    if let Some(ref emitter) = event_emitter {
+                        if let Ok(mut emitter_guard) = emitter.lock() {
+                            let trigger = trigger_type.clone().unwrap_or_else(|| "manual".to_string());
+                            let event = Event::with_context(
+                                EventType::ContainerStarted,
+                                EventData::container_started(
+                                    image,
+                                    trigger,
+                                    schedule.clone(),
+                                    container_id.clone(),
+                                ),
+                                Some(run_id.clone()),
+                                Some(agent_name.to_string()),
+                            );
+                            let _ = emitter_guard.emit(event);
+                        }
+                    }
 
                     // Capture the start time for skill installation timing
                     // This approximates the installation time by measuring from container start
@@ -1199,6 +1236,22 @@ pub async fn run_agent(
                     };
 
                     let end_time = Utc::now();
+
+                    // Emit container.exited event after container exits
+                    let duration_seconds = (end_time - start_time).num_seconds() as u64;
+                    let timeout_hit = exit_code == -1 || exit_code == 137;
+                    
+                    if let Some(ref emitter) = event_emitter {
+                        if let Ok(mut emitter_guard) = emitter.lock() {
+                            let event = Event::with_context(
+                                EventType::ContainerExited,
+                                EventData::container_exited(exit_code as i32, duration_seconds, timeout_hit),
+                                Some(run_id.clone()),
+                                Some(agent_name.to_string()),
+                            );
+                            let _ = emitter_guard.emit(event);
+                        }
+                    }
 
                     // Calculate skill installation time
                     // This approximates the installation time by measuring from container start

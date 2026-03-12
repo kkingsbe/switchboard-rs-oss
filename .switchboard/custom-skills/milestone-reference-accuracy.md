@@ -1,8 +1,8 @@
 # Milestone Reference Accuracy
 
-> **Source:** Distilled from loops 2, 3
+> **Source:** Distilled from loops 2, 3, 4
 > **Created:** 2026-03-11T03:33:10Z
-> **Last updated:** 2026-03-11T03:33:10Z
+> **Last updated:** 2026-03-11T13:03:00Z
 > **Confidence:** high
 
 ## Context
@@ -23,11 +23,14 @@ When implementing milestones in a multi-milestone project, the executor must ens
 - **Mismatched milestone labels:** Implementing M2 code but referencing M1 in commits
 - **Scope drift:** Adding code for a future milestone while working on current one
 - **Copy-paste errors:** Using milestone references from previous work without updating
+- **No commits at all:** Failing to create any commits with milestone references — changes remain unstaged
+- **False reporting:** Claiming no work was done when code was actually implemented
 
 ## Evidence
 
 - **Loop 2 (PARTIAL):** Executor correctly implemented scheduler events (M2), but commit and report incorrectly referenced M1 instead of M2 — scope violation
-- **Loop 3 (PASS):** Executor corrected milestone references, verifier confirmed correct [M2] label in commit `3bff647`
+- **Loop 3 (PASS):** Executor corrected milestone references. Verifier confirmed correct [M2] label in commit `3bff647`
+- **Loop 4 (M3):** Executor made NO COMMITS at all for M3 implementation. 477 lines of code were added but remained unstaged — complete violation of milestone reference requirement
 
 ## Applicability
 

@@ -823,6 +823,9 @@ pub async fn run_run(
         Some(&metrics_store),
         &agent.name,
         None, // queued_start_time - CLI runs are not queued
+        None, // event_emitter - CLI runs don't emit events
+        Some("manual".to_string()), // trigger_type - CLI runs are manual
+        None, // schedule - CLI runs don't have a schedule
     )
     .await
     {

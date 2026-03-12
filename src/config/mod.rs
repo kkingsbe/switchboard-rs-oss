@@ -700,6 +700,142 @@ pub enum OverlapMode {
     Queue,
 }
 
+/// Observability configuration for event logging
+#[derive(Debug, Clone, Deserialize, Serialize, PartialEq)]
+pub struct ObservabilityConfig {
+    /// Enable observability event logging
+    #[serde(default = "default_observability_enabled")]
+    pub enabled: bool,
+    /// Directory for event log files
+    #[serde(default)]
+    pub event_log_dir: String,
+    /// Maximum log file size before rotation (e.g., "10MB", "1GB", "100KB")
+    #[serde(default)]
+    pub max_log_size: String,
+    /// Number of days to retain rotated log files
+    #[serde(default = "default_retention_days")]
+    pub retention_days: u32,
+}
+
+impl Default for ObservabilityConfig {
+    fn default() -> Self {
+        ObservabilityConfig {
+            enabled: true,
+            event_log_dir: ".switchboard/logs/events".to_string(),
+            max_log_size: "10MB".to_string(),
+            retention_days: 30,
+        }
+    }
+}
+
+impl ObservabilityConfig {
+    /// Parse max_log_size string to bytes
+    /// 
+    /// Supported formats:
+    /// - "10MB" -> 10 * 1024 * 1024 bytes
+    /// - "1GB" -> 1 * 1024 * 1024 * 1024 bytes
+    /// - "100KB" -> 100 * 1024 bytes
+    /// - "500" -> 500 bytes (no unit)
+    /// 
+    /// # Arguments
+    /// 
+    /// * `max_log_size` - String like "10MB", "1GB", "100KB", or just a number
+    /// 
+    /// # Returns
+    /// 
+    /// * `Ok(u64)` - Size in bytes
+    /// * `Err(ConfigError)` - If the format is invalid
+    pub fn parse_max_log_size(&self) -> Result<u64, ConfigError> {
+        parse_log_size(&self.max_log_size)
+    }
+}
+
+/// Parse a log size string to bytes
+/// 
+/// Supported formats: "10MB", "1GB", "100KB", "500" (bytes)
+pub fn parse_log_size(size_str: &str) -> Result<u64, ConfigError> {
+    let size_str = size_str.trim();
+    
+    if size_str.is_empty() {
+        return Err(ConfigError::ValidationError {
+            message: "max_log_size cannot be empty".to_string(),
+            agent_name: None,
+            field_name: Some("settings.observability.max_log_size".to_string()),
+            line: None,
+            col: None,
+        });
+    }
+    
+    // Try to parse as plain number (bytes)
+    if let Ok(bytes) = size_str.parse::<u64>() {
+        return Ok(bytes);
+    }
+    
+    // Try to parse with unit
+    let size_str_lower = size_str.to_lowercase();
+    
+    // Extract numeric part and unit
+    let (num_str, unit) = if size_str_lower.ends_with("kb") {
+        (&size_str[..size_str.len() - 2], "kb")
+    } else if size_str_lower.ends_with("mb") {
+        (&size_str[..size_str.len() - 2], "mb")
+    } else if size_str_lower.ends_with("gb") {
+        (&size_str[..size_str.len() - 2], "gb")
+    } else if size_str_lower.ends_with("b") {
+        (&size_str[..size_str.len() - 1], "b")
+    } else {
+        return Err(ConfigError::ValidationError {
+            message: format!("Invalid max_log_size format: '{}'. Use format like '10MB', '1GB', '100KB', or a plain number for bytes.", size_str),
+            agent_name: None,
+            field_name: Some("settings.observability.max_log_size".to_string()),
+            line: None,
+            col: None,
+        });
+    };
+    
+    let num: f64 = num_str.parse().map_err(|_| ConfigError::ValidationError {
+        message: format!("Invalid number in max_log_size: '{}'", num_str),
+        agent_name: None,
+        field_name: Some("settings.observability.max_log_size".to_string()),
+        line: None,
+        col: None,
+    })?;
+    
+    if num < 0.0 {
+        return Err(ConfigError::ValidationError {
+            message: "max_log_size cannot be negative".to_string(),
+            agent_name: None,
+            field_name: Some("settings.observability.max_log_size".to_string()),
+            line: None,
+            col: None,
+        });
+    }
+    
+    let bytes = match unit {
+        "kb" => (num * 1024.0) as u64,
+        "mb" => (num * 1024.0 * 1024.0) as u64,
+        "gb" => (num * 1024.0 * 1024.0 * 1024.0) as u64,
+        "b" => num as u64,
+        _ => return Err(ConfigError::ValidationError {
+            message: format!("Unknown unit: '{}'. Use KB, MB, GB, or B", unit),
+            agent_name: None,
+            field_name: Some("settings.observability.max_log_size".to_string()),
+            line: None,
+            col: None,
+        }),
+    };
+    
+    Ok(bytes)
+}
+
+fn default_observability_enabled() -> bool {
+    true
+}
+
+fn default_retention_days() -> u32 {
+    30
+}
+
 /// Global settings that apply to all agents
 #[derive(Debug, Clone, Deserialize, Serialize, PartialEq)]
 pub struct Settings {
@@ -727,6 +863,9 @@ pub struct Settings {
     /// Global silent timeout
     #[serde(default)]
     pub silent_timeout: Option<String>,
+    /// Observability configuration
+    #[serde(default)]
+    pub observability: Option<ObservabilityConfig>,
 }
 
 impl Default for Settings {
@@ -740,6 +879,7 @@ impl Default for Settings {
             overlap_mode: None,
             silent_timeout_str: "5m".to_string(),
             silent_timeout: None,
+            observability: Some(ObservabilityConfig::default()),
         }
     }
 }
@@ -3770,5 +3910,195 @@ prompt = "Test prompt 6"
 
         let result = agent.effective_silent_timeout(&None);
         assert_eq!(result, "5m");
+    }
+
+    // Tests for ObservabilityConfig
+
+    #[test]
+    fn test_parse_log_size_bytes() {
+        // Plain number (bytes)
+        assert_eq!(parse_log_size("500").unwrap(), 500);
+        assert_eq!(parse_log_size("1024").unwrap(), 1024);
+        assert_eq!(parse_log_size("0").unwrap(), 0);
+    }
+
+    #[test]
+    fn test_parse_log_size_kb() {
+        // Kilobytes
+        assert_eq!(parse_log_size("100KB").unwrap(), 100 * 1024);
+        assert_eq!(parse_log_size("1KB").unwrap(), 1024);
+        assert_eq!(parse_log_size("10kb").unwrap(), 10 * 1024);
+    }
+
+    #[test]
+    fn test_parse_log_size_mb() {
+        // Megabytes
+        assert_eq!(parse_log_size("10MB").unwrap(), 10 * 1024 * 1024);
+        assert_eq!(parse_log_size("1MB").unwrap(), 1024 * 1024);
+        assert_eq!(parse_log_size("1.5MB").unwrap(), (1.5 * 1024.0 * 1024.0) as u64);
+    }
+
+    #[test]
+    fn test_parse_log_size_gb() {
+        // Gigabytes
+        assert_eq!(parse_log_size("1GB").unwrap(), 1024 * 1024 * 1024);
+        assert_eq!(parse_log_size("2GB").unwrap(), 2 * 1024 * 1024 * 1024);
+    }
+
+    #[test]
+    fn test_parse_log_size_invalid_format() {
+        // Invalid format
+        let result = parse_log_size("invalid");
+        assert!(result.is_err());
+        
+        let result = parse_log_size("10TB");
+        assert!(result.is_err());
+        
+        let result = parse_log_size("");
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_parse_log_size_negative() {
+        // Negative number
+        let result = parse_log_size("-10MB");
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_observability_config_defaults() {
+        let config = ObservabilityConfig::default();
+        
+        assert_eq!(config.enabled, true);
+        assert_eq!(config.event_log_dir, ".switchboard/logs/events");
+        assert_eq!(config.max_log_size, "10MB");
+        assert_eq!(config.retention_days, 30);
+    }
+
+    #[test]
+    fn test_observability_config_parse_max_log_size() {
+        let config = ObservabilityConfig {
+            enabled: true,
+            event_log_dir: ".switchboard/logs/events".to_string(),
+            max_log_size: "10MB".to_string(),
+            retention_days: 30,
+        };
+        
+        let bytes = config.parse_max_log_size().unwrap();
+        assert_eq!(bytes, 10 * 1024 * 1024);
+    }
+
+    #[test]
+    fn test_observability_config_invalid_max_log_size() {
+        let config = ObservabilityConfig {
+            enabled: true,
+            event_log_dir: ".switchboard/logs/events".to_string(),
+            max_log_size: "invalid".to_string(),
+            retention_days: 30,
+        };
+        
+        let result = config.parse_max_log_size();
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_settings_with_observability() {
+        let toml_content = r#"
+            [settings]
+            image_name = "custom-agent"
+            
+            [settings.observability]
+            enabled = true
+            event_log_dir = "/var/log/events"
+            max_log_size = "50MB"
+            retention_days = 7
+
+            [[agent]]
+            name = "test-agent"
+            prompt_file = "prompts/test.md"
+            schedule = "0 * * * *"
+        "#;
+
+        let temp_file = create_temp_toml(toml_content);
+        let temp_dir = temp_file.path().parent().unwrap();
+        let prompts_dir = temp_dir.join("prompts");
+        fs::create_dir_all(&prompts_dir).unwrap();
+        fs::write(prompts_dir.join("test.md"), "Test prompt content").unwrap();
+
+        let config = Config::from_toml(temp_file.path()).unwrap();
+
+        let settings = config.settings.as_ref().unwrap();
+        let obs = settings.observability.as_ref().unwrap();
+        
+        assert_eq!(obs.enabled, true);
+        assert_eq!(obs.event_log_dir, "/var/log/events");
+        assert_eq!(obs.max_log_size, "50MB");
+        assert_eq!(obs.retention_days, 7);
+    }
+
+    #[test]
+    fn test_settings_observability_disabled() {
+        let toml_content = r#"
+            [settings]
+            image_name = "custom-agent"
+            
+            [settings.observability]
+            enabled = false
+
+            [[agent]]
+            name = "test-agent"
+            prompt_file = "prompts/test.md"
+            schedule = "0 * * * *"
+        "#;
+
+        let temp_file = create_temp_toml(toml_content);
+        let temp_dir = temp_file.path().parent().unwrap();
+        let prompts_dir = temp_dir.join("prompts");
+        fs::create_dir_all(&prompts_dir).unwrap();
+        fs::write(prompts_dir.join("test.md"), "Test prompt content").unwrap();
+
+        let config = Config::from_toml(temp_file.path()).unwrap();
+
+        let settings = config.settings.as_ref().unwrap();
+        let obs = settings.observability.as_ref().unwrap();
+        
+        assert_eq!(obs.enabled, false);
+    }
+
+    #[test]
+    fn test_settings_without_observability_section() {
+        let toml_content = r#"
+            [settings]
+            image_name = "custom-agent"
+
+            [[agent]]
+            name = "test-agent"
+            prompt_file = "prompts/test.md"
+            schedule = "0 * * * *"
+        "#;
+
+        let temp_file = create_temp_toml(toml_content);
+        let temp_dir = temp_file.path().parent().unwrap();
+        let prompts_dir = temp_dir.join("prompts");
+        fs::create_dir_all(&prompts_dir).unwrap();
+        fs::write(prompts_dir.join("test.md"), "Test prompt content").unwrap();
+
+        let config = Config::from_toml(temp_file.path()).unwrap();
+
+        let settings = config.settings.as_ref().unwrap();
+        // observability should be None when not specified
+        assert!(settings.observability.is_none());
+    }
+
+    #[test]
+    fn test_settings_default_observability() {
+        // When using Settings::default(), observability should have defaults
+        let settings = Settings::default();
+        
+        assert!(settings.observability.is_some());
+        let obs = settings.observability.unwrap();
+        assert_eq!(obs.enabled, true);
+        assert_eq!(obs.max_log_size, "10MB");
+        assert_eq!(obs.retention_days, 30);
     }
 }
