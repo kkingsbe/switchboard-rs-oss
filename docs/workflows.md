@@ -158,7 +158,7 @@ name = "PROMPT.md"
 description = "Prompt description"
 role = "architect"
 
-[[agents]]
+[[agent]]
 name = "agent-name"
 prompt_file = "PROMPT.md"
 schedule = "*/30 * * * *"
@@ -189,7 +189,7 @@ skills = ["vercel-labs/agent-skills@frontend-design"]
 
 **Per-Agent Skills** (overrides defaults for specific agents):
 ```toml
-[[agents]]
+[[agent]]
 name = "code-reviewer"
 prompt_file = "CODE_REVIEW.md"
 skills = ["vercel-labs/agent-skills@security-audit"]

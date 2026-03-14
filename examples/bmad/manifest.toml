@@ -28,35 +28,35 @@ name = "SCRUM_MASTER.md"
 description = "Scrum master agent for sprint management and progress tracking"
 role = "scrum_master"
 
-[[agents]]
+[[agent]]
 name = "architect"
 prompt_file = "ARCHITECT.md"
 schedule = "15 */2 * * *"
 timeout = "30m"
 env = { AGENT_COUNT = "2" }
 
-[[agents]]
+[[agent]]
 name = "scrum-master"
 prompt_file = "SCRUM_MASTER.md"
 schedule = "0 * * * *"
 timeout = "15m"
 env = { AGENT_COUNT = "2" }
 
-[[agents]]
+[[agent]]
 name = "dev-1"
 prompt_file = "DEV_PARALLEL.md"
 schedule = "*/30 * * * *"
 timeout = "30m"
 env = { AGENT_ID = "1" }
 
-[[agents]]
+[[agent]]
 name = "dev-2"
 prompt_file = "DEV_PARALLEL.md"
 schedule = "10,40 * * * *"
 timeout = "30m"
 env = { AGENT_ID = "2" }
 
-[[agents]]
+[[agent]]
 name = "code-reviewer"
 prompt_file = "CODE_REVIEWER.md"
 schedule = "20 */1 * * *"

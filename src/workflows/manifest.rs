@@ -3,7 +3,7 @@
 //! This module provides structures and utilities for parsing and validating
 //! manifest.toml files that define workflow configurations.
 
-use serde::{Deserialize, Serialize};
+use serde::{de::Error as DeError, Deserialize, Deserializer, Serialize};
 use std::collections::HashMap;
 use std::fs;
 use std::path::Path;
@@ -78,7 +78,7 @@ pub struct ManifestAgent {
 }
 
 /// ManifestConfig represents the complete manifest.toml structure
-#[derive(Debug, Clone, Deserialize, Serialize)]
+#[derive(Debug, Clone, Serialize)]
 pub struct ManifestConfig {
     /// Workflow name (matches directory name)
     #[serde(default)]
@@ -96,8 +96,25 @@ pub struct ManifestConfig {
     #[serde(default)]
     pub prompts: Vec<ManifestPrompt>,
     /// Agent configurations
-    #[serde(default)]
     pub agents: Vec<ManifestAgent>,
+}
+
+#[derive(Debug, Deserialize)]
+struct ManifestConfigRaw {
+    #[serde(default)]
+    name: Option<String>,
+    #[serde(default)]
+    description: Option<String>,
+    #[serde(default)]
+    version: Option<String>,
+    #[serde(default)]
+    defaults: Option<ManifestDefaults>,
+    #[serde(default)]
+    prompts: Vec<ManifestPrompt>,
+    #[serde(default, rename = "agent")]
+    agent: Vec<ManifestAgent>,
+    #[serde(default, rename = "agents")]
+    agents: Vec<ManifestAgent>,
 }
 
 /// Errors that can occur when parsing or using manifest.toml
@@ -216,6 +233,35 @@ impl ManifestConfig {
     }
 }
 
+impl<'de> Deserialize<'de> for ManifestConfig {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let raw = ManifestConfigRaw::deserialize(deserializer)?;
+
+        let has_agent = !raw.agent.is_empty();
+        let has_agents = !raw.agents.is_empty();
+
+        if has_agent && has_agents {
+            return Err(D::Error::custom(
+                "manifest cannot mix canonical [[agent]] with legacy [[agents]] sections; use only [[agent]]",
+            ));
+        }
+
+        let agents = if has_agent { raw.agent } else { raw.agents };
+
+        Ok(Self {
+            name: raw.name,
+            description: raw.description,
+            version: raw.version,
+            defaults: raw.defaults,
+            prompts: raw.prompts,
+            agents,
+        })
+    }
+}
+
 /// Validates a single skill source format
 /// Accepts: owner/repo, owner/repo@skill-name, https://github.com/owner/repo
 fn validate_skill_format(skill: &str) -> Result<(), ManifestError> {
@@ -283,8 +329,8 @@ impl ManifestAgent {
         // Prefix agent name with workflow name
         let agent_name = format!("{}_{}", workflow_name, self.name);
 
-        // Convert prompt_file to prompts/ prefix
-        let prompt_file = format!("prompts/{}", self.prompt_file);
+        // Use prompt_file exactly as specified in manifest.toml (no transformation)
+        let prompt_file = self.prompt_file.clone();
 
         Agent {
             name: agent_name,
@@ -350,7 +396,7 @@ name = "CODE_REVIEWER.md"
     #[test]
     fn test_parse_manifest_agents() {
         let toml_content = r#"
-[[agents]]
+[[agent]]
 name = "architect"
 prompt_file = "ARCHITECT.md"
 schedule = "0 10 * * *"
@@ -371,7 +417,7 @@ timeout = "1h"
 name = "test-workflow"
 version = "1.0.0"
 
-[[agents]]
+[[agent]]
 name = "test-agent"
 prompt_file = "test.md"
 "#;
@@ -418,8 +464,8 @@ prompt_file = "test.md"
         // Timeout should come from defaults since agent didn't override
         assert_eq!(config_agent.timeout, Some("30m".to_string()));
         
-        // prompt_file should have prompts/ prefix
-        assert_eq!(config_agent.prompt_file, Some("prompts/ARCHITECT.md".to_string()));
+        // prompt_file should be preserved exactly as specified
+        assert_eq!(config_agent.prompt_file, Some("ARCHITECT.md".to_string()));
         
         // Skills should come from defaults
         assert_eq!(config_agent.skills, Some(vec!["default-skill".to_string()]));
@@ -567,6 +613,37 @@ prompt_file = "test.md"
     }
 
     #[test]
+    fn test_parse_manifest_legacy_agents_syntax() {
+        let toml_content = r#"
+[[agents]]
+name = "legacy-agent"
+prompt_file = "LEGACY.md"
+"#;
+
+        let manifest: ManifestConfig = toml::from_str(toml_content).unwrap();
+        assert_eq!(manifest.agents.len(), 1);
+        assert_eq!(manifest.agents[0].name, "legacy-agent");
+        assert_eq!(manifest.agents[0].prompt_file, "LEGACY.md");
+    }
+
+    #[test]
+    fn test_parse_manifest_rejects_mixed_agent_syntax() {
+        let toml_content = r#"
+[[agent]]
+name = "canonical-agent"
+prompt_file = "ONE.md"
+
+[[agents]]
+name = "legacy-agent"
+prompt_file = "TWO.md"
+"#;
+
+        let result: Result<ManifestConfig, _> = toml::from_str(toml_content);
+        let error = result.expect_err("mixed syntax should fail").to_string();
+        assert!(error.contains("cannot mix canonical [[agent]] with legacy [[agents]] sections"));
+    }
+
+    #[test]
     fn test_validate_bmad_prompts() {
         // Test validating prompts for bmad workflow
         let manifest_path = std::path::Path::new("examples/bmad/manifest.toml");
@@ -589,7 +666,7 @@ prompt_file = "test.md"
         let toml_content = r#"
 name = "minimal-workflow"
 
-[[agents]]
+[[agent]]
 name = "test-agent"
 prompt_file = "test.md"
 "#;
@@ -635,7 +712,7 @@ invalid[ = ] syntax
     fn test_error_handling_missing_agent_name() {
         // Test error handling for missing agent name
         let toml_content = r#"
-[[agents]]
+[[agent]]
 prompt_file = "test.md"
 "#;
         let result: Result<ManifestConfig, _> = toml::from_str(toml_content);
@@ -647,7 +724,7 @@ prompt_file = "test.md"
     fn test_error_handling_missing_prompt_file() {
         // Test error handling for missing prompt_file
         let toml_content = r#"
-[[agents]]
+[[agent]]
 name = "test-agent"
 "#;
         let result: Result<ManifestConfig, _> = toml::from_str(toml_content);
@@ -662,7 +739,7 @@ name = "test-agent"
 [defaults]
 overlap_mode = "QUEUE"
 
-[[agents]]
+[[agent]]
 name = "test-agent"
 prompt_file = "test.md"
 overlap_mode = "Skip"
@@ -683,7 +760,7 @@ overlap_mode = "Skip"
 [defaults]
 env = { KEY1 = "value1", KEY2 = "value2" }
 
-[[agents]]
+[[agent]]
 name = "test-agent"
 prompt_file = "test.md"
 env = { AGENT_ID = "1", DEBUG = "true" }
@@ -707,7 +784,7 @@ env = { AGENT_ID = "1", DEBUG = "true" }
 [defaults]
 skills = ["skill1", "skill2"]
 
-[[agents]]
+[[agent]]
 name = "test-agent"
 prompt_file = "test.md"
 skills = ["agent-skill"]

@@ -9,6 +9,7 @@ mod tests {
         update_skill, remove_skill, ApiResponse, InstallSkillRequest, InstalledSkillInfo,
         ListQuery, RegistrySkillInfo, RemoveSkillRequest, UpdateSkillRequest,
     };
+    use crate::commands::skills::install::perform_post_install_move;
     use crate::api::error::ApiError;
     use crate::api::tests::{
         create_test_state, TestApiStateBuilder,
@@ -19,6 +20,7 @@ mod tests {
         response::Json,
     };
     use serial_test::serial;
+    use std::{env, fs};
     use std::sync::Arc;
 
     // ============================================================================
@@ -198,6 +200,30 @@ mod tests {
                 // Any error is acceptable for invalid URL
             }
         }
+    }
+
+    #[test]
+    #[serial]
+    fn test_install_reconciliation_uses_project_skill_directory() {
+        let temp_dir = tempfile::tempdir().expect("tempdir");
+        let original_dir = env::current_dir().expect("cwd");
+        env::set_current_dir(temp_dir.path()).expect("set cwd");
+
+        let test_result = (|| {
+            let installer_skill_dir = temp_dir.path().join(".kilocode/skills/api-skill");
+            let project_skills_dir = temp_dir.path().join("skills");
+
+            fs::create_dir_all(&installer_skill_dir).expect("create installer dir");
+            fs::write(installer_skill_dir.join("SKILL.md"), "# api skill").expect("write skill");
+
+            perform_post_install_move(&project_skills_dir, "api-skill", "owner/repo@api-skill")
+                .expect("reconcile skill");
+
+            assert!(project_skills_dir.join("api-skill/SKILL.md").exists());
+        })();
+
+        env::set_current_dir(original_dir).expect("restore cwd");
+        test_result;
     }
 
     #[tokio::test]

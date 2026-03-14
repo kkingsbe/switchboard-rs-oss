@@ -424,7 +424,7 @@ pub async fn run() -> Result<ColorMode, Box<dyn std::error::Error>> {
 /// image_tag = "latest"
 /// log_dir = ".switchboard/logs"
 ///
-/// [[agents]]
+/// [[agent]]
 /// name = "dev-agent"
 /// schedule = "0 * * * *"
 /// prompt_file = "prompts/dev.md"

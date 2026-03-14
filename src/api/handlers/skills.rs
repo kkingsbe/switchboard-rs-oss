@@ -5,12 +5,14 @@
 use crate::api::error::ApiError;
 use crate::api::error::ApiResult;
 use crate::api::state::ApiState;
+use crate::commands::skills::install::perform_post_install_move;
+use crate::commands::skills::install::extract_skill_name;
 use crate::commands::skills::types::{SkillsRemove, SkillsUpdate};
 use crate::commands::skills::remove::run_skills_remove;
 use crate::commands::skills::update::handle_skills_update;
 use crate::commands::skills::ExitCode;
 use crate::skills::{
-    scan_global_skills, scan_project_skills, skills_sh_search, 
+    create_npx_command, scan_global_skills, scan_project_skills, skills_sh_search,
     SkillMetadata, SkillsManager, NPX_NOT_FOUND_ERROR,
 };
 use axum::{
@@ -20,7 +22,6 @@ use axum::{
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 use std::sync::Arc;
-use std::process::Command;
 
 use utoipa::ToSchema;
 
@@ -189,7 +190,7 @@ pub async fn install_skill(
     let source = request.source.unwrap_or_else(|| request.name.clone());
 
     // Build the install command similar to the CLI
-    let skill_name = extract_skill_name_from_source(&source);
+    let skill_name = extract_skill_name(&source);
     let skills_dir = skills_manager.skills_dir.clone();
     let skill_path = skills_dir.join(&skill_name);
 
@@ -203,7 +204,7 @@ pub async fn install_skill(
     }
 
     // Build and run the npx skills add command
-    let mut cmd = Command::new("npx");
+    let mut cmd = create_npx_command();
     cmd.arg("skills").arg("add");
 
     // Parse source to handle @skill-name format
@@ -234,9 +235,9 @@ pub async fn install_skill(
         return Err(ApiError::Internal(format!("Failed to install skill: {}", stderr)));
     }
 
-    // Post-install: move from .agents/skills/ to ./skills/
+    // Post-install: verify the skill in the Kilo-local skills directory
     if let Err(e) = perform_post_install_move(&skills_dir, &skill_name, &source) {
-        return Err(ApiError::Internal(format!("Post-install move failed: {}", e)));
+        return Err(ApiError::Internal(format!("Post-install verification failed: {}", e)));
     }
 
     Ok(Json(ApiResponse::success(format!(
@@ -367,72 +368,8 @@ pub async fn remove_skill(
 // Helper Functions
 // ============================================================================
 
-/// Extracts the skill name from a source string.
-fn extract_skill_name_from_source(source: &str) -> String {
-    // Check for @ delimiter first (explicit skill name)
-    if let Some(at_pos) = source.rfind('@') {
-        return source[at_pos + 1..].to_string();
-    }
-
-    // Check for GitHub URL format
-    if source.starts_with("http://") || source.starts_with("https://") {
-        // Extract repo name from URL like https://github.com/owner/repo
-        if let Some(last_slash) = source.rfind('/') {
-            return source[last_slash + 1..].to_string();
-        }
-    }
-
-    // Default: use the last part of owner/repo format
-    if let Some(last_slash) = source.rfind('/') {
-        return source[last_slash + 1..].to_string();
-    }
-
-    // Fallback: use the whole string
-    source.to_string()
-}
-
-/// Performs the post-install move from .agents/skills/ to ./skills/
-fn perform_post_install_move(
-    skills_dir: &PathBuf,
-    skill_name: &str,
-    _source: &str,
-) -> Result<(), String> {
-    use std::fs;
-
-    let source_dir = PathBuf::from(".agents/skills").join(skill_name);
-    let dest_dir = skills_dir.join(skill_name);
-
-    if source_dir.exists() {
-        // Create destination directory if it doesn't exist
-        if !skills_dir.exists() {
-            fs::create_dir_all(skills_dir)
-                .map_err(|e| format!("Failed to create skills directory: {}", e))?;
-        }
-
-        // Remove destination if it exists (overwrite case)
-        if dest_dir.exists() {
-            fs::remove_dir_all(&dest_dir)
-                .map_err(|e| format!("Failed to remove existing skill: {}", e))?;
-        }
-
-        // Move from .agents/skills/ to ./skills/
-        fs::rename(&source_dir, &dest_dir)
-            .map_err(|e| format!("Failed to move skill: {}", e))?;
-
-        // Verify SKILL.md exists after move
-        let skill_md_path = dest_dir.join("SKILL.md");
-        if !skill_md_path.exists() {
-            return Err("SKILL.md not found after installation".to_string());
-        }
-
-        // Clean up empty .agents/skills/ and .agents/ directories
-        cleanup_agents_directory()?;
-    }
-
-    Ok(())
-}
-
-/// Cleans up empty .agents/skills/ and .agents/ directories
+/// Cleans up empty legacy `.agents/skills/` and `.agents/` directories.
+#[allow(dead_code)]
 fn cleanup_agents_directory() -> Result<(), String> {
     use std::fs;
 

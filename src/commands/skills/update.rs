@@ -135,7 +135,7 @@ pub async fn handle_skills_update(args: super::types::SkillsUpdate, _config: &Co
 /// Re-installs a skill from the given source, overwriting if it already exists.
 ///
 /// This is used by the update command to re-install a skill from its original source.
-/// Per Section 3.3.2, this performs the post-install move from .agents/skills/ to ./skills/
+/// Per Section 3.3.2, this verifies the post-install location in the Kilo-local skills directory.
 pub fn reinstall_skill_from_source(
     skills_dir: &Path,
     skill_name: &str,
@@ -172,11 +172,11 @@ pub fn reinstall_skill_from_source(
     match cmd.status() {
         Ok(status) => {
             if status.success() {
-                // Per Section 3.3.2: Perform post-install move from .agents/skills/ to ./skills/
+                // Per Section 3.3.2: Verify the post-install location in the Kilo-local skills directory
                 // Need to get skills_dir as PathBuf for the function call
                 let skills_dir_buf = std::path::PathBuf::from(skills_dir);
                 if let Err(e) = perform_post_install_move(&skills_dir_buf, skill_name, source) {
-                    eprintln!("Warning: Post-install move failed: {}", e);
+                    eprintln!("Warning: Post-install verification failed: {}", e);
                 }
                 ExitCode::Success
             } else {

@@ -14,6 +14,34 @@ use std::fs;
 use std::io::{self, Write};
 use std::path::Path;
 
+fn merge_agents_into_toml(existing_content: &str, agents_to_add: &[Agent]) -> Result<String, Box<dyn std::error::Error>> {
+    let trimmed = existing_content.trim();
+    if trimmed.is_empty() {
+        let mut config = Config::default();
+        config.agents = agents_to_add.to_vec();
+        return Ok(toml::to_string_pretty(&config)?);
+    }
+
+    let mut document: toml::Value = toml::from_str(existing_content)?;
+    let agent_values: Vec<toml::Value> = agents_to_add
+        .iter()
+        .cloned()
+        .map(toml::Value::try_from)
+        .collect::<Result<Vec<_>, _>>()?;
+
+    match document.get_mut("agent") {
+        Some(toml::Value::Array(existing_agents)) => existing_agents.extend(agent_values),
+        Some(_) => unreachable!("validated switchboard.toml should deserialize 'agent' as an array"),
+        None => {
+            if let Some(table) = document.as_table_mut() {
+                table.insert("agent".to_string(), toml::Value::Array(agent_values));
+            }
+        }
+    }
+
+    Ok(toml::to_string_pretty(&document)?)
+}
+
 /// Run the `switchboard workflows apply` command
 ///
 /// This command generates switchboard.toml configuration entries from a workflow's
@@ -101,7 +129,7 @@ pub async fn run_workflows_apply(args: WorkflowsApply, _config: &Config) -> Exit
 
     // Handle the config file
     let output = Path::new(output_path);
-    let mut config = if args.append && output.exists() {
+    let mut config = if output.exists() {
         // Load existing config in append mode
         match Config::from_toml(output) {
             Ok(c) => c,
@@ -176,7 +204,7 @@ pub async fn run_workflows_apply(args: WorkflowsApply, _config: &Config) -> Exit
             output_path
         );
 
-        if args.append && output.exists() {
+        if output.exists() {
             println!("The agents will be appended to the existing configuration.");
         } else {
             println!("A new configuration file will be created.");
@@ -206,12 +234,32 @@ pub async fn run_workflows_apply(args: WorkflowsApply, _config: &Config) -> Exit
     config.agents.extend(agents_to_add);
 
     // Write the config to file
-    let toml_content = match toml::to_string_pretty(&config) {
-        Ok(c) => c,
-        Err(e) => {
-            eprintln!("Error: Failed to serialize config:");
-            eprintln!("  {}", e);
-            return ExitCode::Error;
+    let toml_content = if output.exists() {
+        let existing_content = match fs::read_to_string(output) {
+            Ok(content) => content,
+            Err(e) => {
+                eprintln!("Error: Failed to read existing config at '{}':", output_path);
+                eprintln!("  {}", e);
+                return ExitCode::Error;
+            }
+        };
+
+        match merge_agents_into_toml(&existing_content, &config.agents[config.agents.len() - agents_count..]) {
+            Ok(c) => c,
+            Err(e) => {
+                eprintln!("Error: Failed to serialize merged config:");
+                eprintln!("  {}", e);
+                return ExitCode::Error;
+            }
+        }
+    } else {
+        match toml::to_string_pretty(&config) {
+            Ok(c) => c,
+            Err(e) => {
+                eprintln!("Error: Failed to serialize config:");
+                eprintln!("  {}", e);
+                return ExitCode::Error;
+            }
         }
     };
 
@@ -234,8 +282,6 @@ pub async fn run_workflows_apply(args: WorkflowsApply, _config: &Config) -> Exit
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::io::Write;
-    use tempfile::TempDir;
 
     #[test]
     fn test_apply_requires_workflow() {
@@ -270,5 +316,99 @@ mod tests {
         assert!(args.append);
         assert!(!args.yes);
         assert!(args.dry_run);
+    }
+
+    #[test]
+    fn test_merge_agents_into_toml_preserves_unrelated_sections() {
+        let existing = r#"
+[settings]
+timezone = "America/New_York"
+
+[api]
+enabled = true
+port = 8080
+
+[[agent]]
+name = "existing-agent"
+prompt = "Keep me"
+schedule = "0 * * * *"
+"#;
+
+        let new_agents = vec![Agent {
+            name: "workflow-agent".to_string(),
+            prompt: None,
+            prompt_file: Some(".switchboard/workflows/test/prompts/WORKFLOW.md".to_string()),
+            schedule: "*/5 * * * *".to_string(),
+            timeout: Some("10m".to_string()),
+            readonly: Some(true),
+            overlap_mode: None,
+            max_queue_size: None,
+            env: None,
+            skills: Some(vec!["frontend-design".to_string()]),
+            silent_timeout: None,
+        }];
+
+        let merged = merge_agents_into_toml(existing, &new_agents).unwrap();
+
+        assert!(merged.contains("[settings]"));
+        assert!(merged.contains("timezone = \"America/New_York\""));
+        assert!(merged.contains("[api]"));
+        assert!(merged.contains("port = 8080"));
+        assert!(merged.contains("name = \"existing-agent\""));
+        assert!(merged.contains("name = \"workflow-agent\""));
+    }
+
+    #[test]
+    fn test_merge_agents_into_empty_toml_creates_agent_config() {
+        let new_agents = vec![Agent {
+            name: "workflow-agent".to_string(),
+            prompt: Some("Hello".to_string()),
+            prompt_file: None,
+            schedule: "*/5 * * * *".to_string(),
+            timeout: None,
+            readonly: None,
+            overlap_mode: None,
+            max_queue_size: None,
+            env: None,
+            skills: None,
+            silent_timeout: None,
+        }];
+
+        let merged = merge_agents_into_toml("", &new_agents).unwrap();
+
+        assert!(merged.contains("[[agent]]"));
+        assert!(merged.contains("name = \"workflow-agent\""));
+        assert!(merged.contains("prompt = \"Hello\""));
+    }
+
+    #[test]
+    fn test_merge_agents_into_toml_preserves_canonical_agent_array() {
+        let existing_content = r#"
+[[agent]]
+name = "existing"
+schedule = "0 9 * * *"
+prompt_file = "existing.md"
+"#;
+
+        let agents_to_add = vec![Agent {
+            name: "added".to_string(),
+            prompt: None,
+            prompt_file: Some("added.md".to_string()),
+            schedule: "0 10 * * *".to_string(),
+            timeout: None,
+            readonly: None,
+            overlap_mode: None,
+            max_queue_size: None,
+            env: None,
+            skills: None,
+            silent_timeout: None,
+        }];
+
+        let merged = merge_agents_into_toml(existing_content, &agents_to_add).unwrap();
+
+        assert!(merged.contains("[[agent]]"));
+        assert!(!merged.contains("[[agents]]"));
+        assert!(merged.contains("name = \"existing\""));
+        assert!(merged.contains("name = \"added\""));
     }
 }

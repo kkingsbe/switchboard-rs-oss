@@ -5,7 +5,7 @@ use crate::skills::{
 };
 use crate::traits::ExitCode;
 use std::fs;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 /// Run the `switchboard skills install` command
 ///
@@ -16,11 +16,10 @@ use std::path::PathBuf;
 /// unless the --yes flag is provided.
 ///
 /// Per requirements (Section 3.3.2), the install flow is:
-/// 1. Run `npx skills add <source> -y` which installs to `.agents/skills/<skill-name>/`
-/// 2. Move skill from `.agents/skills/<skill-name>/` to `./skills/<skill-name>/`
-/// 3. Verify `SKILL.md` exists after move
+/// 1. Run `npx skills add <source> -y` which installs to the Kilo-local skills directory
+/// 2. Verify the skill exists in the resolved skills directory
+/// 3. Verify `SKILL.md` exists after install
 /// 4. Update lockfile
-/// 5. Clean up `.agents/skills/` and `.agents/` directories
 pub async fn run_skills_install(args: SkillsInstall, _config: &Config) -> ExitCode {
     // Check if npx is available before invoking the command
     let mut skills_manager = SkillsManager::new(None);
@@ -90,7 +89,7 @@ pub async fn run_skills_install(args: SkillsInstall, _config: &Config) -> ExitCo
 
     // If installation was successful, perform post-install steps
     if result == ExitCode::Success {
-        // Step 2-5: Move from .agents/skills/ to ./skills/, verify, update lockfile, cleanup
+        // Step 2-4: Verify post-install location, verify skill contents, update lockfile
         match perform_post_install_move(&skills_dir, &skill_name, &args.source) {
             Ok(_) => {
                 println!(
@@ -100,7 +99,7 @@ Updated skills.lock.json",
                 );
             }
             Err(e) => {
-                eprintln!("Warning: Post-install move failed: {}", e);
+                eprintln!("Warning: Post-install verification failed: {}", e);
                 // Still try to add to lockfile even if move failed
             }
         }
@@ -114,83 +113,100 @@ Updated skills.lock.json",
     result
 }
 
-/// Performs the post-install move from .agents/skills/ to ./skills/
+/// Reconciles a skill installed by Kilo into Switchboard's canonical skills directory.
 ///
-/// Per Section 3.3.2 requirements:
-/// 1. Create ./skills/ if needed
-/// 2. Move skill from .agents/skills/<name>/ to ./skills/<name>/
-/// 3. Verify SKILL.md exists after move
-/// 4. Clean up empty .agents/skills/ and .agents/ directories
+/// The external installer writes to `.kilocode/skills/<skill-name>`, while
+/// Switchboard discovers project skills from `skills/<skill-name>`. This helper
+/// copies the installer output into the requested destination and verifies that
+/// `SKILL.md` is present afterward.
 pub fn perform_post_install_move(
-    skills_dir: &PathBuf,
+    skills_dir: &Path,
     skill_name: &str,
     _source: &str,
 ) -> Result<(), SkillsError> {
-    // The npx skills add command installs to .agents/skills/<skill-name>/
-    let source_dir = PathBuf::from(".agents/skills").join(skill_name);
+    let installer_dir = PathBuf::from(".kilocode").join("skills").join(skill_name);
     let dest_dir = skills_dir.join(skill_name);
 
-    // Check if npx actually installed something to .agents/skills/
-    if source_dir.exists() {
-        // Create destination directory if it doesn't exist
-        if !skills_dir.exists() {
-            fs::create_dir_all(skills_dir).map_err(|e| SkillsError::IoError {
-                operation: "create skills directory".to_string(),
-                path: skills_dir.display().to_string(),
-                message: e.to_string(),
-            })?;
-        }
+    if !installer_dir.exists() {
+        return Err(SkillsError::SkillNotFound {
+            skill_source: skill_name.to_string(),
+        });
+    }
 
-        // Remove destination if it exists (overwrite case)
-        if dest_dir.exists() {
-            fs::remove_dir_all(&dest_dir).map_err(|e| SkillsError::IoError {
-                operation: "remove existing skill".to_string(),
-                path: dest_dir.display().to_string(),
-                message: e.to_string(),
-            })?;
-        }
+    copy_skill_directory(&installer_dir, &dest_dir)?;
 
-        // Move from .agents/skills/ to ./skills/
-        fs::rename(&source_dir, &dest_dir).map_err(|e| SkillsError::IoError {
-            operation: "move skill from .agents/skills".to_string(),
-            path: format!("{} -> {}", source_dir.display(), dest_dir.display()),
+    if !dest_dir.exists() {
+        return Err(SkillsError::SkillNotFound {
+            skill_source: skill_name.to_string(),
+        });
+    }
+
+    let skill_md_path = dest_dir.join("SKILL.md");
+    if !skill_md_path.exists() {
+        return Err(SkillsError::SkillNotFound {
+            skill_source: skill_name.to_string(),
+        });
+    }
+
+    println!("Done.");
+
+    Ok(())
+}
+
+fn copy_skill_directory(src: &Path, dest: &Path) -> Result<(), SkillsError> {
+    if !src.is_dir() {
+        return Err(SkillsError::IoError {
+            operation: "read installer skill directory".to_string(),
+            path: src.display().to_string(),
+            message: format!("Skill source directory not found: {}", src.display()),
+        });
+    }
+
+    if dest.exists() {
+        fs::remove_dir_all(dest).map_err(|e| SkillsError::IoError {
+            operation: "remove existing reconciled skill directory".to_string(),
+            path: dest.display().to_string(),
             message: e.to_string(),
         })?;
+    }
 
-        // Verify SKILL.md exists after move
-        let skill_md_path = dest_dir.join("SKILL.md");
-        if !skill_md_path.exists() {
-            return Err(SkillsError::SkillNotFound {
-                skill_source: skill_name.to_string(),
-            });
-        }
+    fs::create_dir_all(dest).map_err(|e| SkillsError::IoError {
+        operation: "create reconciled skill directory".to_string(),
+        path: dest.display().to_string(),
+        message: e.to_string(),
+    })?;
 
-        // Clean up empty .agents/skills/ and .agents/ directories
-        cleanup_agents_directory()?;
+    for entry in fs::read_dir(src).map_err(|e| SkillsError::IoError {
+        operation: "read installer skill directory".to_string(),
+        path: src.display().to_string(),
+        message: e.to_string(),
+    })? {
+        let entry = entry.map_err(|e| SkillsError::IoError {
+            operation: "read installer skill directory entry".to_string(),
+            path: src.display().to_string(),
+            message: e.to_string(),
+        })?;
+        let entry_path = entry.path();
+        let dest_path = dest.join(entry.file_name());
 
-        println!("Done.");
-    } else {
-        // If .agents/skills/ doesn't exist, npx may have installed directly to ./skills/
-        // This is fine - just verify the skill exists where expected
-        if !dest_dir.exists() {
-            return Err(SkillsError::SkillNotFound {
-                skill_source: skill_name.to_string(),
-            });
-        }
-
-        // Verify SKILL.md exists
-        let skill_md_path = dest_dir.join("SKILL.md");
-        if !skill_md_path.exists() {
-            return Err(SkillsError::SkillNotFound {
-                skill_source: skill_name.to_string(),
-            });
+        if entry_path.is_dir() {
+            copy_skill_directory(&entry_path, &dest_path)?;
+        } else {
+            fs::copy(&entry_path, &dest_path).map_err(|e| SkillsError::IoError {
+                operation: "copy reconciled skill file".to_string(),
+                path: dest_path.display().to_string(),
+                message: e.to_string(),
+            })?;
         }
     }
 
     Ok(())
 }
 
-/// Cleans up empty .agents/skills/ and .agents/ directories
+/// Cleans up empty legacy `.agents/skills/` and `.agents/` directories.
+///
+/// This remains available for legacy cleanup paths but is not required for
+/// current Kilo-local post-install handling.
 pub fn cleanup_agents_directory() -> Result<(), SkillsError> {
     let agents_skills_dir = PathBuf::from(".agents/skills");
     let agents_dir = PathBuf::from(".agents");
@@ -244,4 +260,57 @@ pub fn extract_skill_name(source: &str) -> String {
 
     // Fallback: use the whole string
     source.to_string()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::perform_post_install_move;
+    use std::{env, fs};
+
+    #[test]
+    fn test_perform_post_install_move_copies_from_kilocode_to_project_skills() {
+        let temp_dir = tempfile::tempdir().expect("tempdir");
+        let original_dir = env::current_dir().expect("cwd");
+        env::set_current_dir(temp_dir.path()).expect("set cwd");
+
+        let test_result = (|| {
+            let installer_skill_dir = temp_dir.path().join(".kilocode/skills/copied-skill/nested");
+            let project_skills_dir = temp_dir.path().join("skills");
+
+            fs::create_dir_all(&installer_skill_dir).expect("create installer dir");
+            fs::write(temp_dir.path().join(".kilocode/skills/copied-skill/SKILL.md"), "# Skill")
+                .expect("write skill");
+            fs::write(installer_skill_dir.join("info.txt"), "hello").expect("write nested");
+
+            perform_post_install_move(&project_skills_dir, "copied-skill", "owner/repo@copied-skill")
+                .expect("reconcile skill");
+
+            assert!(project_skills_dir.join("copied-skill/SKILL.md").exists());
+            assert_eq!(
+                fs::read_to_string(project_skills_dir.join("copied-skill/nested/info.txt"))
+                    .expect("read nested copied file"),
+                "hello"
+            );
+        })();
+
+        env::set_current_dir(original_dir).expect("restore cwd");
+        test_result;
+    }
+
+    #[test]
+    fn test_perform_post_install_move_fails_when_kilocode_skill_missing() {
+        let temp_dir = tempfile::tempdir().expect("tempdir");
+        let original_dir = env::current_dir().expect("cwd");
+        env::set_current_dir(temp_dir.path()).expect("set cwd");
+
+        let result = perform_post_install_move(
+            &temp_dir.path().join("skills"),
+            "missing-skill",
+            "owner/repo@missing-skill",
+        );
+
+        env::set_current_dir(original_dir).expect("restore cwd");
+
+        assert!(result.is_err());
+    }
 }
