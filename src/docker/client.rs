@@ -705,9 +705,6 @@ impl DockerClient {
             .build_image(options, build_context.to_path_buf())?;
         eprintln!("DEBUG: build_image() completed, image_id: {}", image_id);
 
-        // Clean up the temporary Dockerfile
-        let _ = std::fs::remove_file(&dockerfile_path);
-
         Ok(image_id)
     }
 }

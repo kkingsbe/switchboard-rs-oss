@@ -154,12 +154,30 @@ pub struct AgentExecutionResult {
 /// ];
 ///
 /// let result = build_container_env_vars(&env_vars);
-/// assert_eq!(result.len(), 3);
-/// assert_eq!(result[0], "API_KEY=secret123");
+/// // Returns 5 items: 3 NVIDIA GPU env vars + 3 user env vars
+/// assert_eq!(result.len(), 6);
+/// // NVIDIA env vars are prepended
+/// assert_eq!(result[0], "NVIDIA_VISIBLE_DEVICES=all");
+/// assert_eq!(result[1], "NVIDIA_DRIVER_CAPABILITIES=compute,utility,display");
+/// assert_eq!(result[2], "NVIDIA_DISABLE_REQUIRE=1");
+/// // User env vars come after
+/// assert_eq!(result[3], "API_KEY=secret123");
 /// ```
 pub fn build_container_env_vars(env_vars: &[String]) -> Vec<String> {
-    // Return custom env_vars from config
-    env_vars.to_vec()
+    // NVIDIA GPU environment variables for GPU passthrough
+    // These are required when using the nvidia runtime to ensure
+    // GPUs are visible and accessible inside the container
+    let nvidia_env_vars = vec![
+        "NVIDIA_VISIBLE_DEVICES=all".to_string(),
+        "NVIDIA_DRIVER_CAPABILITIES=compute,utility,display".to_string(),
+        "NVIDIA_DISABLE_REQUIRE=1".to_string(),
+    ];
+
+    // Combine NVIDIA env vars with user-provided env vars
+    // NVIDIA vars are prepended so user can override if needed
+    let mut result = nvidia_env_vars;
+    result.extend(env_vars.to_vec());
+    result
 }
 
 /// Build the HostConfig for a Docker container with workspace mount.
@@ -276,6 +294,16 @@ pub fn build_host_config(workspace: &str, readonly: bool) -> HostConfig {
     HostConfig {
         auto_remove: Some(true),
         binds: Some(binds),
+        // GPU device requests for NVIDIA Container Toolkit
+        // This is required to properly reserve and expose GPUs to the container
+        // Equivalent to running: docker run --gpus all
+        device_requests: Some(vec![bollard::models::DeviceRequest {
+            driver: Some("".to_string()),
+            count: Some(-1),
+            device_ids: None,
+            capabilities: Some(vec![vec!["gpu".to_string()]]),
+            options: Some(std::collections::HashMap::new()),
+        }]),
         ..Default::default()
     }
 }
@@ -872,6 +900,8 @@ pub async fn run_agent(
         Some(&cli_args),
     );
 
+    eprintln!("DEBUG host_config: {:?}", container_config.host_config);
+
     // Handle skills-based entrypoint script generation
     // Skills allow installing capabilities into the container before running the agent
     // We generate a custom entrypoint script only when skills are specified and non-empty
@@ -882,6 +912,7 @@ pub async fn run_agent(
     // 3. Some([...]) - Non-empty skills list, generate custom entrypoint script
     match &config.skills {
         Some(skills) if !skills.is_empty() => {
+            eprintln!("DEBUG: Skills configured, generating entrypoint script");
             // CASE 3: Non-empty skills list - generate custom entrypoint script
             // The script will install skills using `npx skills add` then hand off to kilocode
 
@@ -968,10 +999,9 @@ pub async fn run_agent(
         _ => {
             // CASE 1 & 2: No skills specified (None) or empty skills list (Some([]))
             // Use the default entrypoint from the Dockerfile (entrypoint: None)
-            // No modification needed to container_config - skills integration is bypassed
-            //
             // This ensures backward compatibility: existing configurations without skills
             // continue to work exactly as before, with no changes to container behavior.
+            // The Dockerfile's ENTRYPOINT ["kilo"] will be used, which auto-launches kilocode.
         }
     }
 
@@ -3489,10 +3519,16 @@ mod tests {
             Some(image.to_string()),
             "Image should still be set after skills processing"
         );
+        // Env vars now include NVIDIA GPU variables plus user vars
+        let expected_env = vec![
+            "NVIDIA_VISIBLE_DEVICES=all".to_string(),
+            "NVIDIA_DRIVER_CAPABILITIES=compute,utility".to_string(),
+            "CUSTOM_VAR=value".to_string(),
+        ];
         assert_eq!(
             container_config.env,
-            Some(vec!["CUSTOM_VAR=value".to_string()]),
-            "Env vars should still be set after skills processing"
+            Some(expected_env),
+            "Env vars should include NVIDIA GPU vars and user vars after skills processing"
         );
         assert_eq!(
             container_config.cmd,

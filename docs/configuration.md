@@ -406,6 +406,77 @@ See [skills.md](skills.md) for more information on creating and using skills.
 
 ---
 
+## Agent Model Configuration
+
+The coding agent model can be configured through a separate JSON configuration file. This allows you to customize which AI model powers the agent's capabilities.
+
+### Configuration File Location
+
+The config file is located at `.kilocode/cli/config.json` in your project or home directory.
+
+### Creating the Configuration File
+
+To create the configuration file, copy from the example template:
+
+```bash
+# From your project or home directory
+cp .kilocode/cli/config.example.json .kilocode/cli/config.json
+```
+
+### Configurable Fields
+
+The following fields can be configured in the `providers` array:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `kilocodeToken` | string | Your KiloCode API token for authentication |
+| `kilocodeModel` | string | The model identifier to use (e.g., `"minimax/minimax-m2.5"`, `"z-ai/glm-4.7"`) |
+| `kilocodePosthogApiKey` | string | (Optional) Posthog API key for telemetry |
+
+### Example Configuration
+
+```json
+{
+  "version": "1.0.0",
+  "mode": "orchestrator",
+  "provider": "default",
+  "providers": [
+    {
+      "id": "default",
+      "provider": "kilocode",
+      "kilocodeToken": "your-kilocode-api-token-here",
+      "kilocodeModel": "minimax/minimax-m2.5",
+      "kilocodePosthogApiKey": ""
+    }
+  ],
+  "autoApproval": {
+    "enabled": true,
+    "read": { "enabled": true, "outside": false },
+    "write": { "enabled": true, "outside": true, "protected": false },
+    "browser": { "enabled": false },
+    "retry": { "enabled": false, "delay": 10 },
+    "mcp": { "enabled": true },
+    "mode": { "enabled": true },
+    "subtasks": { "enabled": true },
+    "execute": { "enabled": true, "allowed": [], "denied": [] },
+    "question": { "enabled": false, "timeout": 60 },
+    "todo": { "enabled": true }
+  },
+  "theme": "dark",
+  "customThemes": {}
+}
+```
+
+### Switching Models
+
+To switch to a different model, edit the `kilocodeModel` field in your config.json. Available models include:
+
+- `minimax/minimax-m2.5` (default)
+- `z-ai/glm-4.7`
+- Other models supported by your KiloCode subscription
+
+---
+
 ## Validation
 
 Always validate your configuration before running:
