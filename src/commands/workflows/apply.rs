@@ -346,6 +346,7 @@ schedule = "0 * * * *"
             env: None,
             skills: Some(vec!["frontend-design".to_string()]),
             silent_timeout: None,
+            gpu: None,
         }];
 
         let merged = merge_agents_into_toml(existing, &new_agents).unwrap();
@@ -372,6 +373,7 @@ schedule = "0 * * * *"
             env: None,
             skills: None,
             silent_timeout: None,
+            gpu: None,
         }];
 
         let merged = merge_agents_into_toml("", &new_agents).unwrap();
@@ -402,6 +404,7 @@ prompt_file = "existing.md"
             env: None,
             skills: None,
             silent_timeout: None,
+            gpu: None,
         }];
 
         let merged = merge_agents_into_toml(existing_content, &agents_to_add).unwrap();

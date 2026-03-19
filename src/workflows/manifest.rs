@@ -344,6 +344,7 @@ impl ManifestAgent {
             max_queue_size: effective_max_queue_size,
             skills: effective_skills,
             silent_timeout: None,
+            gpu: None,
         }
     }
 }

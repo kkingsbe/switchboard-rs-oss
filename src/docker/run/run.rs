@@ -124,6 +124,15 @@ pub struct AgentExecutionResult {
 /// the configuration's custom environment variables into the format expected by Docker.
 /// Each environment variable is a "KEY=value" string that will be passed to the container.
 ///
+/// # GPU Passthrough
+///
+/// When `gpu` is `true` (default), NVIDIA GPU environment variables are prepended:
+/// - `NVIDIA_VISIBLE_DEVICES=all`
+/// - `NVIDIA_DRIVER_CAPABILITIES=compute,utility,display`
+/// - `NVIDIA_DISABLE_REQUIRE=1`
+///
+/// When `gpu` is `false`, no GPU environment variables are added.
+///
 /// # Skills Integration
 ///
 /// When skills are specified in the container configuration, they do not need to be passed
@@ -135,6 +144,7 @@ pub struct AgentExecutionResult {
 ///
 /// * `env_vars` - Custom environment variables from the config, where each entry is
 ///   a "KEY=value" string ready to be passed to Docker
+/// * `gpu` - Whether to enable GPU passthrough (adds NVIDIA env vars if true)
 ///
 /// # Returns
 ///
@@ -153,8 +163,9 @@ pub struct AgentExecutionResult {
 ///     "LOG_LEVEL=info".to_string(),
 /// ];
 ///
-/// let result = build_container_env_vars(&env_vars);
-/// // Returns 5 items: 3 NVIDIA GPU env vars + 3 user env vars
+/// // With GPU enabled (default)
+/// let result = build_container_env_vars(&env_vars, true);
+/// // Returns 6 items: 3 NVIDIA GPU env vars + 3 user env vars
 /// assert_eq!(result.len(), 6);
 /// // NVIDIA env vars are prepended
 /// assert_eq!(result[0], "NVIDIA_VISIBLE_DEVICES=all");
@@ -162,20 +173,25 @@ pub struct AgentExecutionResult {
 /// assert_eq!(result[2], "NVIDIA_DISABLE_REQUIRE=1");
 /// // User env vars come after
 /// assert_eq!(result[3], "API_KEY=secret123");
+///
+/// // With GPU disabled
+/// let result_no_gpu = build_container_env_vars(&env_vars, false);
+/// // Returns only 3 user env vars
+/// assert_eq!(result_no_gpu.len(), 3);
+/// assert_eq!(result_no_gpu[0], "API_KEY=secret123");
 /// ```
-pub fn build_container_env_vars(env_vars: &[String]) -> Vec<String> {
-    // NVIDIA GPU environment variables for GPU passthrough
-    // These are required when using the nvidia runtime to ensure
-    // GPUs are visible and accessible inside the container
-    let nvidia_env_vars = vec![
-        "NVIDIA_VISIBLE_DEVICES=all".to_string(),
-        "NVIDIA_DRIVER_CAPABILITIES=compute,utility,display".to_string(),
-        "NVIDIA_DISABLE_REQUIRE=1".to_string(),
-    ];
+pub fn build_container_env_vars(env_vars: &[String], gpu: bool) -> Vec<String> {
+    let mut result = Vec::new();
 
-    // Combine NVIDIA env vars with user-provided env vars
-    // NVIDIA vars are prepended so user can override if needed
-    let mut result = nvidia_env_vars;
+    // Add NVIDIA GPU environment variables if GPU is enabled
+    if gpu {
+        result.push("NVIDIA_VISIBLE_DEVICES=all".to_string());
+        result.push("NVIDIA_DRIVER_CAPABILITIES=compute,utility,display".to_string());
+        result.push("NVIDIA_DISABLE_REQUIRE=1".to_string());
+    }
+
+    // Combine with user-provided env vars
+    // User vars come after GPU vars so they can override if needed
     result.extend(env_vars.to_vec());
     result
 }
@@ -185,6 +201,14 @@ pub fn build_container_env_vars(env_vars: &[String]) -> Vec<String> {
 /// This function creates the host configuration for a Docker container, primarily
 /// setting up the workspace bind mount that allows the container to access files
 /// on the host system. The workspace is mounted at `/workspace` inside the container.
+///
+/// # GPU Passthrough
+///
+/// When `gpu` is `true` (default), GPU device requests are added to reserve
+/// and expose NVIDIA GPUs to the container. This is equivalent to running:
+/// `docker run --gpus all`
+///
+/// When `gpu` is `false`, no GPU device requests are added.
 ///
 /// # Skills Directory Mounting
 ///
@@ -215,6 +239,7 @@ pub fn build_container_env_vars(env_vars: &[String]) -> Vec<String> {
 ///   inside the container. This path should be an absolute path.
 /// * `readonly` - Whether to mount the workspace as read-only. When `true`,
 ///   the container cannot modify files in the workspace.
+/// * `gpu` - Whether to enable GPU passthrough (adds device requests if true)
 ///
 /// # Returns
 ///
@@ -222,6 +247,7 @@ pub fn build_container_env_vars(env_vars: &[String]) -> Vec<String> {
 /// - `auto_remove` set to `true` - Container is automatically removed after execution
 /// - `binds` configured with the workspace mount at `/workspace`
 /// - Optionally, a skills mount at `/workspace/.kilocode/skills` if it exists
+/// - `device_requests` set if `gpu` is `true` (NVIDIA GPU passthrough)
 /// - Other settings at their defaults
 ///
 /// # Examples
@@ -229,17 +255,19 @@ pub fn build_container_env_vars(env_vars: &[String]) -> Vec<String> {
 /// ```
 /// use switchboard::docker::run::run::build_host_config;
 ///
-/// // Read-write workspace mount
-/// let config = build_host_config("/home/user/my-project", false);
+/// // Read-write workspace mount with GPU enabled
+/// let config = build_host_config("/home/user/my-project", false, true);
 /// assert_eq!(config.auto_remove, Some(true));
 /// assert!(config.binds.is_some());
+/// assert!(config.device_requests.is_some());
 ///
-/// // Read-only workspace mount
-/// let config = build_host_config("/home/user/my-project", true);
+/// // Read-only workspace mount with GPU disabled
+/// let config = build_host_config("/home/user/my-project", true, false);
 /// let binds = config.binds.unwrap();
 /// assert!(binds[0].contains(":ro"));
+/// assert!(config.device_requests.is_none());
 /// ```
-pub fn build_host_config(workspace: &str, readonly: bool) -> HostConfig {
+pub fn build_host_config(workspace: &str, readonly: bool, gpu: bool) -> HostConfig {
     // Normalize the workspace path for Docker bind mounts
     // On Windows, convert backslashes to forward slashes and remove \\?\ prefix
     let normalized_workspace = if let Some(stripped) = workspace.strip_prefix(r"\\?\") {
@@ -291,19 +319,23 @@ pub fn build_host_config(workspace: &str, readonly: bool) -> HostConfig {
         // This is not a critical error - the container will still work, just without skills
     }
 
-    HostConfig {
-        auto_remove: Some(true),
-        binds: Some(binds),
-        // GPU device requests for NVIDIA Container Toolkit
-        // This is required to properly reserve and expose GPUs to the container
-        // Equivalent to running: docker run --gpus all
-        device_requests: Some(vec![bollard::models::DeviceRequest {
+    // Build device requests for GPU passthrough
+    let device_requests = if gpu {
+        Some(vec![bollard::models::DeviceRequest {
             driver: Some("".to_string()),
             count: Some(-1),
             device_ids: None,
             capabilities: Some(vec![vec!["gpu".to_string()]]),
             options: Some(std::collections::HashMap::new()),
-        }]),
+        }])
+    } else {
+        None
+    };
+
+    HostConfig {
+        auto_remove: Some(true),
+        binds: Some(binds),
+        device_requests,
         ..Default::default()
     }
 }
@@ -393,9 +425,10 @@ pub fn build_container_config(
     agent_name: &str,
     _timeout: u64,
     cmd: Option<&[String]>,
+    gpu: bool,
 ) -> Config<String> {
     // Build host configuration using helper function
-    let host_config = build_host_config(workspace, readonly);
+    let host_config = build_host_config(workspace, readonly, gpu);
 
     // Create labels for the container
     let mut labels = HashMap::new();
@@ -859,7 +892,7 @@ pub async fn run_agent(
     let run_id = generate_run_id();
 
     // Build environment variables for the container
-    let container_env_vars = build_container_env_vars(&config.env_vars);
+    let container_env_vars = build_container_env_vars(&config.env_vars, config.gpu);
 
     // Parse timeout string or default to 30 minutes
     let parsed_timeout = match timeout {
@@ -898,6 +931,7 @@ pub async fn run_agent(
         &config.agent_name,
         timeout_seconds,
         Some(&cli_args),
+        config.gpu,
     );
 
     eprintln!("DEBUG host_config: {:?}", container_config.host_config);
@@ -2922,6 +2956,7 @@ mod tests {
             &config.agent_name,
             timeout_seconds,
             Some(&["--auto".to_string(), config.prompt.clone()]),
+            config.gpu,
         );
 
         // Verify entrypoint is initially None (before skills processing)
@@ -3024,6 +3059,7 @@ mod tests {
             &config.agent_name,
             timeout_seconds,
             Some(&["--auto".to_string(), config.prompt.clone()]),
+            config.gpu,
         );
 
         // Verify entrypoint is initially None (before skills processing)
@@ -3148,6 +3184,7 @@ mod tests {
             &config.agent_name,
             timeout_seconds,
             Some(&["--auto".to_string(), config.prompt.clone()]),
+            config.gpu,
         );
 
         // Verify entrypoint is initially None (before skills processing)
@@ -3225,6 +3262,7 @@ mod tests {
             &config.agent_name,
             timeout_seconds,
             Some(&["--auto".to_string(), config.prompt.clone()]),
+            config.gpu,
         );
 
         // Verify entrypoint is initially None (before skills processing)
@@ -3435,7 +3473,7 @@ mod tests {
 
         // Build the complete container config (simulating run_agent flow)
         let image = "switchboard-agent:latest";
-        let env_vars = build_container_env_vars(&config.env_vars);
+        let env_vars = build_container_env_vars(&config.env_vars, config.gpu);
         let readonly = false;
         let workspace = "/workspace";
         let timeout_seconds = 1800;
@@ -3450,6 +3488,7 @@ mod tests {
             &config.agent_name,
             timeout_seconds,
             Some(&cli_args),
+            config.gpu,
         );
 
         // Verify base config is correct
@@ -5471,6 +5510,118 @@ mod tests {
             vec!["repo1".to_string()],
             "Should find repo1 and ignore the file"
         );
+    }
+
+    // =========================================================================
+    // Tests for GPU passthrough toggle
+    // =========================================================================
+
+    /// Test: build_container_env_vars with GPU enabled
+    #[test]
+    fn test_build_container_env_vars_with_gpu_enabled() {
+        let env_vars = vec!["CUSTOM_VAR=value".to_string()];
+        let result = build_container_env_vars(&env_vars, true);
+        
+        // Should contain NVIDIA env vars
+        assert!(result.contains(&"NVIDIA_VISIBLE_DEVICES=all".to_string()));
+        assert!(result.contains(&"NVIDIA_DRIVER_CAPABILITIES=compute,utility,display".to_string()));
+        assert!(result.contains(&"NVIDIA_DISABLE_REQUIRE=1".to_string()));
+        // Should contain user env var
+        assert!(result.contains(&"CUSTOM_VAR=value".to_string()));
+        // NVIDIA vars should come before user vars
+        assert!(result[0] == "NVIDIA_VISIBLE_DEVICES=all");
+        assert!(result[3] == "CUSTOM_VAR=value");
+    }
+
+    /// Test: build_container_env_vars with GPU disabled
+    #[test]
+    fn test_build_container_env_vars_with_gpu_disabled() {
+        let env_vars = vec!["CUSTOM_VAR=value".to_string()];
+        let result = build_container_env_vars(&env_vars, false);
+        
+        // Should NOT contain any NVIDIA env vars
+        assert!(!result.iter().any(|v| v.starts_with("NVIDIA_")));
+        // Should only contain user env var
+        assert_eq!(result.len(), 1);
+        assert!(result.contains(&"CUSTOM_VAR=value".to_string()));
+    }
+
+    /// Test: build_container_env_vars with empty user env vars and GPU enabled
+    #[test]
+    fn test_build_container_env_vars_gpu_only() {
+        let env_vars: Vec<String> = vec![];
+        let result = build_container_env_vars(&env_vars, true);
+        
+        // Should contain exactly 3 NVIDIA env vars
+        assert_eq!(result.len(), 3);
+        assert!(result.contains(&"NVIDIA_VISIBLE_DEVICES=all".to_string()));
+        assert!(result.contains(&"NVIDIA_DRIVER_CAPABILITIES=compute,utility,display".to_string()));
+        assert!(result.contains(&"NVIDIA_DISABLE_REQUIRE=1".to_string()));
+    }
+
+    /// Test: build_container_env_vars with empty user env vars and GPU disabled
+    #[test]
+    fn test_build_container_env_vars_empty_gpu_disabled() {
+        let env_vars: Vec<String> = vec![];
+        let result = build_container_env_vars(&env_vars, false);
+        
+        // Should be empty
+        assert!(result.is_empty());
+    }
+
+    /// Test: build_host_config with GPU enabled
+    #[test]
+    fn test_build_host_config_with_gpu_enabled() {
+        let config = build_host_config("/workspace", false, true);
+        
+        assert!(config.device_requests.is_some());
+        let device_requests = config.device_requests.unwrap();
+        assert!(!device_requests.is_empty());
+        
+        // Check GPU capability
+        let device_request = &device_requests[0];
+        assert_eq!(device_request.count, Some(-1));
+        assert_eq!(device_request.driver, Some("".to_string()));
+        assert!(device_request.capabilities.is_some());
+    }
+
+    /// Test: build_host_config with GPU disabled
+    #[test]
+    fn test_build_host_config_with_gpu_disabled() {
+        let config = build_host_config("/workspace", false, false);
+        
+        assert!(config.device_requests.is_none());
+    }
+
+    /// Test: build_host_config with GPU enabled and readonly workspace
+    #[test]
+    fn test_build_host_config_gpu_enabled_readonly() {
+        let config = build_host_config("/workspace", true, true);
+        
+        assert!(config.device_requests.is_some());
+        assert!(config.binds.is_some());
+        let binds = config.binds.unwrap();
+        // Read-only mount should have :ro suffix
+        assert!(binds[0].contains(":ro"));
+    }
+
+    /// Test: ContainerConfig::new() sets gpu to true by default
+    #[test]
+    fn test_container_config_new_gpu_default_true() {
+        use crate::docker::run::types::ContainerConfig;
+        
+        let config = ContainerConfig::new("test-agent".to_string());
+        assert_eq!(config.gpu, true, "ContainerConfig::new() should default gpu to true");
+    }
+
+    /// Test: ContainerConfig can be created with gpu set to false
+    #[test]
+    fn test_container_config_gpu_false() {
+        use crate::docker::run::types::ContainerConfig;
+        
+        let mut config = ContainerConfig::new("test-agent".to_string());
+        config.gpu = false;
+        assert_eq!(config.gpu, false, "ContainerConfig gpu should be settable to false");
     }
 
     // =========================================================================

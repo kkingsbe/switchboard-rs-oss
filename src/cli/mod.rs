@@ -775,6 +775,7 @@ pub async fn run_run(
         prompt: prompt.clone(),
         skills: agent.skills.clone(),
         silent_timeout: Some(agent.effective_silent_timeout(&settings_option)),
+        gpu: agent.gpu.unwrap_or(true), // Default to GPU enabled for backward compatibility
     };
 
     // Create DockerClient using DockerClient::new()

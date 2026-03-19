@@ -1,0 +1,126 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="AutoImportSettings">
+    <option name="autoReloadType" value="SELECTIVE" />
+  </component>
+  <component name="ChangeListManager">
+    <list default="true" id="83728309-e84d-4f3d-ae0a-6beeea607113" name="Changes" comment="Set up the goals-based workflow to add the metrics functionality">
+      <change beforePath="$PROJECT_DIR$/.switchboard/instances/test/scheduler.pid" beforeDir="false" afterPath="$PROJECT_DIR$/.switchboard/instances/test/scheduler.pid" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/logs/combined.log" beforeDir="false" afterPath="$PROJECT_DIR$/logs/combined.log" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/logs/error.log" beforeDir="false" afterPath="$PROJECT_DIR$/logs/error.log" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/cli/mod.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/cli/mod.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/commands/validate.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/commands/validate.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/commands/workflows/apply.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/commands/workflows/apply.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/config/mod.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/config/mod.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/docker/run/run.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/docker/run/run.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/docker/run/types.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/docker/run/types.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/scheduler/mod.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/scheduler/mod.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/workflows/manifest.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/workflows/manifest.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/switchboard.sample.toml" beforeDir="false" afterPath="$PROJECT_DIR$/switchboard.sample.toml" afterDir="false" />
+    </list>
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="Git.Settings">
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+  </component>
+  <component name="GitHubPullRequestSearchHistory">{
+  &quot;lastFilter&quot;: {
+    &quot;state&quot;: &quot;OPEN&quot;,
+    &quot;assignee&quot;: &quot;kkingsbe&quot;
+  }
+}</component>
+  <component name="GithubPullRequestsUISettings">{
+  &quot;selectedUrlAndAccountId&quot;: {
+    &quot;url&quot;: &quot;https://github.com/kkingsbe/switchboard-rs-oss&quot;,
+    &quot;accountId&quot;: &quot;5e75d842-cdbd-40dd-99a7-397f46acbefe&quot;
+  }
+}</component>
+  <component name="ProjectColorInfo">{
+  &quot;associatedIndex&quot;: 0
+}</component>
+  <component name="ProjectId" id="3AG2Vwg7n124fKMg3DwSjK2xLPS" />
+  <component name="ProjectViewState">
+    <option name="hideEmptyMiddlePackages" value="true" />
+    <option name="showLibraryContents" value="true" />
+  </component>
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "ModuleVcsDetector.initialDetectionPerformed": "true",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "RunOnceActivity.git.unshallow": "true",
+    "git-widget-placeholder": "main",
+    "last_opened_file_path": "/Users/kylekingsberry/WebstormProjects/switchboard-rs-oss/.switchboard/workflows",
+    "node.js.detected.package.eslint": "true",
+    "node.js.detected.package.tslint": "true",
+    "node.js.selected.package.eslint": "(autodetect)",
+    "node.js.selected.package.tslint": "(autodetect)",
+    "nodejs_package_manager_path": "npm",
+    "vue.rearranger.settings.migration": "true"
+  }
+}]]></component>
+  <component name="RecentsManager">
+    <key name="CopyFile.RECENT_KEYS">
+      <recent name="$PROJECT_DIR$/.switchboard/workflows" />
+      <recent name="$PROJECT_DIR$" />
+    </key>
+  </component>
+  <component name="SharedIndexes">
+    <attachedChunks>
+      <set>
+        <option value="bundled-js-predefined-d6986cc7102b-6a121458b545-JavaScript-WS-251.25410.117" />
+      </set>
+    </attachedChunks>
+  </component>
+  <component name="TaskManager">
+    <task active="true" id="Default" summary="Default task">
+      <changelist id="83728309-e84d-4f3d-ae0a-6beeea607113" name="Changes" comment="" />
+      <created>1772204614411</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1772204614411</updated>
+      <workItem from="1772204618382" duration="4707000" />
+      <workItem from="1772475627690" duration="7543000" />
+      <workItem from="1773071180636" duration="15000" />
+      <workItem from="1773176131107" duration="3872000" />
+      <workItem from="1773754322935" duration="4835000" />
+      <workItem from="1773938077856" duration="3167000" />
+    </task>
+    <task id="LOCAL-00001" summary="Bugfix">
+      <option name="closed" value="true" />
+      <created>1772205535598</created>
+      <option name="number" value="00001" />
+      <option name="presentableId" value="LOCAL-00001" />
+      <option name="project" value="LOCAL" />
+      <updated>1772205535598</updated>
+    </task>
+    <task id="LOCAL-00002" summary="Set up the goals-based workflow to add the metrics functionality">
+      <option name="closed" value="true" />
+      <created>1773178342930</created>
+      <option name="number" value="00002" />
+      <option name="presentableId" value="LOCAL-00002" />
+      <option name="project" value="LOCAL" />
+      <updated>1773178342930</updated>
+    </task>
+    <option name="localTasksCounter" value="3" />
+    <servers />
+  </component>
+  <component name="TypeScriptGeneratedFilesManager">
+    <option name="version" value="3" />
+  </component>
+  <component name="VcsManagerConfiguration">
+    <MESSAGE value="Bugfix" />
+    <MESSAGE value="Set up the goals-based workflow to add the metrics functionality" />
+    <option name="LAST_COMMIT_MESSAGE" value="Set up the goals-based workflow to add the metrics functionality" />
+  </component>
+  <component name="github-copilot-workspace">
+    <instructionFileLocations>
+      <option value=".github/instructions" />
+    </instructionFileLocations>
+    <promptFileLocations>
+      <option value=".github/prompts" />
+    </promptFileLocations>
+  </component>
+</project>

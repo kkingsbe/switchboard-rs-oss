@@ -864,6 +864,7 @@ async fn execute_agent(
             prompt: prompt.clone(),
             skills: agent.skills.clone(),
             silent_timeout: agent.silent_timeout.clone(),
+            gpu: agent.gpu.unwrap_or(true), // Default to GPU enabled for backward compatibility
         };
 
         // Create DockerClient (use injected client if provided, otherwise create internally)

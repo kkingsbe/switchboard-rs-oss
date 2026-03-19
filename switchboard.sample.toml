@@ -128,6 +128,12 @@ skills = [
 # Example: silent_timeout = "5m"
 silent_timeout = "10m"
 
+# Optional: GPU passthrough for this agent (default: true)
+# When true: NVIDIA GPU passthrough is enabled (current behavior)
+# When false: No GPU passthrough - saves resources for CPU-only agents
+# Set to false for CPU-only workloads to reduce costs and resource usage
+gpu = true
+
 # -----------------------------------------------------------------------------
 # Agent 3: Agent using prompt_file instead of inline prompt
 # -----------------------------------------------------------------------------
@@ -196,6 +202,31 @@ skills = [
     "test-skill",
 ]
 
+# -----------------------------------------------------------------------------
+# Agent 6: CPU-only agent with GPU disabled
+# -----------------------------------------------------------------------------
+# This demonstrates an agent that does not need GPU passthrough.
+# Set gpu = false to disable NVIDIA GPU passthrough and save resources.
+
+[[agent]]
+name = "cpu-only-agent"
+
+# Required: Cron schedule
+# This example runs every hour
+schedule = "0 * * * *"
+
+# Required: Inline prompt
+prompt = """
+Run CPU-intensive analysis tasks that don't require GPU acceleration.
+This agent benefits from gpu = false to save resources.
+"""
+
+# Optional: GPU passthrough disabled for CPU-only workloads
+gpu = false
+
+# Optional: Timeout for CPU-only agent (may need less time than GPU agents)
+timeout = "30m"
+
 # =============================================================================
 # ADDITIONAL NOTES
 # =============================================================================
@@ -254,6 +285,13 @@ skills = [
 #   - When readonly = true, the agent container cannot write to the filesystem
 #   - This is useful for analysis tasks that should only read data
 #   - The workspace is still mounted, but in read-only mode
+#
+# GPU Passthrough:
+#   - When gpu = true (default): NVIDIA GPU passthrough is enabled to the container
+#   - When gpu = false: No GPU passthrough - saves resources for CPU-only agents
+#   - Set gpu = false for agents that only need CPU resources to reduce costs
+#   - Useful for lightweight monitoring, analysis, or batch processing agents
+#   - The gpu field is optional and defaults to true for backward compatibility
 #
 # Environment Variables:
 #   - Environment variables can be passed to the agent container via the

@@ -91,6 +91,14 @@ pub struct ContainerConfig {
     /// any log output for the specified duration. This helps identify and clean up
     /// stuck or unresponsive agents.
     pub silent_timeout: Option<String>,
+    /// Whether to enable GPU passthrough to the container
+    ///
+    /// When `true` (default), NVIDIA GPU environment variables and device
+    /// requests are added to the container configuration, enabling GPU access.
+    /// When `false`, the container runs without GPU access.
+    ///
+    /// Default: `true`
+    pub gpu: bool,
 }
 
 impl ContainerConfig {
@@ -151,6 +159,7 @@ impl ContainerConfig {
             prompt: String::new(),
             skills: None,
             silent_timeout: None,
+            gpu: true, // Default to GPU enabled for backward compatibility
         }
     }
 }

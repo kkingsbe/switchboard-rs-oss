@@ -807,6 +807,7 @@ mod tests {
             max_queue_size: None,
             skills: Some(vec![]), // Empty skills list
             silent_timeout: None,
+            gpu: None,
         };
 
         let result = validate_agent_skills_empty(&agent, "test-agent");
@@ -847,6 +848,7 @@ mod tests {
             max_queue_size: None,
             skills: None, // No skills field
             silent_timeout: None,
+            gpu: None,
         };
 
         let result = validate_agent_skills_empty(&agent, "test-agent");
@@ -876,6 +878,7 @@ mod tests {
             max_queue_size: None,
             skills: Some(vec!["owner/repo".to_string()]), // Non-empty skills list
             silent_timeout: None,
+            gpu: None,
         };
 
         let result = validate_agent_skills_empty(&agent, "test-agent");
@@ -911,6 +914,7 @@ mod tests {
                 "owner/@skill".to_string(),   // Invalid: contains @ and /
             ]),
             silent_timeout: None,
+            gpu: None,
         };
 
         let result = validate_agent_skills_format(&agent, "test-agent");
@@ -964,6 +968,7 @@ mod tests {
                 "skill123".to_string(),        // Valid: skill-name with numbers
             ]),
             silent_timeout: None,
+            gpu: None,
         };
 
         let result = validate_agent_skills_format(&agent, "test-agent");
@@ -997,6 +1002,7 @@ mod tests {
                 "backend-api".to_string(),
             ]),
             silent_timeout: None,
+            gpu: None,
         };
 
         let result = validate_agent_skills_duplicates(&agent, "test-agent");
@@ -1033,6 +1039,7 @@ mod tests {
                 "security-audit".to_string(), // Duplicate: appears twice
             ]),
             silent_timeout: None,
+            gpu: None,
         };
 
         let result = validate_agent_skills_duplicates(&agent, "test-agent");
@@ -1093,6 +1100,7 @@ mod tests {
             max_queue_size: None,
             skills: None, // No skills field
             silent_timeout: None,
+            gpu: None,
         };
 
         let result = validate_agent_skills_duplicates(&agent, "test-agent");
@@ -1125,6 +1133,7 @@ mod tests {
                 "security-audit".to_string(),
             ]),
             silent_timeout: None,
+            gpu: None,
         };
 
         let result = validate_agent_skills(&agent, "test-agent");
@@ -1156,6 +1165,7 @@ mod tests {
             max_queue_size: None,
             skills: Some(vec![]), // Empty skills list
             silent_timeout: None,
+            gpu: None,
         };
 
         let result = validate_agent_skills(&agent, "test-agent");
@@ -1192,6 +1202,7 @@ mod tests {
             max_queue_size: None,
             skills: Some(vec!["owner/repo".to_string()]), // Invalid: contains slash
             silent_timeout: None,
+            gpu: None,
         };
 
         let result = validate_agent_skills(&agent, "test-agent");
@@ -1226,6 +1237,7 @@ mod tests {
                 "frontend-design".to_string(), // Duplicate
             ]),
             silent_timeout: None,
+            gpu: None,
         };
 
         let result = validate_agent_skills(&agent, "test-agent");
@@ -1324,6 +1336,7 @@ mod tests {
             max_queue_size: None,
             skills: Some(vec!["frontend-design".to_string()]),
             silent_timeout: None,
+            gpu: None,
         };
 
         let skills_dir = PathBuf::from("/nonexistent/path/skills");
@@ -1369,6 +1382,7 @@ mod tests {
             max_queue_size: None,
             skills: Some(vec!["frontend-design".to_string()]), // Valid skill-name format
             silent_timeout: None,
+            gpu: None,
         };
 
         let result = validate_skills_exist_in_directory(&agent, "test-agent", &skills_dir);
@@ -1396,6 +1410,7 @@ mod tests {
             max_queue_size: None,
             skills: None, // No skills field
             silent_timeout: None,
+            gpu: None,
         };
 
         let skills_dir = PathBuf::from("./skills");
@@ -1436,6 +1451,7 @@ mod tests {
             max_queue_size: None,
             skills: Some(vec![]), // No skills
             silent_timeout: None,
+            gpu: None,
         }];
 
         let result = validate_lockfile_consistency(&config, &skills_dir);
@@ -1471,6 +1487,7 @@ mod tests {
             max_queue_size: None,
             skills: None, // No skills field
             silent_timeout: None,
+            gpu: None,
         }];
 
         let result = validate_lockfile_consistency(&config, &skills_dir);

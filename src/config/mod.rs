@@ -1014,6 +1014,11 @@ pub struct Agent {
     /// Agent-level override for silent timeout
     #[serde(default)]
     pub silent_timeout: Option<String>,
+    /// GPU passthrough for this agent (default: true)
+    /// When true: NVIDIA GPU passthrough is enabled
+    /// When false: No GPU passthrough - saves resources for CPU-only agents
+    #[serde(default)]
+    pub gpu: Option<bool>,
 }
 
 impl Agent {
@@ -2617,6 +2622,7 @@ mod tests {
             max_queue_size: None,
             skills: None,
             silent_timeout: None,
+            gpu: None,
         };
 
         // Read the prompt file
@@ -2643,6 +2649,7 @@ mod tests {
             max_queue_size: None,
             skills: None,
             silent_timeout: None,
+            gpu: None,
         };
 
         let temp_dir = tempfile::tempdir().expect("Failed to create temp dir");
@@ -2666,6 +2673,7 @@ mod tests {
             max_queue_size: None,
             skills: None,
             silent_timeout: None,
+            gpu: None,
         };
 
         let temp_dir = tempfile::tempdir().expect("Failed to create temp dir");
